@@ -30,6 +30,7 @@ src-tauri/gen/
 src-tauri/target/
 yarn-debug.log*
 yarn-error.log*
+*.bak
 
 # Cadre ATLAS — non suivi (générés par ATLAS, ne pas éditer)
 AGENTS.md
