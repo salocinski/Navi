@@ -244,7 +244,7 @@
     {
       "id": "N-031",
       "title": "Structurer les modules Rust",
-      "description": "capture, shortcuts, text, language, tts, audio, state.",
+      "description": "capture, shortcuts, text, language, tts, audio, state.\n\n[NOTE 2026-11-17 18:07] 2026-11-17 - PR #4 merge + PR #5 créée pour corrections compilation. PR #4 (feat/TW-31-architecture) mergée, PR #5 (fix/compilation-errors) créée pour corrections API ort 2.x, Tauri 2.x, windows crate, rodio 0.19. Compilation OK sur branche fix/compilation-errors.",
       "state": "doing",
       "updated_at": "2026-11-17T20:28:41Z",
       "assignee": ""
