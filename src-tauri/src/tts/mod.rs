@@ -1,6 +1,6 @@
 //! Moteur TTS (Kokoro via ONNX Runtime)
 
-use ort::{Environment, Session, GraphOptimizationLevel, value::Tensor};
+use ort::{environment::Environment, session::Session, session::builder::GraphOptimizationLevel, value::Tensor};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -77,7 +77,7 @@ impl TtsEngine {
     fn ensure_session(&self) -> Result<(), Box<dyn std::error::Error>> {
         let mut session_lock = self.session.lock().unwrap();
         if session_lock.is_none() {
-            let env = ort::Environment::init().build()?;
+            let env = ort::environment::init().build()?;
             let session = Session::builder(&env)?
                 .with_optimization_level(GraphOptimizationLevel::Level3)?
                 .commit_from_file(&self.config.model_path)?;
@@ -116,8 +116,8 @@ impl TtsEngine {
         ids.push(0);
         
         // Inférence
-        let session_lock = self.session.lock().unwrap();
-        let session = session_lock.as_ref().unwrap();
+        let mut session_lock = self.session.lock().unwrap();
+        let session = session_lock.as_mut().unwrap();
         
         let input = ort::inputs! {
             "tokens" => Tensor::from_array(([1usize, ids.len()], ids))?,
@@ -175,9 +175,9 @@ impl TtsEngine {
 
 impl Phonemizer {
     fn new(lib_path: &str, data_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let lib = libloading::Library::new(lib_path)?;
+        let lib = unsafe { libloading::Library::new(lib_path)? };
         
-        let init = unsafe { *lib.get(b"espeak_Initialize")? };
+        let init: unsafe extern "system" fn(i32, i32, *const i8, i32) -> i32 = unsafe { *lib.get(b"espeak_Initialize")? };
         let set_voice = unsafe { *lib.get(b"espeak_SetVoiceByName")? };
         let to_phonemes = unsafe { *lib.get(b"espeak_TextToPhonemes")? };
         

@@ -38,7 +38,7 @@ impl PlaybackStateMachine {
     }
     
     pub fn state(&self) -> PlaybackState {
-        *self.state.lock().unwrap()
+        self.state.lock().unwrap().clone()
     }
     
     pub fn set_text(&self, text: String, chunk_count: usize) {

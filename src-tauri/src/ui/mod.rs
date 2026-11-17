@@ -1,32 +1,33 @@
 //! Interface utilisateur : zone de notification, panneau, menu
 
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
+use tauri::webview::WebviewWindowBuilder;
 
 /// Crée le menu de la zone de notification (Tauri 2.x)
 pub fn create_system_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let read_item = MenuItemBuilder::new("read")
-        .text("Lire la sélection")
+    let read_item = MenuItemBuilder::new("Lire la sélection")
+        .id("read")
         .accelerator("Ctrl+Shift+R")
         .build(app)?;
-    let pause_item = MenuItemBuilder::new("pause")
-        .text("Pause / Reprise")
+    let pause_item = MenuItemBuilder::new("Pause / Reprise")
+        .id("pause")
         .accelerator("Ctrl+Shift+P")
         .build(app)?;
-    let stop_item = MenuItemBuilder::new("stop")
-        .text("Arrêt")
+    let stop_item = MenuItemBuilder::new("Arrêt")
+        .id("stop")
         .accelerator("Ctrl+Shift+S")
         .build(app)?;
-    let separator = PredefinedMenuItem::Separator::new(app)?;
-    let settings_item = MenuItemBuilder::new("settings")
-        .text("Paramètres")
+    let separator = PredefinedMenuItem::separator(app)?;
+    let settings_item = MenuItemBuilder::new("Paramètres")
+        .id("settings")
         .build(app)?;
-    let quit_item = MenuItemBuilder::new("quit")
-        .text("Quitter")
+    let quit_item = MenuItemBuilder::new("Quitter")
+        .id("quit")
         .build(app)?;
 
-    let menu = MenuBuilder::new(app)
+    let menu = tauri::menu::MenuBuilder::new(app)
         .items(&[&read_item, &pause_item, &stop_item, &separator, &settings_item, &separator, &quit_item])
         .build()?;
 
@@ -34,12 +35,12 @@ pub fn create_system_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Err
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
         .tooltip("Navi - Lecteur TTS local")
-        .on_tray_icon_event(|tray, event| {
+        .on_tray_icon_event(|_tray, event| {
             if let TrayIconEvent::Click { button: _, .. } = event {
                 // Click simple - pourrait afficher le panneau
             }
         })
-        .on_menu_item_event(|app, event| match event.id.as_ref() {
+        .on_menu_event(|app, event| match event.id.as_ref() {
             "read" => { let _ = app.emit("hotkey_read", ()); }
             "pause" => { let _ = app.emit("hotkey_pause", ()); }
             "stop" => { let _ = app.emit("hotkey_stop", ()); }
@@ -58,7 +59,7 @@ pub fn create_system_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Err
 }
 
 /// Gère les événements de la zone de notification
-pub fn handle_system_tray_event(app: &AppHandle, event: TrayIconEvent) {
+pub fn handle_system_tray_event(_app: &tauri::AppHandle, event: TrayIconEvent) {
     if let TrayIconEvent::Click { button: _, .. } = event {
         // Click simple - pourrait afficher le panneau
     }
@@ -73,10 +74,10 @@ pub fn setup_main_window(app: &AppHandle) {
 
 /// Crée la fenêtre de paramètres
 pub fn create_settings_window(app: &AppHandle) -> Result<tauri::WebviewWindow, Box<dyn std::error::Error>> {
-    Ok(WindowBuilder::new(
+    let window = tauri::webview::WebviewWindowBuilder::new(
         app,
         "settings",
-        WebviewUrl::App("settings.html".into()),
+        tauri::WebviewUrl::App("settings.html".into()),
     )
     .title("Paramètres Navi")
     .inner_size(400.0, 500.0)
@@ -84,7 +85,9 @@ pub fn create_settings_window(app: &AppHandle) -> Result<tauri::WebviewWindow, B
     .maximizable(false)
     .decorations(true)
     .always_on_top(false)
-    .build()?)
+    .build()?;
+
+    Ok(window)
 }
 
 /// Panneau flottant ancré à l'icône de notification
@@ -94,10 +97,10 @@ pub struct FloatingPanel {
 
 impl FloatingPanel {
     pub fn new(app: &AppHandle) -> Result<Self, Box<dyn std::error::Error>> {
-        let window = WindowBuilder::new(
+        let window = tauri::webview::WebviewWindowBuilder::new(
             app,
             "panel",
-            WebviewUrl::App("panel.html".into()),
+            tauri::WebviewUrl::App("panel.html".into()),
         )
         .title("")
         .inner_size(280.0, 320.0)
