@@ -1,13 +1,13 @@
 //! Capture de texte sélectionné via presse-papiers
 
 use std::thread;
-use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
+use windows::Win32::Foundation::{HWND, LPARAM, WPARAM, HGLOBAL};
 use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, SendMessageW};
 use windows::Win32::System::DataExchange::{
     CloseClipboard, EnumClipboardFormats, GetClipboardData, GetClipboardFormatNameW,
     IsClipboardFormatAvailable, OpenClipboard,
 };
-use windows::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock, HGLOBAL};
+use windows::Win32::System::Memory::{GlobalLock, GlobalSize, GlobalUnlock};
 
 const WM_COPY: u32 = 0x0301;
 const CF_UNICODETEXT: u32 = 13;
@@ -42,7 +42,7 @@ pub fn capture_selection() -> CaptureResult {
         return CaptureResult::error("Aucune fenêtre au premier plan".to_string());
     }
     
-    let _ = unsafe { SendMessageW(HWND(hwnd.0), WM_COPY, WPARAM(0), LPARAM(0)) };
+    let _ = unsafe { SendMessageW(HWND(hwnd.0), WM_COPY, WPARAM(0 as usize), LPARAM(0 as isize)) };
     thread::sleep(std::time::Duration::from_millis(200));
     
     // 2. Ouvrir le presse-papiers
@@ -111,7 +111,7 @@ fn read_format_raw(format: u32) -> Result<String, Box<dyn std::error::Error>> {
         String::from_utf8_lossy(slice).trim_end_matches('\0').to_string()
     };
     
-    unsafe { windows::Win32::System::Memory::GlobalUnlock(HGLOBAL(hglobal.0))? };
+    unsafe { windows::Win32::System::Memory::GlobalUnlock(handle)? };
     Ok(result)
 }
 
