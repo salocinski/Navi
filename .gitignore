@@ -1,0 +1,37 @@
+
+!.vscode/extensions.json
+# Editor directories and files
+# Logs
+*.local
+*.bak
+*.log
+*.log
+*.njsproj
+*.ntvs*
+*.sln
+*.suo
+*.sw?
+.DS_Store
+.idea
+.venv/
+.vscode/*
+dist
+dist-ssr
+dist/
+lerna-debug.log*
+logs
+models/
+node_modules
+node_modules/
+npm-debug.log*
+pnpm-debug.log*
+scratch/
+src-tauri/gen/
+src-tauri/target/
+yarn-debug.log*
+yarn-error.log*
+
+# Cadre ATLAS — non suivi (générés par ATLAS, ne pas éditer)
+AGENTS.md
+GEMINI.md
+CLAUDE.md

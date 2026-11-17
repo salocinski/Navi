@@ -1,0 +1,557 @@
+{
+  "estimated_total": 69,
+  "tickets": [
+    {
+      "id": "N-001",
+      "title": "Initialiser le dépôt et le squelette Tauri 2 + React/TS",
+      "description": "Dossiers src/, src-tauri/, models/, tests/, README. models/ dans .gitignore.\n\nCritères :\n- [ ] Le squelette compile et se lance\n\nFait 2026-11-16 : git init (main), Tauri 2 + React/TS (navi), cargo check OK, npm install OK. models/ et scratch/ ignorés.",
+      "state": "done",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-002",
+      "title": "Créer le journal de décisions",
+      "description": "docs/decisions.md : décisions et compromis consignés au fil de l'eau.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-003",
+      "title": "Documenter l'environnement de référence",
+      "description": "Win 11, i7-7700K, 32 Go, RTX 3060 Ti 8 Go. Ne pas supposer CUDA Toolkit installé.\n\nCritères :\n- [ ] Fiche d'environnement écrite",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-004",
+      "title": "Récupérer les artefacts Kokoro-82M",
+      "description": "Modèle ONNX + voix. Noter source, version, hash, licence.\n\nCritères :\n- [ ] Artefacts en local, hors dépôt Git\n\nFait : kokoro-v1.0.int8.onnx (88 Mo) + voices-v1.0.bin (27 Mo) dans models/kokoro/ (hors Git). SHA-256 int8 : 6e742170…06cb ; voices : bca610b8…bf7d. Source : releases de thewh1teagle/kokoro-onnx (model-files-v1.0).",
+      "state": "done",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-005",
+      "title": "Générer un échantillon FR et un échantillon EN (S0-01)",
+      "description": "Comparer 2-3 voix par langue.\n\nCritères :\n- [ ] 1 phrase FR + 1 phrase EN synthétisées localement, qualité jugée acceptable\n\nGénérés (scratch/out/*.wav) : fr-fr ff_siwis, en-us af_heart, en-gb bf_emma. CPU int8 : RTF 0,58-0,63 (hors phase d'échauffement, non benchmarké). À écouter pour juger la qualité, puis passer en Terminé. Note : le code langue espeak est « fr-fr » (pas « fr-FR »).\n\n[NOTE 2026-11-17 10:50] AUDIT VOIX 2026-11-17 - verdict humain : en-us-af-heart retenue, la seule convaincante. Autres voix pas assez naturelles. Suite : chercher voix masculine FR et EN plus voix feminine FR convaincante, tester af_heart sur FR. Travail suivi sur carte 29.\n\n[NOTE 2026-11-17 10:56] 2026-11-17 - verdict final humain : af_heart feminine et am_adam masculine retenues, utilisables sur fr-fr et en-us. Preuves : scratch\\out, notes carte 29.",
+      "state": "doing",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-006",
+      "title": "Charger le modèle via ONNX Runtime depuis Rust, CPU (S0-02)",
+      "description": "Chaîne exacte compatible avec le futur cœur Rust (crate ort ou équivalent).\n\nCritères :\n- [ ] Inférence CPU fonctionnelle depuis Rust\n\nRisque : opérateurs ONNX incompatibles.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-007",
+      "title": "Résoudre la phonémisation FR/EN",
+      "description": "Dépendance type espeak-ng ou alternative ; impact licence et déploiement.\n\nCritères :\n- [ ] Solution retenue et documentée",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-008",
+      "title": "Tester l'accélération GPU si la chaîne est disponible",
+      "description": "DirectML/CUDA uniquement si reproductible ; sinon documenter.\n\nCritères :\n- [ ] Résultat ou impossibilité documentée",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-009",
+      "title": "Esquisser l'interface TtsEngine",
+      "description": "Isoler le moteur pour pouvoir le remplacer (Piper, MeloTTS).\n\nCritères :\n- [ ] Trait Rust défini et utilisé par le prototype",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-010",
+      "title": "Prototyper la segmentation en phrases",
+      "description": "Phrases ou groupes de phrases, sans coupure arbitraire.\n\nCritères :\n- [ ] Segmentation correcte sur textes FR/EN de test",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-011",
+      "title": "Démontrer la lecture progressive (S0-03)",
+      "description": "Génération → file ordonnée → lecture ; génération des suivants pendant la lecture.\n\nCritères :\n- [ ] Le 1er segment est audible avant la fin de la génération totale\n- [ ] Délai avant première parole mesuré",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-012",
+      "title": "Capturer la sélection par presse-papiers (S0-04)",
+      "description": "Sauvegarde → simulation Ctrl+C → lecture → restauration.\n\nCritères :\n- [ ] Texte sélectionné récupéré dans une application de test",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-013",
+      "title": "Sauvegarder/restaurer le presse-papiers multi-formats",
+      "description": "Texte, RTF/HTML, images, fichiers. Restauration même en cas d'erreur.\n\nCritères :\n- [ ] Restauration correcte (scénarios normaux et d'erreur)\n\nRisque majeur : altérer les données de l'utilisateur.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-014",
+      "title": "Gérer les cas limites de capture",
+      "description": "Aucune sélection, copie asynchrone, copie bloquée, interruption.\n\nCritères :\n- [ ] Chaque cas renvoie une erreur claire",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-015",
+      "title": "Évaluer UI Automation / TextPattern en repli",
+      "description": "Critères :\n- [ ] Intérêt réel du repli tranché",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-016",
+      "title": "Tester un panel d'applications et rédiger le rapport de compatibilité",
+      "description": "Navigateurs, Word, éditeur de code, lecteur PDF, terminal, app Electron, app élevée.\n\nCritères :\n- [ ] Rapport avec applications et contrôles non pris en charge",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-017",
+      "title": "Valider la bibliothèque de raccourcis globaux (S0-05)",
+      "description": "Plugin Tauri global-shortcut vs RegisterHotKey.\n\nCritères :\n- [ ] Raccourci détecté Navi non active",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-018",
+      "title": "Tester les raccourcis proposés et leurs conflits",
+      "description": "Ctrl+Alt+Espace / P / S. Échec d'enregistrement détecté et signalé.\n\nCritères :\n- [ ] Comportement en cas de conflit documenté",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-019",
+      "title": "Valider la bibliothèque audio Rust (S0-06)",
+      "description": "rodio/cpal ou autre : lecture en continu, transitions sans silence artificiel.\n\nCritères :\n- [ ] Bibliothèque retenue",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-020",
+      "title": "Valider pause, reprise, arrêt et gestion de la file",
+      "description": "Arrêt : vider la file, annuler proprement la génération en cours.\n\nCritères :\n- [ ] Sans perte de position ni désynchronisation majeure",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-021",
+      "title": "Tester les déclenchements rapides et répétés",
+      "description": "Relance pendant lecture, stop pendant génération.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-022",
+      "title": "Définir le protocole de benchmark (S0-07)",
+      "description": "Textes court/moyen/long, FR/EN, reproductible.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-023",
+      "title": "Mesurer latence, génération, RAM/VRAM et charge CPU/GPU",
+      "description": "Critères :\n- [ ] Délai avant première parole, facteur temps réel, RAM/VRAM, CPU/GPU mesurés",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-024",
+      "title": "Produire le tableau de benchmarks et statuer sur le mode CPU",
+      "description": "Critères :\n- [ ] Verdict : le mode CPU est viable ou non",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-025",
+      "title": "Auditer les licences moteur, poids, voix et dépendances (S0-08)",
+      "description": "Audit séparé : moteur, poids, voix, phonémiseur, ONNX Runtime, crates Rust, assets.\n\nCritères :\n- [ ] Tableau de licences par artefact\n\nPremière passe : docs/licences.md (non concluante). Point bloquant : espeak-ng est GPL-3+ (phonémisation FR/EN de kokoro-onnx). À trancher : GPL, binaire séparé ou phonémiseur permissif. Licence SIWIS (CC BY) à lire.\n\n[NOTE 2026-11-17 11:07] 2026-11-17 - Le repo distant salocinski slash Navi porte deja un LICENSE Apache-2.0 pose par l'humain. Consequence : espeak-ng GPL-3+ ne peut pas etre lie ou embarque comme bibliotheque dans une appli Apache-2.0. Pour conserver Apache, la voie retenue a valider est espeak-ng en processus separe, cote-a-cote, type sidecar Tauri, avec son texte de licence et l'offre du code source dans les mentions. La recommandation GPL-3.0 de la carte 26 est abandonnee si ce choix Apache est confirme.",
+      "state": "doing",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-026",
+      "title": "Décider des conditions de redistribution",
+      "description": "Inclure dans l'installeur ou télécharger à part ; mentions requises.\n\nCritères :\n- [ ] Recommandation écrite\n\n[NOTE 2026-11-17 10:59] 2026-11-17 - Recommandation configuration distribution GitHub releases. 1. Licence du code GPL-3.0 recommandee : la phonemisation FR exige espeak-ng GPL-3+, misaki ne couvre pas le francais verifie sur README misaki le 2026-11-17, et Kokoro Apache-2.0 est compatible GPL. Alternative zone grise : espeak-ng en binaire separe type agregation, a valider sur carte 25. 2. Artefacts embarques dans l'installeur NSIS Tauri ~110-140 Mo total : kokoro int8 92 Mo, voices-v1.0.bin 28 Mo reducible a ~1 Mo en n'extrayant que af_heart et am_adam, donnees espeak-ng fr et en-us. Dans la limite 2 Go par fichier des releases. Offline immediat, pas de telechargement first-run. 3. Mentions : Apache-2.0 Kokoro + NOTICE, MIT kokoro-onnx et ONNX Runtime, GPL-3+ espeak-ng avec offre du code source, notices rodio cpal ort. Pas de ff_siwis embarquee donc attribution SIWIS CC BY inutile. Pas de logo Tauri CC-BY-NC-ND. 4. Chaine de releases via tauri-action a Sprint 1, carte 60.\n\n[NOTE 2026-11-17 11:04] 2026-11-17 - Description de repo retenue par l'humain, variante B : Navi lit a voix haute le texte selectionne sur votre ordinateur - 100 pour cent local, via un moteur Kokoro-82M embarque. Aucune connexion requise, aucune donnee collectee. FR EN, pause et reprise a la volee. A poser dans les parametres du depot GitHub. A amender librement plus tard, la description n'affirme pas encore open source tant que la licence n'est pas tranchee sur carte 25. Topics suggerees non tranchees.\n\n[NOTE 2026-11-17 11:07] 2026-11-17 - Licence Apache-2.0 deja posee sur le depot distant par l'humain, la recommandation GPL-3.0 est eclipee. Nouvelle configuration a valider sur carte 25 : espeak-ng en processus separe sidecar, jamais lie. Le reste de la recommandation tient : artefacts embarques dans l'installeur, voix af_heart et am_adam seules extraites, mentions tierces, pas de logo Tauri.",
+      "state": "doing",
+      "updated_at": "2026-11-17T15:58:32Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-027",
+      "title": "Réaliser la démo intégrée du Sprint 0",
+      "description": "Raccourci → capture → TTS progressif → pause/stop.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-028",
+      "title": "Vérifier les critères de réussite du Sprint 0",
+      "description": "Critères :\n- [ ] Les 8 critères du doc §11 contrôlés\n- [ ] Incertitudes restantes listées",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-029",
+      "title": "Valider l'architecture et choisir libs et voix finales",
+      "description": "Voix FR/EN, bibliothèques audio et raccourcis, Kokoro confirmé ou non.\n\n[NOTE 2026-11-17 10:53] 2026-11-17 - Lot d'essais voix genere dans scratch\\out via s0_29.py : feminine FR af_heart af_nicole af_bella af_nova sur fr-fr ; masculine EN am_michael am_fenrir am_onyx am_adam bm_george bm_fable ; masculine FR am_michael am_fenrir bm_george sur fr-fr. Verdict af_heart sur FR : possible mais accent americain attendu, la phonemisation espeak-ng reste le goulot. En attente d'ecoute humaine.\n\n[NOTE 2026-11-17 10:56] 2026-11-17 - DECISION voix finales : feminine en-us-af-heart, masculine en-us-am-adam. Les deux voix sont couplees a fr-fr ou en-us selon la langue du texte selectionne. Couplage interlingue valide a la generation et a l'ecoute humaine. Volet voix de la carte resolu.",
+      "state": "doing",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-030",
+      "title": "Prioriser le backlog du Sprint 1 sur résultats réels",
+      "description": "Si un risque majeur subsiste, le traiter avant toute fonctionnalité.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-031",
+      "title": "Structurer les modules Rust",
+      "description": "capture, shortcuts, text, language, tts, audio, state.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-032",
+      "title": "Implémenter la machine d'états de lecture",
+      "description": "inactif / capture / génération / lecture / pause / erreur, avec événements vers l'UI.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-033",
+      "title": "Garantir l'instance unique et le démarrage résident",
+      "description": "Pas de fenêtre principale au démarrage.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-034",
+      "title": "Journaliser localement et centraliser les erreurs",
+      "description": "Aucune télémétrie distante.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-035",
+      "title": "Nettoyer et normaliser le texte capturé",
+      "description": "Espaces, sauts de ligne, URLs, symboles, nombres et abréviations de base.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-036",
+      "title": "Détecter automatiquement le français et l'anglais",
+      "description": "Indépendant du moteur TTS. Définir le comportement pour langue inconnue ou texte mixte.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-037",
+      "title": "Segmenter le texte en production",
+      "description": "Préparation de la file de segments.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-038",
+      "title": "Tester le nettoyage, la segmentation et la détection de langue",
+      "description": "Tests unitaires ciblés (branches, parsing).",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-039",
+      "title": "Intégrer Kokoro derrière TtsEngine",
+      "description": "Chargement du modèle en tâche de fond.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-040",
+      "title": "Précharger les segments et régler leur taille",
+      "description": "Taille de segment ajustée aux benchmarks.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-041",
+      "title": "Intégrer lecture, pause, reprise et arrêt à la machine d'états",
+      "description": "Critères :\n- [ ] Pas de désynchronisation majeure",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-042",
+      "title": "Gérer le périphérique audio par défaut",
+      "description": "Changement ou absence de périphérique.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-043",
+      "title": "Durcir la capture presse-papiers",
+      "description": "Formats, restauration garantie, tests d'erreur et d'interruption.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-044",
+      "title": "Ajouter le repli UI Automation si retenu au Sprint 0",
+      "description": "Conditionnel à la décision du S0.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-045",
+      "title": "Brancher les raccourcis globaux lire / pause-reprise / arrêt",
+      "description": "Échec d'enregistrement signalé à l'utilisateur.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-046",
+      "title": "Afficher des messages clairs quand la capture échoue",
+      "description": "Notification Windows quand la capture échoue (ex. « Cette application bloque la copie. Essayez de copier le texte manuellement. ») + pastille rouge sur l'icône.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-047",
+      "title": "Créer l'icône de zone de notification et son menu",
+      "description": "Icône = logo fourni (rond). Clic gauche : ouvre le panneau. Clic droit : menu court (lire, pause/reprise, arrêt, paramètres, démarrer avec Windows, quitter).\n\nCritères :\n- [ ] Icône visible dans la zone de notification\n- [ ] Clic gauche et clic droit fonctionnent",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-048",
+      "title": "Créer le panneau ancré à l'icône de notification",
+      "description": "UI retenue (maquette A) : panneau au-dessus de l'icône, comme Wi-Fi ou Volume. Contenu : état et segment courant, phrase en cours, progression par segments, pause/reprise, arrêt, vitesse, voix auto, rappel des raccourcis, paramètres, quitter.\nPas de mini-lecteur flottant (pastille B écartée).\n\nCritères :\n- [ ] S'ouvre au clic sur l'icône, se ferme au clic extérieur ou Échap\n- [ ] Ne prend pas le focus de l'application active à l'ouverture automatique éventuelle\n- [ ] Pause/reprise/arrêt fonctionnent depuis le panneau",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-049",
+      "title": "Abouter le panneau (multi-écrans, DPI, barre en haut ou sur le côté)",
+      "description": "Ancrage correct près de l'icône quelle que soit la position de la barre ; thème clair/sombre ; fermeture propre.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-050",
+      "title": "Implémenter les anneaux d'état de l'icône",
+      "description": "Design retenu (maquette C) : prêt = aucun anneau ; génération = anneau bleu qui tourne ; lecture = anneau cyan qui pulse ; pause = anneau ambre fixe ; erreur = pastille rouge.\n\nCritères :\n- [ ] Les 5 états s'affichent sur l'icône\n- [ ] Animations désactivées si prefers-reduced-motion\n- [ ] Lisible à 16, 20 et 24 px",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-051",
+      "title": "Créer la fenêtre de paramètres et la persistance locale",
+      "description": "Configuration locale uniquement.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-052",
+      "title": "Rendre les raccourcis configurables et gérer les conflits",
+      "description": "",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-053",
+      "title": "Choisir voix, vitesse et volume",
+      "description": "",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-054",
+      "title": "Proposer le lancement au démarrage de Windows",
+      "description": "Activable et désactivable.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-055",
+      "title": "Décider de la forme finale de la signature sonore",
+      "description": "Voix aiguë, claire, enjouée, 0,8 à 1,5 s, volume modéré.\n\nRisque : ne reproduire aucun élément protégé d'une franchise existante.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-056",
+      "title": "Créer l'enregistrement original de démarrage",
+      "description": "Enregistrement original, aucun extrait ni imitation d'un personnage existant.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-057",
+      "title": "Jouer la signature une seule fois quand raccourcis et capture sont prêts",
+      "description": "Ne pas laisser croire que le TTS est prêt si le modèle charge encore.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-058",
+      "title": "Ajouter les réglages de désactivation et de volume du son",
+      "description": "",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-059",
+      "title": "Gérer localement les modèles (emplacement, intégrité, absence)",
+      "description": "Message clair si le modèle est absent.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-060",
+      "title": "Créer l'installeur Windows",
+      "description": "MSIX ou NSIS ; bundle ou téléchargement selon l'audit de licences.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-061",
+      "title": "Fournir le fichier de mentions légales tierces",
+      "description": "",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-062",
+      "title": "Mettre en place les tests (capture, file audio, machine d'états) et la CI",
+      "description": "Build, tests, lint.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-063",
+      "title": "Décharger le modèle après inactivité",
+      "description": "Si la RAM occupée est significative.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-064",
+      "title": "Documenter les limites connues de compatibilité",
+      "description": "Applications et contrôles non pris en charge.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-065",
+      "title": "Parcourir l'accessibilité (clavier, contrastes, lecteurs d'écran)",
+      "description": "",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-066",
+      "title": "Installer et mettre à jour les modèles automatiquement",
+      "description": "Hors périmètre du Sprint 0.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-067",
+      "title": "Ajouter un moteur alternatif (Piper ou MeloTTS)",
+      "description": "Si Kokoro échoue sur latence, CPU ou licence ; évaluation S0-02e à rouvrir.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-068",
+      "title": "Retenir l'interface : panneau A + anneaux C, sans pastille B",
+      "description": "Décision du 2026-11-16. Panneau ancré à l'icône de notification (A), anneaux d'état sur l'icône (C). La pastille flottante B est écartée : le mini-lecteur flottant de la vision est remplacé par le panneau.\nMaquettes : https://claude.ai/artifact/P6BmcvgqiwcTeGstPcoTBr",
+      "state": "done",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-069",
+      "title": "Produire l'icône multi-tailles à partir du logo (.ico) et valider sa lisibilité",
+      "description": "Source : « navi icon.jfif » (2048×2048, à utiliser tel quel). Générer 16/20/24/32/48/256 px.\n\nCritères :\n- [ ] Rendu vérifié sur la vraie barre Windows 11, thèmes clair et sombre\n- [ ] Si illisible à 16-24 px : décider d'un recadrage sur le sujet pour l'icône seule\n\nRisque : détails perdus à petite taille.",
+      "state": "todo",
+      "updated_at": "2026-11-17T15:50:02Z",
+      "assignee": ""
+    }
+  ]
+}

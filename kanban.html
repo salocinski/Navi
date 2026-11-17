@@ -1,0 +1,1698 @@
+cards block                              matches=1 plan block                               matches=1 cardcode const                           matches=1 draft key                                matches=1 h1                                       matches=1 eyebrow                                  matches=1 title                                    matches=1 font mono                                matches=1 font body                                matches=1 font display                             matches=1 stylesheet fonts                         matches=1 preconnect gstatic                       matches=1 preconnect googleapis                    matches=1 <!doctype html>
+<html lang="fr">
+<head>
+<meta charset=utf8>
+<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Navi - Kanban (dep)</title>
+<!--
+  BASTION PROTOCOL — Kanban versionné dans le dépôt (suivi multi-providers d'IA).
+  Données : les deux blocs <script type="application/json"> ci-dessous sont la source de vérité.
+    #bp-plan  → { "milestones": [...], "epics": [...] }   (constantes du projet, §11 du doc de référence)
+    #bp-cards → { "cards": [...] }                        (cartes prefixe-xxx ; statuts, notes, criteres)
+  Usage :
+    1. Ouvrir ce fichier dans un navigateur, déplacer/éditer les cartes.
+    2. Cliquer « Exporter le fichier » : le kanban.html mis à jour est téléchargé.
+    3. Remplacer le fichier du dépôt par celui-ci, puis committer. L'historique Git suit tout.
+  Un provider d'IA peut lire les blocs JSON directement, ou modifier les statuts puis regénérer le fichier.
+  Statuts de carte : backlog | todo | doing | review | done. Une carte n'est « done » que si sa DoD est vérifiée.
+-->
+
+<style>
+/* Layout: control-room board. Milestone track on top, filters, five status lanes; Roadmap and Epics as alternate views. Dark-first. */
+:root {
+  --bg: #14171b;
+  --panel: #1c2026;
+  --panel-2: #232830;
+  --line: #2e353e;
+  --fg: #e4e8ec;
+  --muted: #8d97a2;
+  --orange: #ec7a2f;
+  --orange-ink: #1a0f06;
+  --cyan: #3cc7da;
+  --ok: #5cbf6b;
+  --warn: #e3b43c;
+  --crit: #e5574a;
+  --shadow: 0 6px 20px rgba(0,0,0,.35);
+  --f-display: "Bahnschrift", "Segoe UI", sans-serif;
+  --f-body: "Segoe UI", system-ui, sans-serif;
+  --f-mono: ui-monospace, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #eceff2; --panel: #ffffff; --panel-2: #f4f6f8; --line: #d2d8de;
+    --fg: #1a1e23; --muted: #5a6470; --orange: #c45d16; --orange-ink: #ffffff;
+    --cyan: #0b8799; --ok: #2e8a3d; --warn: #9a7300; --crit: #c23a2e;
+    --shadow: 0 6px 18px rgba(30,40,50,.12); color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #eceff2; --panel: #ffffff; --panel-2: #f4f6f8; --line: #d2d8de;
+  --fg: #1a1e23; --muted: #5a6470; --orange: #c45d16; --orange-ink: #ffffff;
+  --cyan: #0b8799; --ok: #2e8a3d; --warn: #9a7300; --crit: #c23a2e;
+  --shadow: 0 6px 18px rgba(30,40,50,.12); color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1480px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+button, select, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* Header */
+.top { border-bottom: 1px solid var(--line); background: var(--panel); }
+.top .wrap { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-block: 20px 16px; }
+.eyebrow { font-family: var(--f-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--orange); }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(26px, 4vw, 36px); letter-spacing: .02em; margin: 4px 0 0; text-transform: uppercase; text-wrap: balance; }
+h1 span { color: var(--muted); font-weight: 500; }
+.stats { display: flex; flex-wrap: wrap; gap: 24px; }
+.stat { display: grid; gap: 2px; }
+.stat b { font-family: var(--f-display); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat small { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+
+main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
+
+/* Milestone track */
+.track { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(132px, 1fr); gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.ms { text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 10px 10px 9px; cursor: pointer; display: grid; gap: 4px; position: relative; }
+.ms:hover { border-color: var(--muted); }
+.ms[aria-pressed="true"] { border-color: var(--orange); box-shadow: inset 0 0 0 1px var(--orange); }
+.ms .code { font-family: var(--f-mono); font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
+.ms .name { font-family: var(--f-display); font-weight: 600; font-size: 14px; line-height: 1.15; }
+.ms.post { border-style: dashed; background: transparent; }
+.ms.post .name { color: var(--muted); }
+.bar { height: 4px; background: var(--panel-2); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--cyan); }
+.ms .count { font-family: var(--f-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.phase-tag { font-family: var(--f-mono); font-size: 10px; letter-spacing: .08em; }
+.phase-tag.mvp { color: var(--orange); }
+
+/* Toolbar */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.tabs button { background: var(--panel); border: 0; padding: 7px 14px; cursor: pointer; font-family: var(--f-display); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 12px; color: var(--muted); }
+.tabs button + button { border-left: 1px solid var(--line); }
+.tabs button[aria-selected="true"] { background: var(--panel-2); color: var(--fg); box-shadow: inset 0 -2px 0 var(--orange); }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.filters select, .filters input[type="search"] { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; min-width: 0; max-width: 100%; }
+.filters input[type="search"] { width: 180px; }
+.check { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+.btn { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 7px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--orange); color: var(--orange-ink); border-color: var(--orange); font-weight: 600; }
+.btn.danger { color: var(--crit); }
+.btn.danger.armed { background: var(--crit); color: #fff; border-color: var(--crit); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+.notice { border: 1px solid var(--line); border-left: 3px solid var(--warn); background: var(--panel); padding: 10px 12px; border-radius: 4px; font-size: 13px; }
+.notice.err { border-left-color: var(--crit); }
+.notice.ok { border-left-color: var(--ok); }
+.notice button { margin-left: 10px; }
+
+/* Board */
+.board-scroll { overflow-x: auto; scrollbar-width: thin; }
+.board { display: grid; grid-template-columns: repeat(5, minmax(250px, 1fr)); gap: 10px; min-height: 300px; }
+.lane { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; display: flex; flex-direction: column; min-width: 0; }
+.lane.drop { border-color: var(--cyan); box-shadow: inset 0 0 0 1px var(--cyan); }
+.lane-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.lane-head h2 { font-family: var(--f-display); font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin: 0; }
+.lane-head .n { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.lane[data-status="doing"] .lane-head h2 { color: var(--cyan); }
+.lane[data-status="done"] .lane-head h2 { color: var(--ok); }
+.cards { padding: 8px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.empty-lane { color: var(--muted); font-size: 12px; padding: 10px 4px; text-align: center; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 9px 10px 8px; cursor: pointer; display: grid; gap: 6px; position: relative; }
+.card:hover { border-color: var(--muted); }
+.card.dragging { opacity: .4; }
+.card .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.cid { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.card h3 { font-size: 13.5px; font-weight: 500; margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
+.card.is-done h3 { color: var(--muted); }
+.pill { font-family: var(--f-mono); font-size: 10.5px; padding: 1px 5px; border-radius: 2px; border: 1px solid var(--line); color: var(--muted); }
+.pill.P1 { color: var(--crit); border-color: color-mix(in srgb, var(--crit) 50%, transparent); }
+.pill.P2 { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
+.kind { font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 1px 5px; border-radius: 2px; }
+.kind.decision { color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.kind.spike { color: var(--cyan); background: color-mix(in srgb, var(--cyan) 12%, transparent); }
+.kind.jalon { color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.epic { display: inline-flex; align-items: center; gap: 5px; font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.epic i, .swatch { width: 9px; height: 9px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+.msref { font-family: var(--f-mono); font-size: 10.5px; color: var(--muted); }
+.deps { font-family: var(--f-mono); font-size: 10.5px; color: var(--muted); }
+
+/* Roadmap */
+.roadmap { display: grid; gap: 10px; }
+.rm { border: 1px solid var(--line); background: var(--panel); border-radius: 4px; padding: 14px 16px; display: grid; grid-template-columns: 240px 1fr 200px; gap: 16px; align-items: start; }
+.rm.post { border-style: dashed; opacity: .75; }
+.rm .code { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.rm h3 { font-family: var(--f-display); font-size: 16px; font-weight: 600; margin: 2px 0 6px; }
+.rm p { margin: 0; font-size: 13px; color: var(--muted); }
+.rm .crit { font-size: 12.5px; margin-top: 8px; }
+.rm .crit b { color: var(--fg); font-weight: 600; }
+.rm .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.rm .chips button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
+.rm .chips button:hover { border-color: var(--muted); }
+.rm .side { display: grid; gap: 6px; justify-items: end; }
+.state { font-family: var(--f-display); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.state.active { color: var(--orange); }
+.state.done { color: var(--ok); }
+.state.next { color: var(--muted); }
+.rm .count { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+
+/* Epics matrix */
+.matrix-scroll { overflow-x: auto; }
+.matrix { width: 100%; border-collapse: collapse; }
+.matrix th, .matrix td { border: 1px solid var(--line); padding: 8px 10px; font-size: 12.5px; text-align: center; }
+.matrix thead th { background: var(--panel-2); font-family: var(--f-display); letter-spacing: .06em; text-transform: uppercase; font-size: 11.5px; }
+.matrix th.ep { text-align: left; min-width: 180px; }
+.matrix td.post-col { color: var(--muted); border-left: 1px dashed var(--line); }
+.matrix .tot { font-family: var(--f-mono); font-size: 12px; }
+.matrix tbody tr:last-child th, .matrix tbody tr:last-child td { border-bottom: 0; }
+
+/* Sheet */
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 20; display: flex; justify-content: flex-end; }
+.sheet { width: min(480px, 100%); height: 100%; background: var(--panel); border-left: 1px solid var(--line); box-shadow: var(--shadow); overflow-y: auto; padding: calc(18px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) 20px; display: grid; gap: 14px; align-content: start; }
+.sheet h2 { font-family: var(--f-display); font-size: 18px; margin: 0; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.field input, .field select, .field textarea { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 8px; width: 100%; }
+.field textarea { min-height: 150px; resize: vertical; }
+.field small { color: var(--muted); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; }
+.actions .right { display: flex; gap: 8px; }
+
+@media (max-width: 860px) {
+  .rm { grid-template-columns: 1fr; gap: 8px; }
+  .rm .side { justify-items: start; }
+  .filters input[type="search"] { width: 100%; }
+  .filters { width: 100%; }
+  .filters select { flex: 1 1 140px; }
+  .board { grid-template-columns: repeat(5, minmax(78vw, 1fr)); scroll-snap-type: x mandatory; }
+  .lane { scroll-snap-align: start; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Projet · suivi versionné dans le dépôt</div>
+      <h1>Navi <span>/ Kanban</span></h1>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="notice" id="notice" hidden></div>
+
+  <nav class="track" id="track" aria-label="Milestones"></nav>
+
+  <div class="toolbar">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-view="board" aria-selected="true">Tableau</button>
+      <button role="tab" data-view="roadmap" aria-selected="false">Roadmap</button>
+      <button role="tab" data-view="epics" aria-selected="false">Epics</button>
+    </div>
+    <div class="filters" id="filters">
+      <select id="f-epic-filter" aria-label="Filtrer par epic"></select>
+      <select id="f-kind-filter" aria-label="Filtrer par type">
+        <option value="all">Tous les types</option>
+        <option value="tache">Tâches</option>
+        <option value="decision">Décisions</option>
+        <option value="spike">Études</option>
+        <option value="jalon">Jalons</option>
+      </select>
+      <input type="search" id="f-search" placeholder="Rechercher…" aria-label="Rechercher une carte">
+      <label class="check"><input type="checkbox" id="f-post"> Afficher l'après-v1.0</label>
+      <button class="btn" id="export-btn" title="Télécharge kanban.html avec les données actuelles, à committer dans le dépôt">Exporter le fichier</button>
+      <button class="btn primary" id="add-card">+ Carte</button>
+    </div>
+  </div>
+
+  <section id="view-board">
+    <div class="board-scroll"><div class="board" id="board"></div></div>
+  </section>
+  <section id="view-roadmap" hidden><div class="roadmap" id="roadmap"></div></section>
+  <section id="view-epics" hidden><div class="matrix-scroll"><table class="matrix" id="matrix"></table></div></section>
+</main>
+
+<div class="scrim" id="scrim" hidden>
+  <form class="sheet" id="sheet" aria-labelledby="sheet-title">
+    <div>
+      <div class="cid" id="sheet-id"></div>
+      <h2 id="sheet-title">Carte</h2>
+    </div>
+    <div class="field"><label for="e-title">Titre (verbe + objet)</label><input id="e-title" required maxlength="200"></div>
+    <div class="grid3">
+      <div class="field"><label for="e-status">Statut</label><select id="e-status"></select></div>
+      <div class="field"><label for="e-prio">Priorité</label><select id="e-prio"><option>P1</option><option>P2</option><option>P3</option></select></div>
+      <div class="field"><label for="e-kind">Type</label><select id="e-kind"><option value="tache">Tâche</option><option value="decision">Décision</option><option value="spike">Étude</option><option value="jalon">Jalon</option></select></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="e-ms">Milestone</label><select id="e-ms"></select></div>
+      <div class="field"><label for="e-epic">Epic</label><select id="e-epic"></select></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="e-size">Taille</label><select id="e-size"><option value="S">S</option><option value="M">M</option><option value="L">L (à découper)</option></select></div>
+      <div class="field"><label for="e-deps">Depend de (prefixe-xxx, DEC-xxx, separes par des virgules)</label><input id="e-deps" placeholder="N-001, DEC-001"></div>
+    </div>
+    <div class="field">
+      <label for="e-note">Contexte, critères d'acceptation, risque, notes</label>
+      <textarea id="e-note" maxlength="6000"></textarea>
+      <small>Modèle conseillé : Contexte (§ source) / Critères d'acceptation (- [ ] …) / Risque / Notes.</small>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn danger" id="e-delete">Supprimer</button>
+      <div class="right">
+        <button type="button" class="btn" id="e-cancel">Fermer</button>
+        <button type="submit" class="btn primary" id="e-save">Enregistrer</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script id="bp-plan" type="application/json">
+{
+  "milestones": [
+    {
+      "id": "M0",
+      "sprint": "Sprint 0",
+      "name": "Validation technique",
+      "phase": "MVP",
+      "goal": "Réduire les risques techniques : TTS local, lecture progressive, capture, raccourci, audio, benchmarks, licences.",
+      "criterion": "Les 8 critères de réussite du Sprint 0 sont vérifiés ; backlog Sprint 1 priorisé sur résultats réels."
+    },
+    {
+      "id": "M1",
+      "sprint": "Sprint 1",
+      "name": "Tranche verticale",
+      "phase": "MVP",
+      "goal": "Démarrage résident, raccourcis, capture, synthèse, lecture et mini-lecteur minimal (conditionnel aux résultats du S0).",
+      "criterion": "Sélection + Ctrl+Alt+Espace → lecture progressive, pause/reprise/arrêt depuis tray et mini-lecteur."
+    },
+    {
+      "id": "M2",
+      "sprint": "Sprint 2+",
+      "name": "Version 1.0",
+      "phase": "MVP",
+      "goal": "Paramètres, mini-lecteur abouti, signature sonore, gestion des modèles, installeur, tests et robustesse.",
+      "criterion": "Version 1.0 installable, testée, licences conformes."
+    },
+    {
+      "id": "M3",
+      "sprint": "Sprints suivants",
+      "name": "Après v1.0",
+      "phase": "post",
+      "goal": "Évolutions hors vision initiale.",
+      "criterion": "Trajectoire décidée."
+    }
+  ],
+  "epics": [
+    {
+      "id": "socle",
+      "name": "Socle & décisions",
+      "color": "#55B9E8"
+    },
+    {
+      "id": "tts",
+      "name": "Moteur TTS",
+      "color": "#8B7CFF"
+    },
+    {
+      "id": "audio",
+      "name": "Lecture & audio",
+      "color": "#42B883"
+    },
+    {
+      "id": "capture",
+      "name": "Capture de texte",
+      "color": "#ec7a2f"
+    },
+    {
+      "id": "raccourcis",
+      "name": "Raccourcis globaux",
+      "color": "#e3b43c"
+    },
+    {
+      "id": "texte",
+      "name": "Texte & langue",
+      "color": "#3cc7da"
+    },
+    {
+      "id": "presence",
+      "name": "Présence & UI",
+      "color": "#e5574a"
+    },
+    {
+      "id": "parametres",
+      "name": "Paramètres",
+      "color": "#b07cc6"
+    },
+    {
+      "id": "identite",
+      "name": "Signature sonore",
+      "color": "#f08fb0"
+    },
+    {
+      "id": "licences",
+      "name": "Licences",
+      "color": "#9aa5b1"
+    },
+    {
+      "id": "qualite",
+      "name": "Qualité & benchmarks",
+      "color": "#7fb069"
+    },
+    {
+      "id": "distribution",
+      "name": "Modèles & distribution",
+      "color": "#d9a066"
+    }
+  ]
+}
+</script>
+
+<script id="bp-cards" type="application/json">
+{
+  "cards": [
+    {
+      "num": 1,
+      "title": "Initialiser le dépôt et le squelette Tauri 2 + React/TS",
+      "status": "done",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M0",
+      "epic": "socle",
+      "size": "S",
+      "deps": [],
+      "note": "Dossiers src/, src-tauri/, models/, tests/, README. models/ dans .gitignore.\n\nCritères :\n- [ ] Le squelette compile et se lance\n\nFait 2026-11-16 : git init (main), Tauri 2 + React/TS (navi), cargo check OK, npm install OK. models/ et scratch/ ignorés."
+    },
+    {
+      "num": 2,
+      "title": "Créer le journal de décisions",
+      "status": "todo",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M0",
+      "epic": "socle",
+      "size": "S",
+      "deps": [],
+      "note": "docs/decisions.md : décisions et compromis consignés au fil de l'eau."
+    },
+    {
+      "num": 3,
+      "title": "Documenter l'environnement de référence",
+      "status": "todo",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M0",
+      "epic": "socle",
+      "size": "S",
+      "deps": [],
+      "note": "Win 11, i7-7700K, 32 Go, RTX 3060 Ti 8 Go. Ne pas supposer CUDA Toolkit installé.\n\nCritères :\n- [ ] Fiche d'environnement écrite"
+    },
+    {
+      "num": 4,
+      "title": "Récupérer les artefacts Kokoro-82M",
+      "status": "done",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "tts",
+      "size": "M",
+      "deps": [
+        "N-001"
+      ],
+      "note": "Modèle ONNX + voix. Noter source, version, hash, licence.\n\nCritères :\n- [ ] Artefacts en local, hors dépôt Git\n\nFait : kokoro-v1.0.int8.onnx (88 Mo) + voices-v1.0.bin (27 Mo) dans models/kokoro/ (hors Git). SHA-256 int8 : 6e742170…06cb ; voices : bca610b8…bf7d. Source : releases de thewh1teagle/kokoro-onnx (model-files-v1.0)."
+    },
+    {
+      "num": 5,
+      "title": "Générer un échantillon FR et un échantillon EN (S0-01)",
+      "status": "review",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "tts",
+      "size": "M",
+      "deps": [
+        "N-004"
+      ],
+      "note": "Comparer 2-3 voix par langue.\n\nCritères :\n- [ ] 1 phrase FR + 1 phrase EN synthétisées localement, qualité jugée acceptable\n\nGénérés (scratch/out/*.wav) : fr-fr ff_siwis, en-us af_heart, en-gb bf_emma. CPU int8 : RTF 0,58-0,63 (hors phase d'échauffement, non benchmarké). À écouter pour juger la qualité, puis passer en Terminé. Note : le code langue espeak est « fr-fr » (pas « fr-FR »).\n\n[NOTE 2026-11-17 10:50] AUDIT VOIX 2026-11-17 - verdict humain : en-us-af-heart retenue, la seule convaincante. Autres voix pas assez naturelles. Suite : chercher voix masculine FR et EN plus voix feminine FR convaincante, tester af_heart sur FR. Travail suivi sur carte 29.\n\n[NOTE 2026-11-17 10:56] 2026-11-17 - verdict final humain : af_heart feminine et am_adam masculine retenues, utilisables sur fr-fr et en-us. Preuves : scratch\\out, notes carte 29."
+    },
+    {
+      "num": 6,
+      "title": "Charger le modèle via ONNX Runtime depuis Rust, CPU (S0-02)",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "tts",
+      "size": "L",
+      "deps": [
+        "N-004"
+      ],
+      "note": "Chaîne exacte compatible avec le futur cœur Rust (crate ort ou équivalent).\n\nCritères :\n- [ ] Inférence CPU fonctionnelle depuis Rust\n\nRisque : opérateurs ONNX incompatibles."
+    },
+    {
+      "num": 7,
+      "title": "Résoudre la phonémisation FR/EN",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "tts",
+      "size": "M",
+      "deps": [
+        "N-004"
+      ],
+      "note": "Dépendance type espeak-ng ou alternative ; impact licence et déploiement.\n\nCritères :\n- [ ] Solution retenue et documentée"
+    },
+    {
+      "num": 8,
+      "title": "Tester l'accélération GPU si la chaîne est disponible",
+      "status": "todo",
+      "prio": "P2",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "tts",
+      "size": "M",
+      "deps": [
+        "N-006"
+      ],
+      "note": "DirectML/CUDA uniquement si reproductible ; sinon documenter.\n\nCritères :\n- [ ] Résultat ou impossibilité documentée"
+    },
+    {
+      "num": 9,
+      "title": "Esquisser l'interface TtsEngine",
+      "status": "todo",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M0",
+      "epic": "tts",
+      "size": "S",
+      "deps": [
+        "N-006"
+      ],
+      "note": "Isoler le moteur pour pouvoir le remplacer (Piper, MeloTTS).\n\nCritères :\n- [ ] Trait Rust défini et utilisé par le prototype"
+    },
+    {
+      "num": 10,
+      "title": "Prototyper la segmentation en phrases",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "texte",
+      "size": "M",
+      "deps": [],
+      "note": "Phrases ou groupes de phrases, sans coupure arbitraire.\n\nCritères :\n- [ ] Segmentation correcte sur textes FR/EN de test"
+    },
+    {
+      "num": 11,
+      "title": "Démontrer la lecture progressive (S0-03)",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "audio",
+      "size": "L",
+      "deps": [
+        "N-006",
+        "N-010",
+        "N-019"
+      ],
+      "note": "Génération → file ordonnée → lecture ; génération des suivants pendant la lecture.\n\nCritères :\n- [ ] Le 1er segment est audible avant la fin de la génération totale\n- [ ] Délai avant première parole mesuré"
+    },
+    {
+      "num": 12,
+      "title": "Capturer la sélection par presse-papiers (S0-04)",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "capture",
+      "size": "L",
+      "deps": [],
+      "note": "Sauvegarde → simulation Ctrl+C → lecture → restauration.\n\nCritères :\n- [ ] Texte sélectionné récupéré dans une application de test"
+    },
+    {
+      "num": 13,
+      "title": "Sauvegarder/restaurer le presse-papiers multi-formats",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "capture",
+      "size": "M",
+      "deps": [
+        "N-012"
+      ],
+      "note": "Texte, RTF/HTML, images, fichiers. Restauration même en cas d'erreur.\n\nCritères :\n- [ ] Restauration correcte (scénarios normaux et d'erreur)\n\nRisque majeur : altérer les données de l'utilisateur."
+    },
+    {
+      "num": 14,
+      "title": "Gérer les cas limites de capture",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "capture",
+      "size": "M",
+      "deps": [
+        "N-012"
+      ],
+      "note": "Aucune sélection, copie asynchrone, copie bloquée, interruption.\n\nCritères :\n- [ ] Chaque cas renvoie une erreur claire"
+    },
+    {
+      "num": 15,
+      "title": "Évaluer UI Automation / TextPattern en repli",
+      "status": "todo",
+      "prio": "P2",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "capture",
+      "size": "M",
+      "deps": [
+        "N-012"
+      ],
+      "note": "Critères :\n- [ ] Intérêt réel du repli tranché"
+    },
+    {
+      "num": 16,
+      "title": "Tester un panel d'applications et rédiger le rapport de compatibilité",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "capture",
+      "size": "M",
+      "deps": [
+        "N-013",
+        "N-014"
+      ],
+      "note": "Navigateurs, Word, éditeur de code, lecteur PDF, terminal, app Electron, app élevée.\n\nCritères :\n- [ ] Rapport avec applications et contrôles non pris en charge"
+    },
+    {
+      "num": 17,
+      "title": "Valider la bibliothèque de raccourcis globaux (S0-05)",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "raccourcis",
+      "size": "M",
+      "deps": [
+        "N-001"
+      ],
+      "note": "Plugin Tauri global-shortcut vs RegisterHotKey.\n\nCritères :\n- [ ] Raccourci détecté Navi non active"
+    },
+    {
+      "num": 18,
+      "title": "Tester les raccourcis proposés et leurs conflits",
+      "status": "todo",
+      "prio": "P2",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "raccourcis",
+      "size": "S",
+      "deps": [
+        "N-017"
+      ],
+      "note": "Ctrl+Alt+Espace / P / S. Échec d'enregistrement détecté et signalé.\n\nCritères :\n- [ ] Comportement en cas de conflit documenté"
+    },
+    {
+      "num": 19,
+      "title": "Valider la bibliothèque audio Rust (S0-06)",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "audio",
+      "size": "M",
+      "deps": [
+        "N-001"
+      ],
+      "note": "rodio/cpal ou autre : lecture en continu, transitions sans silence artificiel.\n\nCritères :\n- [ ] Bibliothèque retenue"
+    },
+    {
+      "num": 20,
+      "title": "Valider pause, reprise, arrêt et gestion de la file",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "audio",
+      "size": "M",
+      "deps": [
+        "N-019"
+      ],
+      "note": "Arrêt : vider la file, annuler proprement la génération en cours.\n\nCritères :\n- [ ] Sans perte de position ni désynchronisation majeure"
+    },
+    {
+      "num": 21,
+      "title": "Tester les déclenchements rapides et répétés",
+      "status": "todo",
+      "prio": "P2",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "audio",
+      "size": "S",
+      "deps": [
+        "N-020"
+      ],
+      "note": "Relance pendant lecture, stop pendant génération."
+    },
+    {
+      "num": 22,
+      "title": "Définir le protocole de benchmark (S0-07)",
+      "status": "todo",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M0",
+      "epic": "qualite",
+      "size": "M",
+      "deps": [],
+      "note": "Textes court/moyen/long, FR/EN, reproductible."
+    },
+    {
+      "num": 23,
+      "title": "Mesurer latence, génération, RAM/VRAM et charge CPU/GPU",
+      "status": "todo",
+      "prio": "P2",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "qualite",
+      "size": "M",
+      "deps": [
+        "N-022",
+        "N-011"
+      ],
+      "note": "Critères :\n- [ ] Délai avant première parole, facteur temps réel, RAM/VRAM, CPU/GPU mesurés"
+    },
+    {
+      "num": 24,
+      "title": "Produire le tableau de benchmarks et statuer sur le mode CPU",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "decision",
+      "milestone": "M0",
+      "epic": "qualite",
+      "size": "S",
+      "deps": [
+        "N-023"
+      ],
+      "note": "Critères :\n- [ ] Verdict : le mode CPU est viable ou non"
+    },
+    {
+      "num": 25,
+      "title": "Auditer les licences moteur, poids, voix et dépendances (S0-08)",
+      "status": "doing",
+      "prio": "P1",
+      "kind": "spike",
+      "milestone": "M0",
+      "epic": "licences",
+      "size": "M",
+      "deps": [
+        "N-004"
+      ],
+      "note": "Audit séparé : moteur, poids, voix, phonémiseur, ONNX Runtime, crates Rust, assets.\n\nCritères :\n- [ ] Tableau de licences par artefact\n\nPremière passe : docs/licences.md (non concluante). Point bloquant : espeak-ng est GPL-3+ (phonémisation FR/EN de kokoro-onnx). À trancher : GPL, binaire séparé ou phonémiseur permissif. Licence SIWIS (CC BY) à lire.\n\n[NOTE 2026-11-17 11:07] 2026-11-17 - Le repo distant salocinski slash Navi porte deja un LICENSE Apache-2.0 pose par l'humain. Consequence : espeak-ng GPL-3+ ne peut pas etre lie ou embarque comme bibliotheque dans une appli Apache-2.0. Pour conserver Apache, la voie retenue a valider est espeak-ng en processus separe, cote-a-cote, type sidecar Tauri, avec son texte de licence et l'offre du code source dans les mentions. La recommandation GPL-3.0 de la carte 26 est abandonnee si ce choix Apache est confirme."
+    },
+    {
+      "num": 26,
+      "title": "Décider des conditions de redistribution",
+      "status": "doing",
+      "prio": "P1",
+      "kind": "decision",
+      "milestone": "M0",
+      "epic": "licences",
+      "size": "S",
+      "deps": [
+        "N-025"
+      ],
+      "note": "Inclure dans l'installeur ou télécharger à part ; mentions requises.\n\nCritères :\n- [ ] Recommandation écrite\n\n[NOTE 2026-11-17 10:59] 2026-11-17 - Recommandation configuration distribution GitHub releases. 1. Licence du code GPL-3.0 recommandee : la phonemisation FR exige espeak-ng GPL-3+, misaki ne couvre pas le francais verifie sur README misaki le 2026-11-17, et Kokoro Apache-2.0 est compatible GPL. Alternative zone grise : espeak-ng en binaire separe type agregation, a valider sur carte 25. 2. Artefacts embarques dans l'installeur NSIS Tauri ~110-140 Mo total : kokoro int8 92 Mo, voices-v1.0.bin 28 Mo reducible a ~1 Mo en n'extrayant que af_heart et am_adam, donnees espeak-ng fr et en-us. Dans la limite 2 Go par fichier des releases. Offline immediat, pas de telechargement first-run. 3. Mentions : Apache-2.0 Kokoro + NOTICE, MIT kokoro-onnx et ONNX Runtime, GPL-3+ espeak-ng avec offre du code source, notices rodio cpal ort. Pas de ff_siwis embarquee donc attribution SIWIS CC BY inutile. Pas de logo Tauri CC-BY-NC-ND. 4. Chaine de releases via tauri-action a Sprint 1, carte 60.\n\n[NOTE 2026-11-17 11:04] 2026-11-17 - Description de repo retenue par l'humain, variante B : Navi lit a voix haute le texte selectionne sur votre ordinateur - 100 pour cent local, via un moteur Kokoro-82M embarque. Aucune connexion requise, aucune donnee collectee. FR EN, pause et reprise a la volee. A poser dans les parametres du depot GitHub. A amender librement plus tard, la description n'affirme pas encore open source tant que la licence n'est pas tranchee sur carte 25. Topics suggerees non tranchees.\n\n[NOTE 2026-11-17 11:07] 2026-11-17 - Licence Apache-2.0 deja posee sur le depot distant par l'humain, la recommandation GPL-3.0 est eclipee. Nouvelle configuration a valider sur carte 25 : espeak-ng en processus separe sidecar, jamais lie. Le reste de la recommandation tient : artefacts embarques dans l'installeur, voix af_heart et am_adam seules extraites, mentions tierces, pas de logo Tauri."
+    },
+    {
+      "num": 27,
+      "title": "Réaliser la démo intégrée du Sprint 0",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "jalon",
+      "milestone": "M0",
+      "epic": "socle",
+      "size": "S",
+      "deps": [
+        "N-011",
+        "N-016",
+        "N-017",
+        "N-020"
+      ],
+      "note": "Raccourci → capture → TTS progressif → pause/stop."
+    },
+    {
+      "num": 28,
+      "title": "Vérifier les critères de réussite du Sprint 0",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "jalon",
+      "milestone": "M0",
+      "epic": "socle",
+      "size": "S",
+      "deps": [
+        "N-027",
+        "N-024",
+        "N-026"
+      ],
+      "note": "Critères :\n- [ ] Les 8 critères du doc §11 contrôlés\n- [ ] Incertitudes restantes listées"
+    },
+    {
+      "num": 29,
+      "title": "Valider l'architecture et choisir libs et voix finales",
+      "status": "doing",
+      "prio": "P1",
+      "kind": "decision",
+      "milestone": "M0",
+      "epic": "socle",
+      "size": "S",
+      "deps": [
+        "N-028"
+      ],
+      "note": "Voix FR/EN, bibliothèques audio et raccourcis, Kokoro confirmé ou non.\n\n[NOTE 2026-11-17 10:53] 2026-11-17 - Lot d'essais voix genere dans scratch\\out via s0_29.py : feminine FR af_heart af_nicole af_bella af_nova sur fr-fr ; masculine EN am_michael am_fenrir am_onyx am_adam bm_george bm_fable ; masculine FR am_michael am_fenrir bm_george sur fr-fr. Verdict af_heart sur FR : possible mais accent americain attendu, la phonemisation espeak-ng reste le goulot. En attente d'ecoute humaine.\n\n[NOTE 2026-11-17 10:56] 2026-11-17 - DECISION voix finales : feminine en-us-af-heart, masculine en-us-am-adam. Les deux voix sont couplees a fr-fr ou en-us selon la langue du texte selectionne. Couplage interlingue valide a la generation et a l'ecoute humaine. Volet voix de la carte resolu."
+    },
+    {
+      "num": 30,
+      "title": "Prioriser le backlog du Sprint 1 sur résultats réels",
+      "status": "todo",
+      "prio": "P1",
+      "kind": "jalon",
+      "milestone": "M0",
+      "epic": "socle",
+      "size": "S",
+      "deps": [
+        "N-029"
+      ],
+      "note": "Si un risque majeur subsiste, le traiter avant toute fonctionnalité."
+    },
+    {
+      "num": 31,
+      "title": "Structurer les modules Rust",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "socle",
+      "size": "M",
+      "deps": [
+        "N-029"
+      ],
+      "note": "capture, shortcuts, text, language, tts, audio, state."
+    },
+    {
+      "num": 32,
+      "title": "Implémenter la machine d'états de lecture",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "socle",
+      "size": "M",
+      "deps": [
+        "N-031"
+      ],
+      "note": "inactif / capture / génération / lecture / pause / erreur, avec événements vers l'UI."
+    },
+    {
+      "num": 33,
+      "title": "Garantir l'instance unique et le démarrage résident",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "socle",
+      "size": "M",
+      "deps": [
+        "N-031"
+      ],
+      "note": "Pas de fenêtre principale au démarrage."
+    },
+    {
+      "num": 34,
+      "title": "Journaliser localement et centraliser les erreurs",
+      "status": "backlog",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "socle",
+      "size": "S",
+      "deps": [
+        "N-031"
+      ],
+      "note": "Aucune télémétrie distante."
+    },
+    {
+      "num": 35,
+      "title": "Nettoyer et normaliser le texte capturé",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "texte",
+      "size": "M",
+      "deps": [
+        "N-031"
+      ],
+      "note": "Espaces, sauts de ligne, URLs, symboles, nombres et abréviations de base."
+    },
+    {
+      "num": 36,
+      "title": "Détecter automatiquement le français et l'anglais",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "texte",
+      "size": "M",
+      "deps": [
+        "N-031"
+      ],
+      "note": "Indépendant du moteur TTS. Définir le comportement pour langue inconnue ou texte mixte."
+    },
+    {
+      "num": 37,
+      "title": "Segmenter le texte en production",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "texte",
+      "size": "M",
+      "deps": [
+        "N-010",
+        "N-035"
+      ],
+      "note": "Préparation de la file de segments."
+    },
+    {
+      "num": 38,
+      "title": "Tester le nettoyage, la segmentation et la détection de langue",
+      "status": "backlog",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "texte",
+      "size": "M",
+      "deps": [
+        "N-035",
+        "N-036",
+        "N-037"
+      ],
+      "note": "Tests unitaires ciblés (branches, parsing)."
+    },
+    {
+      "num": 39,
+      "title": "Intégrer Kokoro derrière TtsEngine",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "tts",
+      "size": "L",
+      "deps": [
+        "N-009",
+        "N-031"
+      ],
+      "note": "Chargement du modèle en tâche de fond."
+    },
+    {
+      "num": 40,
+      "title": "Précharger les segments et régler leur taille",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "tts",
+      "size": "M",
+      "deps": [
+        "N-039",
+        "N-024"
+      ],
+      "note": "Taille de segment ajustée aux benchmarks."
+    },
+    {
+      "num": 41,
+      "title": "Intégrer lecture, pause, reprise et arrêt à la machine d'états",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "audio",
+      "size": "M",
+      "deps": [
+        "N-032",
+        "N-039"
+      ],
+      "note": "Critères :\n- [ ] Pas de désynchronisation majeure"
+    },
+    {
+      "num": 42,
+      "title": "Gérer le périphérique audio par défaut",
+      "status": "backlog",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "audio",
+      "size": "S",
+      "deps": [
+        "N-041"
+      ],
+      "note": "Changement ou absence de périphérique."
+    },
+    {
+      "num": 43,
+      "title": "Durcir la capture presse-papiers",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "capture",
+      "size": "L",
+      "deps": [
+        "N-016"
+      ],
+      "note": "Formats, restauration garantie, tests d'erreur et d'interruption."
+    },
+    {
+      "num": 44,
+      "title": "Ajouter le repli UI Automation si retenu au Sprint 0",
+      "status": "backlog",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "capture",
+      "size": "M",
+      "deps": [
+        "N-015"
+      ],
+      "note": "Conditionnel à la décision du S0."
+    },
+    {
+      "num": 45,
+      "title": "Brancher les raccourcis globaux lire / pause-reprise / arrêt",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "raccourcis",
+      "size": "M",
+      "deps": [
+        "N-018",
+        "N-032"
+      ],
+      "note": "Échec d'enregistrement signalé à l'utilisateur."
+    },
+    {
+      "num": 46,
+      "title": "Afficher des messages clairs quand la capture échoue",
+      "status": "backlog",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "capture",
+      "size": "S",
+      "deps": [
+        "N-043"
+      ],
+      "note": "Notification Windows quand la capture échoue (ex. « Cette application bloque la copie. Essayez de copier le texte manuellement. ») + pastille rouge sur l'icône."
+    },
+    {
+      "num": 47,
+      "title": "Créer l'icône de zone de notification et son menu",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "presence",
+      "size": "M",
+      "deps": [
+        "N-032"
+      ],
+      "note": "Icône = logo fourni (rond). Clic gauche : ouvre le panneau. Clic droit : menu court (lire, pause/reprise, arrêt, paramètres, démarrer avec Windows, quitter).\n\nCritères :\n- [ ] Icône visible dans la zone de notification\n- [ ] Clic gauche et clic droit fonctionnent"
+    },
+    {
+      "num": 48,
+      "title": "Créer le panneau ancré à l'icône de notification",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "presence",
+      "size": "L",
+      "deps": [
+        "N-032"
+      ],
+      "note": "UI retenue (maquette A) : panneau au-dessus de l'icône, comme Wi-Fi ou Volume. Contenu : état et segment courant, phrase en cours, progression par segments, pause/reprise, arrêt, vitesse, voix auto, rappel des raccourcis, paramètres, quitter.\nPas de mini-lecteur flottant (pastille B écartée).\n\nCritères :\n- [ ] S'ouvre au clic sur l'icône, se ferme au clic extérieur ou Échap\n- [ ] Ne prend pas le focus de l'application active à l'ouverture automatique éventuelle\n- [ ] Pause/reprise/arrêt fonctionnent depuis le panneau"
+    },
+    {
+      "num": 49,
+      "title": "Abouter le panneau (multi-écrans, DPI, barre en haut ou sur le côté)",
+      "status": "backlog",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "presence",
+      "size": "M",
+      "deps": [
+        "N-048"
+      ],
+      "note": "Ancrage correct près de l'icône quelle que soit la position de la barre ; thème clair/sombre ; fermeture propre."
+    },
+    {
+      "num": 50,
+      "title": "Implémenter les anneaux d'état de l'icône",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "presence",
+      "size": "M",
+      "deps": [
+        "N-047",
+        "N-032"
+      ],
+      "note": "Design retenu (maquette C) : prêt = aucun anneau ; génération = anneau bleu qui tourne ; lecture = anneau cyan qui pulse ; pause = anneau ambre fixe ; erreur = pastille rouge.\n\nCritères :\n- [ ] Les 5 états s'affichent sur l'icône\n- [ ] Animations désactivées si prefers-reduced-motion\n- [ ] Lisible à 16, 20 et 24 px"
+    },
+    {
+      "num": 51,
+      "title": "Créer la fenêtre de paramètres et la persistance locale",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "parametres",
+      "size": "M",
+      "deps": [
+        "N-047"
+      ],
+      "note": "Configuration locale uniquement."
+    },
+    {
+      "num": 52,
+      "title": "Rendre les raccourcis configurables et gérer les conflits",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "parametres",
+      "size": "M",
+      "deps": [
+        "N-051",
+        "N-045"
+      ],
+      "note": ""
+    },
+    {
+      "num": 53,
+      "title": "Choisir voix, vitesse et volume",
+      "status": "backlog",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "parametres",
+      "size": "S",
+      "deps": [
+        "N-051"
+      ],
+      "note": ""
+    },
+    {
+      "num": 54,
+      "title": "Proposer le lancement au démarrage de Windows",
+      "status": "backlog",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "parametres",
+      "size": "S",
+      "deps": [
+        "N-051"
+      ],
+      "note": "Activable et désactivable."
+    },
+    {
+      "num": 55,
+      "title": "Décider de la forme finale de la signature sonore",
+      "status": "backlog",
+      "prio": "P3",
+      "kind": "decision",
+      "milestone": "M2",
+      "epic": "identite",
+      "size": "S",
+      "deps": [],
+      "note": "Voix aiguë, claire, enjouée, 0,8 à 1,5 s, volume modéré.\n\nRisque : ne reproduire aucun élément protégé d'une franchise existante."
+    },
+    {
+      "num": 56,
+      "title": "Créer l'enregistrement original de démarrage",
+      "status": "backlog",
+      "prio": "P3",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "identite",
+      "size": "M",
+      "deps": [
+        "N-055"
+      ],
+      "note": "Enregistrement original, aucun extrait ni imitation d'un personnage existant."
+    },
+    {
+      "num": 57,
+      "title": "Jouer la signature une seule fois quand raccourcis et capture sont prêts",
+      "status": "backlog",
+      "prio": "P3",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "identite",
+      "size": "S",
+      "deps": [
+        "N-056",
+        "N-045"
+      ],
+      "note": "Ne pas laisser croire que le TTS est prêt si le modèle charge encore."
+    },
+    {
+      "num": 58,
+      "title": "Ajouter les réglages de désactivation et de volume du son",
+      "status": "backlog",
+      "prio": "P3",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "identite",
+      "size": "S",
+      "deps": [
+        "N-057",
+        "N-051"
+      ],
+      "note": ""
+    },
+    {
+      "num": 59,
+      "title": "Gérer localement les modèles (emplacement, intégrité, absence)",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "distribution",
+      "size": "M",
+      "deps": [
+        "N-039"
+      ],
+      "note": "Message clair si le modèle est absent."
+    },
+    {
+      "num": 60,
+      "title": "Créer l'installeur Windows",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "distribution",
+      "size": "M",
+      "deps": [
+        "N-026"
+      ],
+      "note": "MSIX ou NSIS ; bundle ou téléchargement selon l'audit de licences."
+    },
+    {
+      "num": 61,
+      "title": "Fournir le fichier de mentions légales tierces",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "licences",
+      "size": "S",
+      "deps": [
+        "N-026"
+      ],
+      "note": ""
+    },
+    {
+      "num": 62,
+      "title": "Mettre en place les tests (capture, file audio, machine d'états) et la CI",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "qualite",
+      "size": "M",
+      "deps": [
+        "N-043",
+        "N-041"
+      ],
+      "note": "Build, tests, lint."
+    },
+    {
+      "num": 63,
+      "title": "Décharger le modèle après inactivité",
+      "status": "backlog",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "qualite",
+      "size": "S",
+      "deps": [
+        "N-039"
+      ],
+      "note": "Si la RAM occupée est significative."
+    },
+    {
+      "num": 64,
+      "title": "Documenter les limites connues de compatibilité",
+      "status": "backlog",
+      "prio": "P2",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "qualite",
+      "size": "S",
+      "deps": [
+        "N-016"
+      ],
+      "note": "Applications et contrôles non pris en charge."
+    },
+    {
+      "num": 65,
+      "title": "Parcourir l'accessibilité (clavier, contrastes, lecteurs d'écran)",
+      "status": "backlog",
+      "prio": "P3",
+      "kind": "tache",
+      "milestone": "M2",
+      "epic": "presence",
+      "size": "M",
+      "deps": [
+        "N-048"
+      ],
+      "note": ""
+    },
+    {
+      "num": 66,
+      "title": "Installer et mettre à jour les modèles automatiquement",
+      "status": "backlog",
+      "prio": "P3",
+      "kind": "tache",
+      "milestone": "M3",
+      "epic": "distribution",
+      "size": "L",
+      "deps": [
+        "N-059"
+      ],
+      "note": "Hors périmètre du Sprint 0."
+    },
+    {
+      "num": 67,
+      "title": "Ajouter un moteur alternatif (Piper ou MeloTTS)",
+      "status": "backlog",
+      "prio": "P3",
+      "kind": "tache",
+      "milestone": "M3",
+      "epic": "tts",
+      "size": "L",
+      "deps": [
+        "N-009"
+      ],
+      "note": "Si Kokoro échoue sur latence, CPU ou licence ; évaluation S0-02e à rouvrir."
+    },
+    {
+      "num": 68,
+      "title": "Retenir l'interface : panneau A + anneaux C, sans pastille B",
+      "status": "done",
+      "prio": "P1",
+      "kind": "decision",
+      "milestone": "M0",
+      "epic": "presence",
+      "size": "S",
+      "deps": [],
+      "note": "Décision du 2026-11-16. Panneau ancré à l'icône de notification (A), anneaux d'état sur l'icône (C). La pastille flottante B est écartée : le mini-lecteur flottant de la vision est remplacé par le panneau.\nMaquettes : https://claude.ai/artifact/P6BmcvgqiwcTeGstPcoTBr"
+    },
+    {
+      "num": 69,
+      "title": "Produire l'icône multi-tailles à partir du logo (.ico) et valider sa lisibilité",
+      "status": "backlog",
+      "prio": "P1",
+      "kind": "tache",
+      "milestone": "M1",
+      "epic": "presence",
+      "size": "S",
+      "deps": [],
+      "note": "Source : « navi icon.jfif » (2048×2048, à utiliser tel quel). Générer 16/20/24/32/48/256 px.\n\nCritères :\n- [ ] Rendu vérifié sur la vraie barre Windows 11, thèmes clair et sombre\n- [ ] Si illisible à 16-24 px : décider d'un recadrage sur le sujet pour l'icône seule\n\nRisque : détails perdus à petite taille."
+    }
+  ]
+}
+</script>
+
+<script>
+const STATUSES = [["backlog","Backlog"],["todo","À faire"],["doing","En cours"],["review","Revue"],["done","Terminé"]];
+const KIND_LABEL = { tache: "Tâche", decision: "Décision", spike: "Étude", jalon: "Jalon" };
+const PRIO_RANK = { P1: 0, P2: 1, P3: 2 };
+const DRAFT_KEY = "kanban-repo-draft";
+
+let plan = null;
+let cards = [];
+let brouillon = false;
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function msList() { return plan?.milestones || []; }
+function epicList() { return plan?.epics || []; }
+function msById(id) { return msList().find((m) => m.id === id); }
+function epicById(id) { return epicList().find((e) => e.id === id); }
+function msOrder(id) { const i = msList().findIndex((m) => m.id === id); return i < 0 ? 99 : i; }
+function isPost(c) { return msById(c.milestone)?.phase === "post"; }
+const CARD_PREFIX = "N-";
+function cardCode(c) { return CARD_PREFIX + String(c.num).padStart(3, "0"); }
+function parseDeps(s) { return String(s || "").split(",").map((x) => x.trim()).filter(Boolean); }
+function depsLabel(c) { return (c.deps || []).join(", "); }
+
+function notice(text, kind) {
+  const n = $("#notice");
+  if (!text) { n.hidden = true; return; }
+  n.innerHTML = esc(text) + (kind === "draft" ? ' <button class="btn" id="notice-export">Exporter maintenant</button>' : "");
+  n.className = "notice" + (kind === "err" ? " err" : kind === "ok" ? " ok" : "");
+  n.hidden = false;
+  if (kind === "draft") n.querySelector("#notice-export")?.addEventListener("click", exporterFichier);
+}
+
+const ui = { view: "board", ms: "all", epic: "all", kind: "all", q: "", post: false };
+
+function filtered() {
+  const q = ui.q.trim().toLowerCase();
+  return cards.filter((c) => {
+    if (!ui.post && ui.ms !== "POST" && isPost(c)) return false;
+    if (ui.ms !== "all" && c.milestone !== ui.ms) return false;
+    if (ui.epic !== "all" && c.epic !== ui.epic) return false;
+    if (ui.kind !== "all" && c.kind !== ui.kind) return false;
+    if (q && !(`${cardCode(c)} ${c.title} ${c.note || ""}`.toLowerCase().includes(q))) return false;
+    return true;
+  }).sort((a, b) => msOrder(a.milestone) - msOrder(b.milestone) || (PRIO_RANK[a.prio] ?? 3) - (PRIO_RANK[b.prio] ?? 3) || (a.num ?? 0) - (b.num ?? 0));
+}
+
+function progress(list) {
+  const done = list.filter((c) => c.status === "done").length;
+  return { done, total: list.length, pct: list.length ? Math.round((done / list.length) * 100) : 0 };
+}
+
+function renderStats() {
+  const v1 = cards.filter((c) => !isPost(c));
+  const p = progress(v1);
+  const doing = v1.filter((c) => c.status === "doing" || c.status === "review").length;
+  const decisions = v1.filter((c) => c.kind === "decision" && c.status !== "done").length;
+  const mvp = progress(v1.filter((c) => msById(c.milestone)?.phase === "MVP"));
+  $("#stats").innerHTML = [
+    [p.pct + " %", "v1.0 terminée"],
+    [mvp.pct + " %", "MVP terminé"],
+    [p.total, "Cartes v1.0"],
+    [doing, "En cours / revue"],
+    [decisions, "Décisions ouvertes"],
+  ].map(([b, s]) => `<div class="stat"><b>${b}</b><small>${s}</small></div>`).join("");
+}
+
+function renderTrack() {
+  $("#track").innerHTML = msList().map((m) => {
+    const p = progress(cards.filter((c) => c.milestone === m.id));
+    const post = m.phase === "post";
+    return `<button class="ms${post ? " post" : ""}" data-ms="${esc(m.id)}" aria-pressed="${ui.ms === m.id}">
+      <span class="code"><span>${esc(m.id)} · ${esc(m.sprint)}</span><span class="phase-tag ${m.phase === "MVP" ? "mvp" : ""}">${post ? "HORS V1" : esc(m.phase)}</span></span>
+      <span class="name">${esc(m.name)}</span>
+      <span class="bar"><i style="width:${p.pct}%"></i></span>
+      <span class="count">${p.done}/${p.total}</span>
+    </button>`;
+  }).join("");
+}
+
+function cardHtml(c) {
+  const ep = epicById(c.epic);
+  return `<article class="card${c.status === "done" ? " is-done" : ""}" data-id="${esc(c.num)}" tabindex="0" draggable="true">
+    <div class="row"><span class="cid">${cardCode(c)}</span><span class="pill ${esc(c.prio)}">${esc(c.prio)}</span><span class="pill">${esc(c.size || "S")}</span>${c.kind !== "tache" ? `<span class="kind ${esc(c.kind)}">${esc(KIND_LABEL[c.kind] || c.kind)}</span>` : ""}</div>
+    <h3>${esc(c.title)}</h3>
+    <div class="row"><span class="epic"><i style="background:${esc(ep?.color || "#888")}"></i>${esc(ep?.name || c.epic)}</span><span class="msref">${esc(c.milestone)}</span></div>
+    ${depsLabel(c) ? `<div class="deps">dépend de : ${esc(depsLabel(c))}</div>` : ""}
+  </article>`;
+}
+
+function renderBoard() {
+  const list = filtered();
+  $("#board").innerHTML = STATUSES.map(([k, label]) => {
+    const inLane = list.filter((c) => (c.status || "backlog") === k);
+    return `<section class="lane" data-status="${k}">
+      <div class="lane-head"><h2>${label}</h2><span class="n">${inLane.length}</span></div>
+      <div class="cards">${inLane.map(cardHtml).join("") || `<div class="empty-lane">Aucune carte</div>`}</div>
+    </section>`;
+  }).join("");
+}
+
+function renderRoadmap() {
+  let activeFound = false;
+  $("#roadmap").innerHTML = msList().map((m) => {
+    const list = cards.filter((c) => c.milestone === m.id);
+    const p = progress(list);
+    const post = m.phase === "post";
+    let st = "next", stLabel = "À venir";
+    if (post) { stLabel = "Hors périmètre v1.0"; }
+    else if (p.total && p.done === p.total) { st = "done"; stLabel = "Terminé"; }
+    else if (!activeFound) { st = "active"; stLabel = "Milestone courante"; activeFound = true; }
+    const byEpic = {};
+    list.forEach((c) => { byEpic[c.epic] = byEpic[c.epic] || []; byEpic[c.epic].push(c); });
+    const chips = Object.keys(byEpic).sort((a, b) => byEpic[b].length - byEpic[a].length).map((eid) => {
+      const ep = epicById(eid); const pe = progress(byEpic[eid]);
+      return `<button data-goto-ms="${esc(m.id)}" data-goto-epic="${esc(eid)}"><span class="epic"><i style="background:${esc(ep?.color || "#888")}"></i>${esc(ep?.name || eid)} · ${pe.done}/${pe.total}</span></button>`;
+    }).join("");
+    return `<article class="rm${post ? " post" : ""}">
+      <div><div class="code">${esc(m.id)} · ${esc(m.sprint)}${post ? " · hors v1.0" : ""}</div><h3>${esc(m.name)}</h3></div>
+      <div><p>${esc(m.goal)}</p><div class="crit"><b>Validation :</b> ${esc(m.criterion)}</div><div class="chips">${chips}</div></div>
+      <div class="side"><span class="state ${st}">${stLabel}</span><span class="bar"><i style="width:${p.pct}%"></i></span><span class="count">${p.done}/${p.total} cartes · ${p.pct} %</span></div>
+    </article>`;
+  }).join("");
+}
+
+function renderMatrix() {
+  const ms = msList();
+  const head = `<thead><tr><th class="ep">Epic</th>${ms.map((m) => `<th${m.phase === "post" ? ' class="post-col"' : ""}>${esc(m.id)}</th>`).join("")}<th>v1.0</th></tr></thead>`;
+  const rows = epicList().map((e) => {
+    const mine = cards.filter((c) => c.epic === e.id);
+    if (!mine.length) return "";
+    const v1 = progress(mine.filter((c) => !isPost(c)));
+    const cells = ms.map((m) => {
+      const p = progress(mine.filter((c) => c.milestone === m.id));
+      const cls = [m.phase === "post" ? "post-col" : "", p.total && p.done === p.total ? "all-done" : ""].join(" ").trim();
+      return `<td class="${cls}">${p.total ? `${p.done}/${p.total}` : ""}</td>`;
+    }).join("");
+    return `<tr><th class="ep"><span class="epic"><i style="background:${esc(e.color)}"></i>${esc(e.name)}</span></th>${cells}<td class="tot">${v1.total ? `${v1.done}/${v1.total}` : "—"}</td></tr>`;
+  }).join("");
+  $("#matrix").innerHTML = head + `<tbody>${rows}</tbody>`;
+}
+
+function renderFilters() {
+  const sel = $("#f-epic-filter");
+  sel.innerHTML = `<option value="all">Tous les epics</option>` + epicList().map((e) => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join("");
+  sel.value = epicById(ui.epic) ? ui.epic : "all";
+  $("#f-kind-filter").value = ui.kind;
+  $("#f-search").value = ui.q;
+  $("#f-post").checked = ui.post;
+}
+
+function render() {
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === ui.view)));
+  $("#view-board").hidden = ui.view !== "board";
+  $("#view-roadmap").hidden = ui.view !== "roadmap";
+  $("#view-epics").hidden = ui.view !== "epics";
+  $("#filters").style.visibility = ui.view === "board" ? "visible" : "hidden";
+  if (!plan) { notice("Plan absent : les blocs JSON du fichier sont corrompus. Restituez kanban.html depuis Git.", "err"); return; }
+  renderStats();
+  renderTrack();
+  renderFilters();
+  if (ui.view === "board") renderBoard();
+  if (ui.view === "roadmap") renderRoadmap();
+  if (ui.view === "epics") renderMatrix();
+}
+
+function marquerBrouillon() {
+  if (brouillon) return;
+  brouillon = true;
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ cards, savedAt: Date.now() })); } catch (e) {}
+  notice("Modifications non exportées : elles sont gardées dans ce navigateur. Exportez le fichier et commettez-le pour les versionner.", "draft");
+}
+
+/* Sheet */
+let editing = null;
+function openSheet(num) {
+  const c = num != null ? cards.find((x) => x.num === num) : null;
+  const base = c || { title: "", note: "", status: "backlog", prio: "P2", kind: "tache", milestone: ui.ms !== "all" ? ui.ms : (msList()[0]?.id || ""), epic: ui.epic !== "all" ? ui.epic : (epicList()[0]?.id || ""), size: "S", deps: [] };
+  editing = c ? c.num : null;
+  const fill = (el, items) => { el.innerHTML = items.map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join(""); };
+  fill($("#e-status"), STATUSES);
+  fill($("#e-ms"), msList().map((m) => [m.id, `${m.id} · ${m.name}`]));
+  fill($("#e-epic"), epicList().map((e) => [e.id, e.name]));
+  $("#sheet-id").textContent = c ? cardCode(c) : "Nouvelle carte";
+  $("#sheet-title").textContent = c ? "Modifier la carte" : "Créer une carte";
+  $("#e-title").value = base.title || "";
+  $("#e-note").value = base.note || "";
+  $("#e-status").value = base.status || "backlog";
+  $("#e-prio").value = base.prio || "P2";
+  $("#e-ms").value = base.milestone;
+  $("#e-epic").value = base.epic;
+  $("#e-kind").value = base.kind || "tache";
+  $("#e-size").value = base.size || "S";
+  $("#e-deps").value = depsLabel(base);
+  $("#e-delete").hidden = !c;
+  $("#e-delete").classList.remove("armed");
+  $("#e-delete").textContent = "Supprimer";
+  $("#scrim").hidden = false;
+  $("#e-title").focus();
+}
+function closeSheet() { $("#scrim").hidden = true; editing = null; }
+
+$("#sheet").addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  const data = {
+    title: $("#e-title").value.trim(), note: $("#e-note").value.trim(), status: $("#e-status").value,
+    prio: $("#e-prio").value, kind: $("#e-kind").value, milestone: $("#e-ms").value,
+    epic: $("#e-epic").value, size: $("#e-size").value, deps: parseDeps($("#e-deps").value),
+  };
+  if (!data.title) { $("#e-title").focus(); return; }
+  if (editing != null) {
+    const c = cards.find((x) => x.num === editing);
+    Object.assign(c, data);
+  } else {
+    const num = Math.max(0, ...cards.map((c) => c.num || 0)) + 1;
+    cards.push({ num, ...data });
+  }
+  closeSheet();
+  marquerBrouillon();
+  render();
+});
+$("#e-cancel").addEventListener("click", closeSheet);
+$("#scrim").addEventListener("click", (e) => { if (e.target === e.currentTarget) closeSheet(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#scrim").hidden) closeSheet(); });
+$("#e-delete").addEventListener("click", (e) => {
+  const b = e.currentTarget;
+  if (editing == null) return;
+  if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirmer la suppression"; return; }
+  cards = cards.filter((c) => c.num !== editing);
+  closeSheet();
+  marquerBrouillon();
+  render();
+});
+
+/* Interactions */
+document.querySelector(".tabs").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-view]"); if (!b) return;
+  ui.view = b.dataset.view; render();
+});
+$("#track").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-ms]"); if (!b) return;
+  ui.ms = ui.ms === b.dataset.ms ? "all" : b.dataset.ms;
+  if (ui.view !== "board") ui.view = "board";
+  render();
+});
+document.addEventListener("click", (e) => {
+  const g = e.target.closest("[data-goto-ms]"); if (!g) return;
+  ui.ms = g.dataset.gotoMs; ui.epic = g.dataset.gotoEpic; ui.kind = "all"; ui.q = ""; ui.view = "board";
+  render(); window.scrollTo({ top: 0 });
+});
+$("#f-epic-filter").addEventListener("change", (e) => { ui.epic = e.target.value; render(); });
+$("#f-kind-filter").addEventListener("change", (e) => { ui.kind = e.target.value; render(); });
+$("#f-post").addEventListener("change", (e) => { ui.post = e.target.checked; render(); });
+let qTimer;
+$("#f-search").addEventListener("input", (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => { ui.q = e.target.value; renderBoard(); }, 150); });
+$("#add-card").addEventListener("click", () => openSheet(null));
+
+const board = $("#board");
+board.addEventListener("click", (e) => { const c = e.target.closest(".card"); if (c) openSheet(+c.dataset.id); });
+board.addEventListener("keydown", (e) => {
+  const c = e.target.closest(".card"); if (!c) return;
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSheet(+c.dataset.id); }
+  if (e.altKey && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+    const card = cards.find((x) => x.num === +c.dataset.id); if (!card) return;
+    const cur = STATUSES.findIndex(([k]) => k === (card.status || "backlog"));
+    const next = STATUSES[cur + (e.key === "ArrowRight" ? 1 : -1)];
+    if (next) { card.status = next[0]; marquerBrouillon(); render(); requestAnimationFrame(() => document.querySelector(`.card[data-id="${CSS.escape(card.num)}"]`)?.focus()); }
+  }
+});
+board.addEventListener("dragstart", (e) => {
+  const c = e.target.closest(".card"); if (!c) return;
+  e.dataTransfer.setData("text/plain", c.dataset.id); e.dataTransfer.effectAllowed = "move"; c.classList.add("dragging");
+});
+board.addEventListener("dragend", (e) => { e.target.closest(".card")?.classList.remove("dragging"); board.querySelectorAll(".lane.drop").forEach((l) => l.classList.remove("drop")); });
+board.addEventListener("dragover", (e) => {
+  const lane = e.target.closest(".lane"); if (!lane) return;
+  e.preventDefault(); board.querySelectorAll(".lane.drop").forEach((l) => l !== lane && l.classList.remove("drop")); lane.classList.add("drop");
+});
+board.addEventListener("dragleave", (e) => { const lane = e.target.closest(".lane"); if (lane && !lane.contains(e.relatedTarget)) lane.classList.remove("drop"); });
+board.addEventListener("drop", (e) => {
+  const lane = e.target.closest(".lane"); if (!lane) return;
+  e.preventDefault(); lane.classList.remove("drop");
+  const card = cards.find((x) => x.num === +e.dataTransfer.getData("text/plain"));
+  if (card && card.status !== lane.dataset.status) { card.status = lane.dataset.status; marquerBrouillon(); render(); }
+});
+
+/* Export : régénère kanban.html avec les données actuelles dans les blocs JSON */
+function jsonSafe(obj) { return JSON.stringify(obj, null, 2).replace(/<\//g, "<\\/"); }
+function exporterFichier() {
+  const clone = document.documentElement.cloneNode(true);
+  clone.querySelector("#bp-plan").textContent = jsonSafe(plan);
+  clone.querySelector("#bp-cards").textContent = jsonSafe({ cards });
+  // Vider le contenu rendu : il est régénéré au chargement par render().
+  ["#stats", "#track", "#board", "#roadmap", "#matrix", "#f-epic-filter", "#notice"].forEach((sel) => {
+    const el = clone.querySelector(sel); if (el) el.innerHTML = "";
+  });
+  clone.querySelectorAll("[aria-pressed]").forEach((el) => el.setAttribute("aria-pressed", "false"));
+  const tabs = clone.querySelectorAll(".tabs button");
+  tabs.forEach((el, i) => el.setAttribute("aria-selected", String(i === 0)));
+  const cloneView = clone.querySelectorAll("#view-board, #view-roadmap, #view-epics");
+  cloneView.forEach((el, i) => { el.hidden = i !== 0; });
+  clone.querySelector("#scrim").hidden = true;
+  const noticeEl = clone.querySelector("#notice"); if (noticeEl) noticeEl.hidden = true;
+  const search = clone.querySelector("#f-search"); if (search) search.value = "";
+  const post = clone.querySelector("#f-post"); if (post) post.checked = false;
+  const html = "<!doctype html>\n" + clone.outerHTML;
+  const blob = new Blob([html], { type: "text/html" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "kanban.html";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+  brouillon = false;
+  notice("kanban.html téléchargé : remplacez le fichier du dépôt par celui-ci, puis commitez (les modifications sont désormais dans le fichier).", "ok");
+}
+$("#export-btn").addEventListener("click", exporterFichier);
+
+/* Chargement : le fichier est la source de vérité, le brouillon du navigateur s'applique au-dessus. */
+(async () => {
+  try {
+    plan = JSON.parse(document.getElementById("bp-plan").textContent);
+    cards = (JSON.parse(document.getElementById("bp-cards").textContent).cards) || [];
+  } catch (e) {
+    notice("JSON du fichier illisible : " + e.message, "err");
+    return;
+  }
+  try {
+    const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+    if (draft && Array.isArray(draft.cards) && draft.cards.length) {
+      cards = draft.cards;
+      brouillon = true;
+      notice("Brouillon du navigateur restauré (" + new Date(draft.savedAt).toLocaleString() + ") : pensez à exporter et committer.", "draft");
+    }
+  } catch (e) {}
+  render();
+})();
+</script>
+
+</body>
+</html>
