@@ -435,7 +435,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 5,
       "title": "Générer un échantillon FR et un échantillon EN (S0-01)",
-      "status": "review",
+      "status": "done",
       "prio": "P1",
       "kind": "spike",
       "milestone": "M0",
@@ -444,12 +444,12 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-004"
       ],
-      "note": "Comparer 2-3 voix par langue.\n\nCritères :\n- [ ] 1 phrase FR + 1 phrase EN synthétisées localement, qualité jugée acceptable\n\nGénérés (scratch/out/*.wav) : fr-fr ff_siwis, en-us af_heart, en-gb bf_emma. CPU int8 : RTF 0,58-0,63 (hors phase d'échauffement, non benchmarké). À écouter pour juger la qualité, puis passer en Terminé. Note : le code langue espeak est « fr-fr » (pas « fr-FR »).\n\n[NOTE 2026-11-17 10:50] AUDIT VOIX 2026-11-17 - verdict humain : en-us-af-heart retenue, la seule convaincante. Autres voix pas assez naturelles. Suite : chercher voix masculine FR et EN plus voix feminine FR convaincante, tester af_heart sur FR. Travail suivi sur carte 29.\n\n[NOTE 2026-11-17 10:56] 2026-11-17 - verdict final humain : af_heart feminine et am_adam masculine retenues, utilisables sur fr-fr et en-us. Preuves : scratch\\out, notes carte 29."
+      "note": "Comparer 2-3 voix par langue.\n\nCritères :\n- [ ] 1 phrase FR + 1 phrase EN synthétisées localement, qualité jugée acceptable\n\nGénérés (scratch/out/*.wav) : fr-fr ff_siwis, en-us af_heart, en-gb bf_emma. CPU int8 : RTF 0,58-0,63 (hors phase d'échauffement, non benchmarké). À écouter pour juger la qualité, puis passer en Terminé. Note : le code langue espeak est « fr-fr » (pas « fr-FR »).\n\n[NOTE 2026-11-17 10:50] AUDIT VOIX 2026-11-17 - verdict humain : en-us-af-heart retenue, la seule convaincante. Autres voix pas assez naturelles. Suite : chercher voix masculine FR et EN plus voix feminine FR convaincante, tester af_heart sur FR. Travail suivi sur carte 29.\n\n[NOTE 2026-11-17 10:56] 2026-11-17 - verdict final humain : af_heart feminine et am_adam masculine retenues, utilisables sur fr-fr et en-us. Preuves : scratch\\out, notes carte 29.\n\n[RESOLUTION 2026-11-17] [RESOLUTION 2026-11-17] Echantillons FR EN generes et audit humain rendu : en-us-af-heart retenue feminine, am_adam masculine, couplage fr-fr valide. Preuves : notes cartes 5 et 29, fichiers scratch\\out, verdict licence trace dans docs\\licences.md fusionne via PR 2, historique git du depot salocinski slash Navi."
     },
     {
       "num": 6,
       "title": "Charger le modèle via ONNX Runtime depuis Rust, CPU (S0-02)",
-      "status": "todo",
+      "status": "done",
       "prio": "P1",
       "kind": "spike",
       "milestone": "M0",
@@ -458,7 +458,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-004"
       ],
-      "note": "Chaîne exacte compatible avec le futur cœur Rust (crate ort ou équivalent).\n\nCritères :\n- [ ] Inférence CPU fonctionnelle depuis Rust\n\nRisque : opérateurs ONNX incompatibles."
+      "note": "Chaîne exacte compatible avec le futur cœur Rust (crate ort ou équivalent).\n\nCritères :\n- [ ] Inférence CPU fonctionnelle depuis Rust\n\nRisque : opérateurs ONNX incompatibles.\n\n[NOTE 2026-11-17 12:54] 2026-11-17 - Critere atteint : inference CPU Kokoro-82M int8 fonctionnelle depuis Rust via ort 2.0.0-rc.15. RTF 0.38 FR et EN contre 0.52-0.56 en Python, chargement 1.29 s, WAV 24 kHz comparables aux references. Risque operateurs ONNX incompatibles leve. Prototype scratch\\s0_02 non suivi, rapport docs\\s0-02.md, PR 3 en attente de fusion.\n\n[RESOLUTION 2026-11-17] [RESOLUTION 2026-11-17] Inference CPU Kokoro-82M int8 fonctionnelle depuis Rust via ort 2.0.0-rc.15 : RTF 0.38 FR et EN, chargement 1.29 s, WAV 24 kHz comparables aux references Python. Risque operateurs ONNX incompatibles leve. Preuves : docs\\s0-02.md fusionne via PR 3, prototype scratch\\s0_02, notes de la carte."
     },
     {
       "num": 7,
@@ -713,7 +713,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 25,
       "title": "Auditer les licences moteur, poids, voix et dépendances (S0-08)",
-      "status": "doing",
+      "status": "done",
       "prio": "P1",
       "kind": "spike",
       "milestone": "M0",
@@ -722,7 +722,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-004"
       ],
-      "note": "Audit séparé : moteur, poids, voix, phonémiseur, ONNX Runtime, crates Rust, assets.\n\nCritères :\n- [ ] Tableau de licences par artefact\n\nPremière passe : docs/licences.md (non concluante). Point bloquant : espeak-ng est GPL-3+ (phonémisation FR/EN de kokoro-onnx). À trancher : GPL, binaire séparé ou phonémiseur permissif. Licence SIWIS (CC BY) à lire.\n\n[NOTE 2026-11-17 11:07] 2026-11-17 - Le repo distant salocinski slash Navi porte deja un LICENSE Apache-2.0 pose par l'humain. Consequence : espeak-ng GPL-3+ ne peut pas etre lie ou embarque comme bibliotheque dans une appli Apache-2.0. Pour conserver Apache, la voie retenue a valider est espeak-ng en processus separe, cote-a-cote, type sidecar Tauri, avec son texte de licence et l'offre du code source dans les mentions. La recommandation GPL-3.0 de la carte 26 est abandonnee si ce choix Apache est confirme."
+      "note": "Audit séparé : moteur, poids, voix, phonémiseur, ONNX Runtime, crates Rust, assets.\n\nCritères :\n- [ ] Tableau de licences par artefact\n\nPremière passe : docs/licences.md (non concluante). Point bloquant : espeak-ng est GPL-3+ (phonémisation FR/EN de kokoro-onnx). À trancher : GPL, binaire séparé ou phonémiseur permissif. Licence SIWIS (CC BY) à lire.\n\n[NOTE 2026-11-17 11:07] 2026-11-17 - Le repo distant salocinski slash Navi porte deja un LICENSE Apache-2.0 pose par l'humain. Consequence : espeak-ng GPL-3+ ne peut pas etre lie ou embarque comme bibliotheque dans une appli Apache-2.0. Pour conserver Apache, la voie retenue a valider est espeak-ng en processus separe, cote-a-cote, type sidecar Tauri, avec son texte de licence et l'offre du code source dans les mentions. La recommandation GPL-3.0 de la carte 26 est abandonnee si ce choix Apache est confirme.\n\n[NOTE 2026-11-17 12:49] 2026-11-17 - passe 2 fusionnee via PR 2. docs\\licences.md complet : licences brutes verifiees, espeak-ng embarquable sous GPL-3.0, ff_siwis hors distribution, am_adam note F+ en amont trace avec alternatives en secours.\n\n[RESOLUTION 2026-11-17] [RESOLUTION 2026-11-17] Audit de licences passe 2 : tableau complet dans docs\\licences.md, licences brutes verifiees pour chaque artefact. Verdict GPL-3.0 rendu compatible avec toute la chaine, espeak-ng embarquable, ff_siwis ecartee. Restant : cargo about aux cartes 60 et 61. Preuves : PR 2 fusionnee, notes cartes 25 et 26."
     },
     {
       "num": 26,
