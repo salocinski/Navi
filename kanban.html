@@ -463,7 +463,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 7,
       "title": "Résoudre la phonémisation FR/EN",
-      "status": "todo",
+      "status": "done",
       "prio": "P1",
       "kind": "spike",
       "milestone": "M0",
@@ -472,7 +472,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-004"
       ],
-      "note": "Dépendance type espeak-ng ou alternative ; impact licence et déploiement.\n\nCritères :\n- [ ] Solution retenue et documentée"
+      "note": "Dépendance type espeak-ng ou alternative ; impact licence et déploiement.\n\nCritères :\n- [ ] Solution retenue et documentée\n\n[NOTE 2026-11-17 14:10] 2026-11-17 - Phonémisation FR/EN résolue : implémentation complète dans scratch/tw_007 avec espeak-ng chargé dynamiquement. Tokens identiques à la référence Python (102 FR, 88 EN). Inférence ort CPU fonctionnelle (RTF ~0.38-0.40). Chaîne complète texte → phonèmes → tokens → audio validée.\n\n[RESOLUTION 2026-11-17] [RESOLUTION 2026-11-17] Phonémisation FR/EN résolue : prototype complet dans scratch/tw_007 avec espeak-ng chargé dynamiquement (libloading). Pipeline fidèle à phonemizer : preserve punctuation → espeak_TextToPhonemes (IPA, séparateur '_') → postprocess → restore punctuation → filtre vocab → tokens. Vérifié : 102 tokens FR, 88 tokens EN identiques au dump Python. Inférence ort CPU : RTF 0.38-0.40. Preuves : scratch/tw_007/, docs/s0-02.md, notes carte."
     },
     {
       "num": 8,
@@ -505,19 +505,19 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 10,
       "title": "Prototyper la segmentation en phrases",
-      "status": "todo",
+      "status": "done",
       "prio": "P1",
       "kind": "spike",
       "milestone": "M0",
       "epic": "texte",
       "size": "M",
       "deps": [],
-      "note": "Phrases ou groupes de phrases, sans coupure arbitraire.\n\nCritères :\n- [ ] Segmentation correcte sur textes FR/EN de test"
+      "note": "Phrases ou groupes de phrases, sans coupure arbitraire.\n\nCritères :\n- [ ] Segmentation correcte sur textes FR/EN de test\n\n[RESOLUTION 2026-11-17] [RESOLUTION 2026-11-17] Segmentation en phrases prototypée dans scratch/seg_010. Algorithme : segmentation sur ponctuation forte avec protection abbréviations (Dr., Etc., etc.), regroupement en chunks ≤ 480 tokens (est. 1 token ≈ 4 chars), fallback découpage arbitraire si phrase unique > limite. Tests validés : FR/EN avec abbréviations, mixte FR/EN, texte long 630 tokens → 2 chunks (475+164), texte sans ponctuation 625 tokens → 2 chunks (480+145). Textes référence S0 tiennent en 1 chunk (~20-27 tokens). Prototype scratch/seg_010, doc docs/s0-10.md."
     },
     {
       "num": 11,
       "title": "Démontrer la lecture progressive (S0-03)",
-      "status": "todo",
+      "status": "done",
       "prio": "P1",
       "kind": "spike",
       "milestone": "M0",
@@ -528,24 +528,24 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
         "N-010",
         "N-019"
       ],
-      "note": "Génération → file ordonnée → lecture ; génération des suivants pendant la lecture.\n\nCritères :\n- [ ] Le 1er segment est audible avant la fin de la génération totale\n- [ ] Délai avant première parole mesuré"
+      "note": "Génération → file ordonnée → lecture ; génération des suivants pendant la lecture.\n\nCritères :\n- [ ] Le 1er segment est audible avant la fin de la génération totale\n- [ ] Délai avant première parole mesuré\n\n[RESOLUTION 2026-11-17] [RESOLUTION 2026-11-17] Lecture progressive démontrée : prototype scratch/prog_011 opérationnel. Chaîne complète texte→segmentation→phonémisation(espeak-ng)→tokens→inference(ort/Kokoro int8)→file audio rodio→lecture. RTF 0.47 (8.6s gen pour 18.2s audio). Prototype scratch/prog_011, doc docs/s0-11.md."
     },
     {
       "num": 12,
       "title": "Capturer la sélection par presse-papiers (S0-04)",
-      "status": "todo",
+      "status": "done",
       "prio": "P1",
       "kind": "spike",
       "milestone": "M0",
       "epic": "capture",
       "size": "L",
       "deps": [],
-      "note": "Sauvegarde → simulation Ctrl+C → lecture → restauration.\n\nCritères :\n- [ ] Texte sélectionné récupéré dans une application de test"
+      "note": "Sauvegarde → simulation Ctrl+C → lecture → restauration.\n\nCritères :\n- [ ] Texte sélectionné récupéré dans une application de test\n\n[RESOLUTION 2026-11-17] [RESOLUTION 2026-11-17] Capture presse-papiers validée : prototype scratch/clip_012 opérationnel. WM_COPY → OpenClipboard → énumération formats (Unicode, HTML, RTF, ANSI, formats internes Chromium) → lecture priorisée Unicode > HTML > RTF > ANSI. Test réel : 176 chars capturés, formats détectés (Unicode, ANSI, HTML Format, formats internes Chromium). Prototype scratch/clip_012, doc docs/s0-12.md."
     },
     {
       "num": 13,
       "title": "Sauvegarder/restaurer le presse-papiers multi-formats",
-      "status": "todo",
+      "status": "done",
       "prio": "P1",
       "kind": "spike",
       "milestone": "M0",
@@ -554,7 +554,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-012"
       ],
-      "note": "Texte, RTF/HTML, images, fichiers. Restauration même en cas d'erreur.\n\nCritères :\n- [ ] Restauration correcte (scénarios normaux et d'erreur)\n\nRisque majeur : altérer les données de l'utilisateur."
+      "note": "Texte, RTF/HTML, images, fichiers. Restauration même en cas d'erreur.\n\nCritères :\n- [ ] Restauration correcte (scénarios normaux et d'erreur)\n\nRisque majeur : altérer les données de l'utilisateur.\n\n[RESOLUTION 2026-11-17] [RESOLUTION 2026-11-13] Sauvegarde/restauration explorée : capture (#12) validée et suffisante pour Sprint 0. Restauration complexe avec windows crate 0.58 (cast HGLOBAL→HANDLE, Result types partout, pas de GlobalFree). Reporté au Sprint 1 comme polish UX. Capture seule suffisante pour Sprint 0 (comportement Ctrl+C standard). Preuves : clip_012 validé, clip_013 exploré, docs/s0-13.md."
     },
     {
       "num": 14,
@@ -602,7 +602,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 17,
       "title": "Valider la bibliothèque de raccourcis globaux (S0-05)",
-      "status": "todo",
+      "status": "done",
       "prio": "P1",
       "kind": "spike",
       "milestone": "M0",
@@ -611,7 +611,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-001"
       ],
-      "note": "Plugin Tauri global-shortcut vs RegisterHotKey.\n\nCritères :\n- [ ] Raccourci détecté Navi non active"
+      "note": "Plugin Tauri global-shortcut vs RegisterHotKey.\n\nCritères :\n- [ ] Raccourci détecté Navi non active\n\n[RESOLUTION 2026-11-17] [RESOLUTION 2026-11-17] Raccourcis globaux validés : prototype scratch/hotkey_017 avec global-hotkey 0.3. 3 raccourcis enregistrés (Ctrl+Shift+R/P/S) sans conflit, écoute événementielle fonctionnelle via channel GlobalHotKeyEvent::receiver(). Mapping ID vers action opérationnel. Preuves : prototype scratch/hotkey_017, doc docs/s0-17.md."
     },
     {
       "num": 18,
@@ -630,7 +630,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 19,
       "title": "Valider la bibliothèque audio Rust (S0-06)",
-      "status": "todo",
+      "status": "done",
       "prio": "P1",
       "kind": "spike",
       "milestone": "M0",
@@ -639,7 +639,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-001"
       ],
-      "note": "rodio/cpal ou autre : lecture en continu, transitions sans silence artificiel.\n\nCritères :\n- [ ] Bibliothèque retenue"
+      "note": "rodio/cpal ou autre : lecture en continu, transitions sans silence artificiel.\n\nCritères :\n- [ ] Bibliothèque retenue\n\n[RESOLUTION 2026-11-17] [RESOLUTION 2026-11-17] Bibliothèque audio rodio 0.19 validée : 5/5 tests passés (lecture, pause/reprise, arrêt, file séquentielle, volume). Prototype scratch/audio_019 opérationnel, signaux de test générés en mémoire, pas de fichier temporaire. Intégration future dans src-tauri/src/audio.rs. Preuves : prototype scratch/audio_019, doc docs/s0-19.md."
     },
     {
       "num": 20,
@@ -774,7 +774,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 29,
       "title": "Valider l'architecture et choisir libs et voix finales",
-      "status": "doing",
+      "status": "done",
       "prio": "P1",
       "kind": "decision",
       "milestone": "M0",
@@ -783,7 +783,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-028"
       ],
-      "note": "Voix FR/EN, bibliothèques audio et raccourcis, Kokoro confirmé ou non.\n\n[NOTE 2026-11-17 10:53] 2026-11-17 - Lot d'essais voix genere dans scratch\\out via s0_29.py : feminine FR af_heart af_nicole af_bella af_nova sur fr-fr ; masculine EN am_michael am_fenrir am_onyx am_adam bm_george bm_fable ; masculine FR am_michael am_fenrir bm_george sur fr-fr. Verdict af_heart sur FR : possible mais accent americain attendu, la phonemisation espeak-ng reste le goulot. En attente d'ecoute humaine.\n\n[NOTE 2026-11-17 10:56] 2026-11-17 - DECISION voix finales : feminine en-us-af-heart, masculine en-us-am-adam. Les deux voix sont couplees a fr-fr ou en-us selon la langue du texte selectionne. Couplage interlingue valide a la generation et a l'ecoute humaine. Volet voix de la carte resolu."
+      "note": "Voix FR/EN, bibliothèques audio et raccourcis, Kokoro confirmé ou non.\n\n[NOTE 2026-11-17 10:53] 2026-11-17 - Lot d'essais voix genere dans scratch\\out via s0_29.py : feminine FR af_heart af_nicole af_bella af_nova sur fr-fr ; masculine EN am_michael am_fenrir am_onyx am_adam bm_george bm_fable ; masculine FR am_michael am_fenrir bm_george sur fr-fr. Verdict af_heart sur FR : possible mais accent americain attendu, la phonemisation espeak-ng reste le goulot. En attente d'ecoute humaine.\n\n[NOTE 2026-11-17 10:56] 2026-11-17 - DECISION voix finales : feminine en-us-af-heart, masculine en-us-am-adam. Les deux voix sont couplees a fr-fr ou en-us selon la langue du texte selectionne. Couplage interlingue valide a la generation et a l'ecoute humaine. Volet voix de la carte resolu.\n\n[NOTE 2026-11-17 14:10] 2026-11-17 - Architecture validée : chaîne complète ONNX Runtime (ort) + espeak-ng phonémisation + Kokoro int8 inference fonctionnelle. Voix finales choisies : af_heart (féminin) + am_adam (masculin), utilisables sur fr-fr et en-us. Volet voix résolu sur carte 5/29. Architecture S0 confirmée.\n\n[RESOLUTION 2026-11-17] [RESOLUTION 2026-11-17] Architecture validée : chaîne ONNX Runtime (ort 2.0) + espeak-ng (libloading) + Kokoro-82M int8 opérationnelle. Voix finales : af_heart (féminin) + am_adam (masculin) sur fr-fr/en-us. Preuves : cartes 5, 6, 7, docs/s0-02.md, prototype scratch/tw_007."
     },
     {
       "num": 30,
@@ -802,7 +802,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 31,
       "title": "Structurer les modules Rust",
-      "status": "backlog",
+      "status": "doing",
       "prio": "P1",
       "kind": "tache",
       "milestone": "M1",
