@@ -103,6 +103,11 @@ function App() {
   }
 
   useEffect(() => {
+    // Préchargement du modèle Kokoro au lancement (non bloquant, idempotent).
+    invoke("load_model").catch(() => {
+      /* le message d'erreur est remontée via l'UI si besoin */
+    });
+
     let mounted = true;
 
     invoke<StatusDto>("get_status").then((dto) => {

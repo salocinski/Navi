@@ -145,12 +145,6 @@ impl crate::pipeline::AudioSink for AudioHandle {
     }
 }
 
-impl Drop for AudioHandle {
-    fn drop(&mut self) {
-        let _ = self.stop();
-    }
-}
-
 /// Gestionnaire de lecture audio avec file (queue).
 ///
 /// Cycle de vie : `new` → `reset()` → `enqueue…` → `pause`/`resume`/`stop`.
@@ -221,7 +215,11 @@ impl AudioPlayer {
                     }
                 };
 
-                let Some(samples) = samples else { return };
+                let Some(samples) = samples else {
+                    eprintln!("[audio] consommateur gen {my_gen} sorti");
+                    return;
+                };
+                eprintln!("[audio] consommateur gen {my_gen} : pop {} échantillons, append au sink", samples.len());
 
                 // Ne pas jouer si ce consommateur n'est plus le courant
                 if *generation.lock().unwrap() != my_gen {
@@ -238,8 +236,12 @@ impl AudioPlayer {
 
                 let sink_lock = sink.lock().unwrap();
                 if let Some(sink) = sink_lock.as_ref() {
+                    let n = samples.len();
                     let source = SamplesBuffer::new(1, SAMPLE_RATE, samples);
                     sink.append(source);
+                    eprintln!("[audio] sink appendé — {} échantillons en vol", n);
+                } else {
+                    eprintln!("[audio] SINK ABSENT — échantillons perdus (sink consommé ou absent)");
                 }
             }
         });
