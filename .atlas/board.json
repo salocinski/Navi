@@ -156,9 +156,9 @@
     {
       "id": "N-020",
       "title": "Valider pause, reprise, arrêt et gestion de la file",
-      "description": "Arrêt : vider la file, annuler proprement la génération en cours.\n\nCritères :\n- [ ] Sans perte de position ni désynchronisation majeure",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Arrêt : vider la file, annuler proprement la génération en cours.\n\nCritères :\n- [ ] Sans perte de position ni désynchronisation majeure\n\n[NOTE 2026-11-18 11:11] PR https://github.com/salocinski/Navi/pull/22 - FIFO corrigee, stop vide la file + reset sink, jetons d'annulation de generation, 13 tests verts. Fusion par l'humain puis done 20.",
+      "state": "doing",
+      "updated_at": "2026-11-18T16:07:18Z",
       "assignee": ""
     },
     {
