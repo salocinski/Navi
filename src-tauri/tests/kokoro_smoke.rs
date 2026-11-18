@@ -27,4 +27,9 @@ fn kokoro_charge_et_synthetise_en_francais() {
         .synthesize("Bonjour le monde", Some("ff_siwis"), Some("fr"), 1.0)
         .expect("synthèse Kokoro");
     assert!(!samples.is_empty(), "Kokoro a produit 0 échantillon");
+    let peak = samples.iter().fold(0.0f32, |acc, s| acc.max(s.abs()));
+    let rms = (samples.iter().map(|s| (*s as f64) * (*s as f64)).sum::<f64>() / samples.len() as f64).sqrt() as f32;
+    eprintln!("[smoke] {} échantillons — peak {:.6} — RMS {:.6}", samples.len(), peak, rms);
+    let duration_s = samples.len() as f32 / 24_000.0;
+    eprintln!("[smoke] durée {:.2} s @24kHz", duration_s);
 }
