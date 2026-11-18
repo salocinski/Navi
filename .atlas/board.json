@@ -301,8 +301,8 @@
       "id": "N-038",
       "title": "Tester le nettoyage, la segmentation et la détection de langue",
       "description": "Tests unitaires ciblés (branches, parsing).",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-18T19:37:37Z",
       "assignee": ""
     },
     {
