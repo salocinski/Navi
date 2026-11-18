@@ -212,7 +212,7 @@
     {
       "id": "N-027",
       "title": "Réaliser la démo intégrée du Sprint 0",
-      "description": "Raccourci → capture → TTS progressif → pause/stop.",
+      "description": "Raccourci → capture → TTS progressif → pause/stop.\n\n[NOTE 2026-11-18 20:20] PRISE 2026-11-17 - Lancement de la démo intégrée Sprint 0. [RESOLUTION 2026-11-18] TW-027 : démo documentée avec trace d'exécution réelle (docs/s0-09a-demo.md). Ré-exécution TTS CNID prog_011 : espeak-ng OK rc=22050, Kokoro chargé 10.98 s, 296 tokens, inférence 22.67 s, 18.2 s audio lu jusqu'au bout ; capture/raccourcis/pause-stop validés par prototypes (TW-12/TW-17/TW-19) ; intégration applicative unique reportée Sprint 1. PR : https://github.com/salocinski/Navi/pull/17",
       "state": "doing",
       "updated_at": "2026-11-18T01:16:27Z",
       "assignee": ""
