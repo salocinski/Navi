@@ -244,9 +244,9 @@
     {
       "id": "N-031",
       "title": "Structurer les modules Rust",
-      "description": "capture, shortcuts, text, language, tts, audio, state.\n\n[NOTE 2026-11-17 18:07] 2026-11-17 - PR #4 merge + PR #5 créée pour corrections compilation. PR #4 (feat/TW-31-architecture) mergée, PR #5 (fix/compilation-errors) créée pour corrections API ort 2.x, Tauri 2.x, windows crate, rodio 0.19. Compilation OK sur branche fix/compilation-errors.",
-      "state": "doing",
-      "updated_at": "2026-11-17T20:28:41Z",
+      "description": "capture, shortcuts, text, language, tts, audio, state.\n\n[NOTE 2026-11-17 18:07] 2026-11-17 - PR #4 merge + PR #5 créée pour corrections compilation. PR #4 (feat/TW-31-architecture) mergée, PR #5 (fix/compilation-errors) créée pour corrections API ort 2.x, Tauri 2.x, windows crate, rodio 0.19. Compilation OK sur branche fix/compilation-errors.\n\n[RESOLUTION 2026-11-18] [RESOLUTION 2026-11-17] TW-031 : structure modulaire Rust livrée et fusionnée. PR #4 (feat/TW-31-architecture, 524cb24) : 8 modules (config, capture, hotkey, tts, audio, state, ui, utils) + lib.rs - mergée (62e9c40). PR #5 (fix/compilation-errors, 9dd1769) : corrections API ort 2.x, Tauri 2.x, crate windows, rodio 0.19 - mergée (f8dccaa). Compilation OK documentée sur la branche. Structure vérifiée sur main sous src-tauri/src/.",
+      "state": "done",
+      "updated_at": "2026-11-18T00:43:08Z",
       "assignee": ""
     },
     {
