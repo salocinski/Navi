@@ -68,9 +68,9 @@
     {
       "id": "N-009",
       "title": "Esquisser l'interface TtsEngine",
-      "description": "Isoler le moteur pour pouvoir le remplacer (Piper, MeloTTS).\n\nCritères :\n- [ ] Trait Rust défini et utilisé par le prototype\n\n[NOTE 2026-11-18 13:13] PR https://github.com/salocinski/Navi/pull/29 - trait TtsEngine pose (Kokoro isole), contrat synchrone mono f32 24kHz, 3 tests stub, 21 verts. Piper ecable tel quel, MeloTTS en secours via ONNX. Fusion par l'humain puis done 9.",
-      "state": "doing",
-      "updated_at": "2026-11-18T18:09:53Z",
+      "description": "Isoler le moteur pour pouvoir le remplacer (Piper, MeloTTS).\n\nCritères :\n- [ ] Trait Rust défini et utilisé par le prototype\n\n[NOTE 2026-11-18 13:13] PR https://github.com/salocinski/Navi/pull/29 - trait TtsEngine pose (Kokoro isole), contrat synchrone mono f32 24kHz, 3 tests stub, 21 verts. Piper ecable tel quel, MeloTTS en secours via ONNX. Fusion par l'humain puis done 9.\n\n[RESOLUTION 2026-11-18] [RESOLUTION 2026-11-18] PR 29 fusionnee, merge d73624b squash. Trait TtsEngine pose : Kokoro isole et remplaçable Piper ou MeloTTS, contrat synchrone mono f32 24kHz, 3 tests stub, 21 verts. docs/s1-09-tts-engine.md.",
+      "state": "done",
+      "updated_at": "2026-11-18T18:15:43Z",
       "assignee": ""
     },
     {
