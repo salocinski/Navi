@@ -308,7 +308,7 @@
     {
       "id": "N-039",
       "title": "Intégrer Kokoro derrière TtsEngine",
-      "description": "Chargement du modèle en tâche de fond.\n\n[NOTE 2026-11-18 14:55] PR https://github.com/salocinski/Navi/pull/47 - Kokoro derriere TtsEngine avec chargement tache de fond, thread audio dedie (OutputStream non Send), pipeline complet capture->nettoyage->langue->segments->synthese->file audio. 84 tests verts, build TS OK. Recette terrain a executer par l'humain avant done.",
+      "description": "Chargement du modèle en tâche de fond.\n\n[NOTE 2026-11-18 14:55] PR https://github.com/salocinski/Navi/pull/47 - Kokoro derriere TtsEngine avec chargement tache de fond, thread audio dedie (OutputStream non Send), pipeline complet capture->nettoyage->langue->segments->synthese->file audio. 84 tests verts, build TS OK. Recette terrain a executer par l'humain avant done.\n\n[NOTE 2026-11-18 15:36] [VALIDATION TERRAIN 2026-11-18] la voix lit le texte a voix haute, capture->synthese->audio end-to-end. 8 defauts corriges dont AudioHandle::drop->stop() supprimant l'audio en fin de synthese. Prechargement auto au demarrage. PR 47 mise a jour.",
       "state": "doing",
       "updated_at": "2026-11-18T19:47:07Z",
       "assignee": ""
