@@ -188,7 +188,7 @@
     {
       "id": "N-024",
       "title": "Produire le tableau de benchmarks et statuer sur le mode CPU",
-      "description": "Critères :\n- [ ] Verdict : le mode CPU est viable ou non",
+      "description": "Critères :\n- [ ] Verdict : le mode CPU est viable ou non\n\n[NOTE 2026-11-18 20:09] PRISE 2026-11-17 - Lancement du verdict CPU. [RESOLUTION 2026-11-17] TW-024 : verdict CPU viable livré (docs/s0-07c-cpu-verdict.md + décision insérée dans decisions.md). Médiane RUST RTF 0,36, 11/12 cellules ≤ 0,5 (seuil viable), aucune > 0,8 (seule déviation en_court_af_heart 0,58, 'limite', surveillée) ; RAM pic 329-1139 Mo ; CPU ~31-40% ; TTFA 1,9-9,9 s ; VRAM N/A (CPU). PR : https://github.com/salocinski/Navi/pull/15",
       "state": "doing",
       "updated_at": "2026-11-18T01:08:19Z",
       "assignee": ""
