@@ -7,17 +7,32 @@ Sources : sonde PowerShell locale (UIAutomationClient .NET, machine de référen
 
 L'intérêt réel d'un repli via UI Automation / TextPattern (`IUIAutomation`) pour lire la sélection, là où la capture Ctrl+C peut échouer.
 
-## Sondages mesurés (2026-11-18, Windows 10 Home, Notepad moderne)
+## Sondages mesurés (2026-11-18, Windows 10 Home, Notepad moderne, rejoués à deux reprises)
+
+**Important** : la première sonde a été rejouée sans interférence utilisateur (le PC était utilisé pendant l'essai initial, ce qui peut avoir biaisé le focus). Les deux jeux de résultats sont conservés ci-dessous — la conclusion ne s'inverse pas, elle se précise.
+
+### Essai 1 (PC utilisé en parallèle)
 
 | Sonde | Résultat |
 |---|---|
-| Arbre UIA → `FindFirst(Edit)` sous la racine Notepad | **Aucun `Edit` trouvé** (l'éditeur virtualisé n'expose pas un Edit dans l'arbre standard) |
-| `AutomationElement.FocusedElement` avec focus + Ctrl+A | `ControlType.Edit`, `Name = « The editor is not accessible at this time. To enable screen reader optimized mode, use Shift+Alt+F1 »` |
-| `TextPattern.DocumentRange.GetText(-1)` | **Retourne le libellé placeholder**, pas le texte du document |
-| `TextPattern.GetSelection().GetText(-1)` | `selection-count = 1` mais `GetText` = **chaîne vide** |
+| Arbre UIA → `FindFirst(Edit)` sous la racine Notepad | aucun `Edit` trouvé dans l'arbre standard |
+| `AutomationElement.FocusedElement` avec focus + Ctrl+A | `Edit`, `Name = « The editor is not accessible at this time… »` (placeholder) |
+| `TextPattern.GetSelection()` | `selection-count = 1` mais `GetText` = **chaîne vide** |
+| `DocumentRange.GetText(-1)` | placeholder, pas le document |
 | `ValuePattern.Current.Value` | vide |
 
-Conclusion locale : le nouveau Notepad n'expose **aucune** API UI Automation texte en mode standard — le texte réel n'apparaît qu'avec l'éditeur en « screen reader optimized mode » (Shift+Alt+F1), ce qui exigerait de **basculer l'accessibilité de l'utilisateur** ou d'exiger ce mode. Inacceptable pour un repli produit.
+### Essai 2 (PC inchangé, `Ctrl+A` envoyé proprement)
+
+| Sonde | Résultat |
+|---|---|
+| `FocusedElement` | `ControlType.Pane` (`AutomationId = 15`), `Name` = **le texte complet du document** (newlines aplatis en espaces) |
+| `TextPattern` sur ce Pane | **unsupported** (`GetCurrentPattern` → Unsupported Pattern) |
+| `ValuePattern` | **unsupported** |
+| Descendants du Pane | **0** (feuille ; le texte n'est pas structuré en contenu UIA) |
+
+### Lecture consolidée
+
+Le texte est lisible *indirectement* via le `Name` agrégé du Pane WinUI — c'est un détail d'implémentation non documenté, sans garantie (même `Name` peut être tronqué sur de longs documents), sans sémantique de sélection (impossible de lire « uniquement la sélection »), et absent des autres apps non-WinUI. Les deux exécutions montrent **zéro support TextPattern** sur le Notepad moderne : `GetSelection` n'a aucune signification exploitable.
 
 ## Contraintes structurelles (API)
 
@@ -38,7 +53,7 @@ Conclusion locale : le nouveau Notepad n'expose **aucune** API UI Automation tex
 
 **NO-GO.** Le repli UI Automation :
 - n'apporte rien pour les deux apps critiques déjà couvertes ;
-- échoue sur le cas Notepad moderne (le plus simple des cas texte) ;
+- n'expose aucun TextPattern sur Notepad moderne (le contrôle le plus simple) — deux sondes le confirment ; la lecture possible via le `Name` agrégé du Pane est non documentée et sans sémantique de sélection ;
 - est bloqué par UIPI sur les apps élevées — précisément les cas « Ctrl+C ne marche pas » ;
 - coûte plus cher (≥ 2 j) que la valeur attendue.
 
@@ -50,4 +65,4 @@ Si un repli reste nécessaire plus tard, la piste la moins chère est **WinRT `I
 
 - Word non sondé par UIA dans cette évaluation (Word est réputé exposé ; mais Ctrl+C y fonctionne, donc nul enjeu).
 - Chromium non sondé en live (aucun profil garantissant un contenu sélectionnable au moment du test ; support connu pour champs éditables uniquement).
-- Conclusion repose sur un échantillon n=1 par sonde (Notepad) + connaissances API — suffisant pour un go/no-go de priorité P2.
+- Conclusion repose sur n=1 app (Notepad, sondée deux fois — résultats cohérents sur TextPattern) + connaissances API — suffisant pour un go/no-go de priorité P2.
