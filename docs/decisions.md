@@ -115,6 +115,16 @@ Stack : Rust + Tauri 2 + React/TypeScript, Windows 11
 
 ---
 
+## Décision : Priorisation du Sprint 1 sur résultats réels (TW-030, S0-09c)
+
+**Date** : 2026-11-18
+**Contexte** : Le Sprint 0 se clôt sur un verdict « go conditionnel » (`docs/s0-09b-criteres-reussite.md`) : chaîne Kokoro CPU validée (RTF médian 0,36), mais trois risques majeurs non couverts — pause/reprise/arrêt en intégration (N-020), restauration presse-papiers (N-013→N-043), cas limites de capture (N-014).
+**Décision** : Ordre Sprint 1 en quatre phases — Phase 0 risques majeurs (N-020, N-014, N-043, N-009, N-015, N-018, N-021), Phase 1 intégration verticale (N-032, N-035..N-041, N-045, N-033, N-034, N-046, N-016), Phase 2 présence minimale (N-069, N-047, N-050, N-048), Phase 3 robustesse/distribution (N-062, N-042, N-064, N-008 optionnel, N-059/060/061). GPU optionnel (CPU viable) ; UI Automation soumise à go/no-go (N-015) ; N-013 absorbée par N-043. Détail : `docs/s1-priorisation.md`.
+**Implication** : Aucune fonctionnalité nouvelle avant la clôture des risques Phase 0 ; intégration des prototypes dans `src-tauri/` avant tout ajout ; décisions humaines attendues : Win 10/Win 11, raccourcis, N-015, N-008.
+**Raison** : « Si un risque majeur subsiste, le traiter avant toute fonctionnalité » (carte TW-030) ; les écarts restants sont connus et tracés, pas de risque rédhibitoire identifié.
+
+---
+
 ## Prochaine entrée de décision à consigner
 
 **Date à venir** : Suivre toute décision dans un sprint ultérieur.

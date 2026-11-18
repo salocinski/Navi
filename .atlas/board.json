@@ -236,9 +236,9 @@
     {
       "id": "N-030",
       "title": "Prioriser le backlog du Sprint 1 sur résultats réels",
-      "description": "Si un risque majeur subsiste, le traiter avant toute fonctionnalité.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Si un risque majeur subsiste, le traiter avant toute fonctionnalité.\n\n[NOTE 2026-11-18 09:53] PR https://github.com/salocinski/Navi/pull/20 - priorisation Sprint 1 en 4 phases (risques majeurs d'abord). Fusion par l'humain puis done 30.",
+      "state": "doing",
+      "updated_at": "2026-11-18T14:51:39Z",
       "assignee": ""
     },
     {
