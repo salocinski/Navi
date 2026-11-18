@@ -976,7 +976,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 43,
       "title": "Durcir la capture presse-papiers",
-      "status": "backlog",
+      "status": "doing",
       "prio": "P1",
       "kind": "tache",
       "milestone": "M1",
@@ -985,7 +985,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-016"
       ],
-      "note": "Formats, restauration garantie, tests d'erreur et d'interruption."
+      "note": "Formats, restauration garantie, tests d'erreur et d'interruption.\n\n[NOTE 2026-11-18 11:43] PR https://github.com/salocinski/Navi/pull/27 - snapshot integral avant WM_COPY + restauration systematique (meme en erreur) ; capture refusee si snapshot impossible ; formats GDI exclus et comptes ; 18 tests verts. Recette terrain a executer par l'humain avant merge. Fusion puis done 43.\n\n[NOTE 2026-11-18 12:12] [RETOUR 2026-11-18] Recette terrain par l'humain : Chromium OK, texte riche Word + restauration OK. Constat majeur : WM_COPY ne declenchait pas la copie -> corrige par SendInput Ctrl+C (31a6780). Scenarios image/fichier, app gelee, presse-papiers verrouille non joues. Exemple CLI src-tauri/examples/capture_recipe.rs pour rejouer. PR #27 mise a jour."
     },
     {
       "num": 44,
