@@ -157,8 +157,8 @@
       "id": "N-020",
       "title": "Valider pause, reprise, arrêt et gestion de la file",
       "description": "Arrêt : vider la file, annuler proprement la génération en cours.\n\nCritères :\n- [ ] Sans perte de position ni désynchronisation majeure",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-18T16:07:18Z",
       "assignee": ""
     },
     {
