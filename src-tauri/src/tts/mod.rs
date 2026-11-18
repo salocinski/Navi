@@ -24,13 +24,32 @@ pub struct TtsConfig {
     pub default_language: String,
 }
 
+/// Chemin du modèle ONNX (nom unique sur la machine).
+pub const KOKORO_MODEL_FILE: &str = "kokoro-v1.0.int8.onnx";
+/// Nom du fichier de styles de voix.
+pub const KOKORO_VOICES_FILE: &str = "voices-v1.0.bin";
+/// Nom du vocabulaire.
+pub const KOKORO_VOCAB_FILE: &str = "vocab.json";
+
+impl TtsConfig {
+    /// Construit une config pour un répertoire de modèles donné (dev : `models/kokoro/`).
+    pub fn with_dir(dir: &std::path::Path) -> Self {
+        Self {
+            model_path: dir.join(KOKORO_MODEL_FILE),
+            voices_path: dir.join(KOKORO_VOICES_FILE),
+            vocab_path: dir.join(KOKORO_VOCAB_FILE),
+            ..Self::default()
+        }
+    }
+}
+
 impl Default for TtsConfig {
     fn default() -> Self {
-        let base = utils::models_dir().unwrap_or_else(|| PathBuf::from("./models"));
+        let base = crate::utils::resolve_models_dir();
         Self {
-            model_path: base.join("kokoro-v1.0.int8.onnx"),
-            voices_path: base.join("voices-v1.0.bin"),
-            vocab_path: base.join("vocab.json"),
+            model_path: base.join(KOKORO_MODEL_FILE),
+            voices_path: base.join(KOKORO_VOICES_FILE),
+            vocab_path: base.join(KOKORO_VOCAB_FILE),
             espeak_lib_path: "C:\\Program Files\\eSpeak NG\\libespeak-ng.dll".to_string(),
             espeak_data_path: "C:\\Program Files\\eSpeak NG\\espeak-ng-data".to_string(),
             default_voice_female: "af_heart".to_string(),

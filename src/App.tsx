@@ -16,6 +16,8 @@ interface StatusDto {
   phase: Phase;
   current_chunk: number;
   total_chunks: number;
+  engine_loaded: boolean;
+  audio_ready: boolean;
 }
 
 interface StateEventPayload {
@@ -38,8 +40,67 @@ const PHASE_LABEL: Record<Phase, string> = {
 };
 
 function App() {
-  const [status, setStatus] = useState<StatusDto>({ phase: "idle", current_chunk: 0, total_chunks: 0 });
+  const [status, setStatus] = useState<StatusDto>({
+    phase: "idle",
+    current_chunk: 0,
+    total_chunks: 0,
+    engine_loaded: false,
+    audio_ready: false,
+  });
   const [lastError, setLastError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function refreshStatus() {
+    const dto = await invoke<StatusDto>("get_status");
+    setStatus(dto);
+  }
+
+  async function handleRead() {
+    setBusy(true);
+    setLastError(null);
+    try {
+      await invoke("start_reading");
+      await refreshStatus();
+    } catch (err) {
+      setLastError(String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handlePauseResume() {
+    setLastError(null);
+    try {
+      if (status.phase === "paused") {
+        await invoke("resume_reading");
+      } else {
+        await invoke("pause_reading");
+      }
+      await refreshStatus();
+    } catch (err) {
+      setLastError(String(err));
+    }
+  }
+
+  async function handleStop() {
+    setLastError(null);
+    try {
+      await invoke("stop_reading");
+      await refreshStatus();
+    } catch (err) {
+      setLastError(String(err));
+    }
+  }
+
+  async function handlePreload() {
+    setLastError(null);
+    try {
+      await invoke("load_model");
+      await refreshStatus();
+    } catch (err) {
+      setLastError(String(err));
+    }
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -75,7 +136,9 @@ function App() {
   return (
     <main className="container">
       <h1>Navi</h1>
-      <p className="subtitle">Lecteur local — contrat machine d'états → UI (N-032)</p>
+      <p className="subtitle">
+        Lecteur local — {status.engine_loaded ? "modèle chargé" : "modèle non chargé"} · {status.audio_ready ? "audio prêt" : "audio non prêt"}
+      </p>
 
       <div className="status-row">
         <span className={`phase-badge phase-${status.phase}`}>{PHASE_LABEL[status.phase]}</span>
@@ -91,14 +154,23 @@ function App() {
       {lastError && <p className="error-box">{lastError}</p>}
 
       <div className="action-row">
-        <button disabled title="Branché par N-041/N-045 (moteur et raccourcis)">Lire</button>
-        <button disabled title="Branché par N-041/N-045 (moteur et raccourcis)">Pause</button>
-        <button disabled title="Branché par N-041/N-045 (moteur et raccourcis)">Arrêt</button>
+        <button onClick={handleRead} disabled={busy}>
+          {busy ? "Capture…" : "Lire la sélection"}
+        </button>
+        <button onClick={handlePauseResume} disabled={status.phase !== "playing" && status.phase !== "paused"}>
+          {status.phase === "paused" ? "Reprendre" : "Pause"}
+        </button>
+        <button onClick={handleStop} disabled={status.phase === "idle" || status.phase === "stopped"}>
+          Arrêt
+        </button>
+        <button onClick={handlePreload} disabled={status.engine_loaded}>
+          {status.engine_loaded ? "Modèle chargé ✓" : "Charger le modèle"}
+        </button>
       </div>
 
       <p className="note">
-        Les commandes de lecture sont affichées en lecture seule : la capture, le moteur Kokoro et
-        les raccourcis seront branchés par N-039/N-041/N-045.
+        La lecture capture le texte sélectionné dans la fenêtre au premier plan (Ctrl+C simulé),
+        le nettoie, le segmente et synthétise avec Kokoro, puis joue le résultat.
       </p>
     </main>
   );
