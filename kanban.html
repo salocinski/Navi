@@ -867,7 +867,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-031"
       ],
-      "note": "Espaces, sauts de ligne, URLs, symboles, nombres et abréviations de base."
+      "note": "Espaces, sauts de ligne, URLs, symboles, nombres et abréviations de base.\n\n[NOTE 2026-11-18 11:34] [EXIGENCE 2026-11-18, issue de la revue TW-014] Exclure les elements non lisibles : HTML -> texte (fragment reel, sans en-tetes clipboard), suppression img/video/audio/script/style, liens (garder texte), URLs, base64/data URIs. RTF idem au possible. Une selection sans contenu texte exploitable doit renvoyer une erreur claire plutot que lire du markup."
     },
     {
       "num": 36,
