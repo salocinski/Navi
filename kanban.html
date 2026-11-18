@@ -573,7 +573,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 15,
       "title": "Évaluer UI Automation / TextPattern en repli",
-      "status": "doing",
+      "status": "done",
       "prio": "P2",
       "kind": "spike",
       "milestone": "M0",
@@ -582,7 +582,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-012"
       ],
-      "note": "Critères :\n- [ ] Intérêt réel du repli tranché\n\n[NOTE 2026-11-18 13:20] PR https://github.com/salocinski/Navi/pull/31 - verdict NO-GO sur UI Automation en repli (sonde Notepad moderne : TextPattern vide ou placeholder ; UIPI cross-IL ; cout eleve). Reco : retirer N-044 du Sprint 1, reevaluer apres N-016 uniquement si besoin empirique prouve. Fusion par l'humain puis done 15.\n\n[NOTE 2026-11-18 13:23] [CORRECTION 2026-11-18] sonde rejouee sans interferences : Focus Pane Name = texte complet (non documente), TextPattern unsupported, ValuePattern unsupported, descendants 0. Preuve consolide, verdict NO-GO inchange (raison affinee). PR 31 mise a jour, branche feat/TW-15, commit a971516."
+      "note": "Critères :\n- [ ] Intérêt réel du repli tranché\n\n[NOTE 2026-11-18 13:20] PR https://github.com/salocinski/Navi/pull/31 - verdict NO-GO sur UI Automation en repli (sonde Notepad moderne : TextPattern vide ou placeholder ; UIPI cross-IL ; cout eleve). Reco : retirer N-044 du Sprint 1, reevaluer apres N-016 uniquement si besoin empirique prouve. Fusion par l'humain puis done 15.\n\n[NOTE 2026-11-18 13:23] [CORRECTION 2026-11-18] sonde rejouee sans interferences : Focus Pane Name = texte complet (non documente), TextPattern unsupported, ValuePattern unsupported, descendants 0. Preuve consolide, verdict NO-GO inchange (raison affinee). PR 31 mise a jour, branche feat/TW-15, commit a971516.\n\n[RESOLUTION 2026-11-18] [RESOLUTION 2026-11-18] PR 31 fusionnee, merge 2196170 squash. Evaluation UIA en repli : deux sondes documentees (TextPattern absent sur Notepad moderne, texte lisible uniquement via Name agrege non documente, UIPI cross-IL), verdict NO-GO pour le Sprint 1 ; reco : retirer N-044 du Sprint 1 sauf preuve empirique via N-016."
     },
     {
       "num": 16,
