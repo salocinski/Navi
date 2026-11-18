@@ -116,7 +116,7 @@
     {
       "id": "N-015",
       "title": "Évaluer UI Automation / TextPattern en repli",
-      "description": "Critères :\n- [ ] Intérêt réel du repli tranché",
+      "description": "Critères :\n- [ ] Intérêt réel du repli tranché\n\n[NOTE 2026-11-18 13:20] PR https://github.com/salocinski/Navi/pull/31 - verdict NO-GO sur UI Automation en repli (sonde Notepad moderne : TextPattern vide ou placeholder ; UIPI cross-IL ; cout eleve). Reco : retirer N-044 du Sprint 1, reevaluer apres N-016 uniquement si besoin empirique prouve. Fusion par l'humain puis done 15.",
       "state": "doing",
       "updated_at": "2026-11-18T18:18:45Z",
       "assignee": ""
