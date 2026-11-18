@@ -300,9 +300,9 @@
     {
       "id": "N-038",
       "title": "Tester le nettoyage, la segmentation et la détection de langue",
-      "description": "Tests unitaires ciblés (branches, parsing).",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Tests unitaires ciblés (branches, parsing).\n\n[NOTE 2026-11-18 14:39] PR https://github.com/salocinski/Navi/pull/45 - 15 tests d'integration corpus : fragments Word/Chromium, pipelines FR/EN complets, CRLF, RTF, proprietes 100 phrases, limites comportementales, correction Dr -> Dr. -> Docteur. 81 tests verts au total. Fusion par l'humain puis done 38.",
+      "state": "doing",
+      "updated_at": "2026-11-18T19:37:37Z",
       "assignee": ""
     },
     {

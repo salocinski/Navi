@@ -349,7 +349,7 @@ fn expand_abbrev_fr(text: &str) -> String {
         ("M.", "Monsieur"),
         ("Mme", "Madame"),
         ("Mlle", "Mademoiselle"),
-        ("Dr", "Docteur"),
+        ("Dr.", "Docteur"),
         ("Mme.", "Madame"),
         ("p.ex.", "par exemple"),
         ("cf.", "confer"),
