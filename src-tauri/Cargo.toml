@@ -34,8 +34,10 @@ windows = { version = "0.58", features = [
 global-hotkey = "0.3"
 once_cell = "1.19"
 
-# TTS (Kokoro via ONNX Runtime)
-ort = { version = "2.0.0-rc.15", features = ["load-dynamic"] }
+# TTS (Kokoro via ONNX Runtime) — features par défaut : la binaire onnxruntime est
+# téléchargée au build et embarquée (validée en Sprint 0). "load-dynamic" exige une
+# onnxruntime.dll à l'exécution, absente par défaut → LoadLibraryExW échoue.
+ort = "2.0.0-rc.15"
 libloading = "0.9"
 
 # Phonémisation (espeak-ng via libloading - déjà dans tts)

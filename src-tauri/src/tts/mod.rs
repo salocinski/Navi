@@ -46,12 +46,25 @@ impl TtsConfig {
 impl Default for TtsConfig {
     fn default() -> Self {
         let base = crate::utils::resolve_models_dir();
+        let phonemizer_dir = base.parent().map(|p| p.join("phonemizer")).filter(|p| p.exists()).unwrap_or_else(|| base.clone());
+        let (espeak_lib_path, espeak_data_path) = {
+            let dll = phonemizer_dir.join("espeak-ng.dll");
+            if dll.exists() {
+                (dll.to_string_lossy().to_string(), phonemizer_dir.join("espeak-ng-data").to_string_lossy().to_string())
+            } else {
+                // Repli : installation système (Program Files)
+                (
+                    "C:\\Program Files\\eSpeak NG\\libespeak-ng.dll".to_string(),
+                    "C:\\Program Files\\eSpeak NG\\espeak-ng-data".to_string(),
+                )
+            }
+        };
         Self {
             model_path: base.join(KOKORO_MODEL_FILE),
             voices_path: base.join(KOKORO_VOICES_FILE),
             vocab_path: base.join(KOKORO_VOCAB_FILE),
-            espeak_lib_path: "C:\\Program Files\\eSpeak NG\\libespeak-ng.dll".to_string(),
-            espeak_data_path: "C:\\Program Files\\eSpeak NG\\espeak-ng-data".to_string(),
+            espeak_lib_path,
+            espeak_data_path,
             default_voice_female: "af_heart".to_string(),
             voice_male: "am_adam".to_string(),
             default_language: "auto".to_string(),
