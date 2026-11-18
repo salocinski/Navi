@@ -20,6 +20,76 @@ pub enum HotkeyAction {
     Stop,
 }
 
+impl HotkeyAction {
+    pub fn label(&self) -> &'static str {
+        match self {
+            HotkeyAction::ReadSelection => "Lire la sélection",
+            HotkeyAction::PauseResume => "Pause / Reprise",
+            HotkeyAction::Stop => "Arrêt",
+        }
+    }
+}
+
+/// Libellé lisible d'une combinaison (pour l'UI et les rapports).
+pub fn combo_label(modifiers: Modifiers, key: Code) -> String {
+    let mut parts = Vec::new();
+    if modifiers.contains(Modifiers::CONTROL) {
+        parts.push("Ctrl");
+    }
+    if modifiers.contains(Modifiers::SHIFT) {
+        parts.push("Maj");
+    }
+    if modifiers.contains(Modifiers::ALT) {
+        parts.push("Alt");
+    }
+    if modifiers.contains(Modifiers::SUPER) {
+        parts.push("Win");
+    }
+    parts.push(match key {
+        Code::KeyR => "R",
+        Code::KeyP => "P",
+        Code::KeyS => "S",
+        Code::Space => "Espace",
+        Code::Escape => "Échap",
+        _ => "?",
+    });
+    parts.join("+")
+}
+
+/// Rapport d'enregistrement des raccourcis par défaut :
+/// succès partiel toléré, chaque échec porte un message clair.
+#[derive(Debug, Default)]
+pub struct RegistrationReport {
+    /// (action, combo) enregistrés avec succès.
+    pub registered: Vec<(HotkeyAction, String)>,
+    /// (action, combo, erreur) non enregistrés.
+    pub failed: Vec<(HotkeyAction, String, String)>,
+}
+
+impl RegistrationReport {
+    /// Message clair si au moins un raccourci est en échec, `None` sinon.
+    pub fn failure_message(&self) -> Option<String> {
+        if self.failed.is_empty() {
+            return None;
+        }
+        let details = self
+            .failed
+            .iter()
+            .map(|(action, combo, err)| {
+                format!("{combo} → {action} : {err}", action = action.label())
+            })
+            .collect::<Vec<_>>()
+            .join(" ; ");
+        Some(format!(
+            "Raccourci(s) indisponible(s) — déjà réservés par l'OS ou une autre application : {details}"
+        ))
+    }
+
+    pub fn is_complete_success(&self) -> bool {
+        self.failed.is_empty()
+    }
+}
+
 /// Gestionnaire de raccourcis globaux
 pub struct HotkeyManager {
     manager: GlobalHotKeyManager,
@@ -46,18 +116,31 @@ impl HotkeyManager {
         Ok(id)
     }
     
-    /// Enregistre les raccourcis par défaut Navi
-    pub fn register_defaults(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        // Ctrl+Shift+R : Lire sélection
-        self.register(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyR, HotkeyAction::ReadSelection)?;
-        
-        // Ctrl+Shift+P : Pause / Reprise
-        self.register(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyP, HotkeyAction::PauseResume)?;
-        
-        // Ctrl+Shift+S : Arrêt
-        self.register(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyS, HotkeyAction::Stop)?;
-        
-        Ok(())
+    /// Enregistre les raccourcis par défaut Navi ; n'abandonne pas au premier échec.
+    ///
+    /// Comportement en cas de conflit (carte TW-018) :
+    /// - chaque combinaison est tentée indépendamment ;
+    /// - un conflit (combinaison déjà réservée) → échec isolé, message clair, les autres
+    ///   raccourcis sont enregistrés quand même ;
+    /// - le rapport `RegistrationReport` porte le détail pour affichage utilisateur.
+    pub fn register_defaults(&mut self) -> Result<RegistrationReport, Box<dyn std::error::Error>> {
+        let defaults: &[(Modifiers, Code, HotkeyAction)] = &[
+            // Ctrl+Maj+Espace : lire la sélection (ergonomisation demandée, 2026-11-18)
+            (Modifiers::CONTROL | Modifiers::SHIFT, Code::Space, HotkeyAction::ReadSelection),
+            // Ctrl+Maj+P / Ctrl+Maj+S : pause/reprise et arrêt
+            (Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyP, HotkeyAction::PauseResume),
+            (Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyS, HotkeyAction::Stop),
+        ];
+
+        let mut report = RegistrationReport::default();
+        for (modifiers, key, action) in defaults {
+            let label = combo_label(*modifiers, *key);
+            match self.register(*modifiers, *key, *action) {
+                Ok(_) => report.registered.push((*action, label)),
+                Err(err) => report.failed.push((*action, label, err.to_string())),
+            }
+        }
+        Ok(report)
     }
     
     /// Démarre l'écoute des événements (bloquant)
@@ -92,5 +175,48 @@ impl HotkeyManager {
 impl Default for HotkeyManager {
     fn default() -> Self {
         Self::new().expect("Failed to create HotkeyManager")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn combo_label_formatte_lisiblement() {
+        assert_eq!(combo_label(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyR), "Ctrl+Maj+R");
+        assert_eq!(combo_label(Modifiers::CONTROL | Modifiers::ALT, Code::Space), "Ctrl+Alt+Espace");
+        assert_eq!(combo_label(Modifiers::ALT, Code::Escape), "Alt+Échap");
+    }
+
+    #[test]
+    fn rapport_vide_est_un_succes_complet() {
+        let report = RegistrationReport::default();
+        assert!(report.is_complete_success());
+        assert!(report.failure_message().is_none());
+    }
+
+    #[test]
+    fn rapport_partiel_produit_un_message_clair() {
+        let mut report = RegistrationReport::default();
+        report.registered.push((HotkeyAction::ReadSelection, "Ctrl+Maj+R".to_string()));
+        report.failed.push((
+            HotkeyAction::Stop,
+            "Ctrl+Alt+Espace".to_string(),
+            "HotKey already registered".to_string(),
+        ));
+        assert!(!report.is_complete_success());
+        let msg = report.failure_message().expect("un message clair est attendu");
+        assert!(msg.contains("Ctrl+Alt+Espace"));
+        assert!(msg.contains("Arrêt"));
+        assert!(msg.contains("déjà réservés"));
+        assert!(msg.contains("HotKey already registered"));
+    }
+
+    #[test]
+    fn action_labels() {
+        assert_eq!(HotkeyAction::ReadSelection.label(), "Lire la sélection");
+        assert_eq!(HotkeyAction::PauseResume.label(), "Pause / Reprise");
+        assert_eq!(HotkeyAction::Stop.label(), "Arrêt");
     }
 }

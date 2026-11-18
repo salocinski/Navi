@@ -140,9 +140,9 @@
     {
       "id": "N-018",
       "title": "Tester les raccourcis proposés et leurs conflits",
-      "description": "Ctrl+Alt+Espace / P / S. Échec d'enregistrement détecté et signalé.\n\nCritères :\n- [ ] Comportement en cas de conflit documenté",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Ctrl+Alt+Espace / P / S. Échec d'enregistrement détecté et signalé.\n\nCritères :\n- [ ] Comportement en cas de conflit documenté\n\n[NOTE 2026-11-18 13:28] PR https://github.com/salocinski/Navi/pull/33 - mesure sur machine de reference : Ctrl+Maj+R/P/S OK, Ctrl+Alt+Espace deja reserve (HotKey already registered). Defaut retenu Ctrl+Maj+R/P/S. Echecs isoles avec failure_message clair, partiel tolere. 25 tests verts. Fusion par l'humain puis done 18.\n\n[NOTE 2026-11-18 13:35] [AMENDEMENT 2026-11-18] defaut lire remplace par Ctrl+Maj+Espace (mesure OK sur machine de reference, demande humain : main sans viser une lettre). Ctrl+Maj+P/S inchanges. 3564c93 ; PR 33 mise a jour ; decisions.md amende.",
+      "state": "doing",
+      "updated_at": "2026-11-18T18:26:42Z",
       "assignee": ""
     },
     {

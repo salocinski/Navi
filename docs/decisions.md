@@ -125,6 +125,16 @@ Stack : Rust + Tauri 2 + React/TypeScript, Windows 11
 
 ---
 
+## Décision : Raccourcis par défaut — Ctrl+Maj+R/P/S (TW-018, S1-018)
+
+**Date** : 2026-11-18
+**Contexte** : Discordance S0 (critère 5) entre le backlog initial (Ctrl+Alt+Espace/P/S) et les prototypes Sprint 0 (Ctrl+Shift+R/P/S). Mesure du 2026-11-18 (`cargo run --example hotkey_check`, machine de référence) : Ctrl+Maj+R/P/S enregistrent sans conflit ; **Ctrl+Alt+Espace est déjà réservée** par l'OS ou une application.
+**Décision** : Par défaut = **Ctrl+Maj+Espace** (lire), **Ctrl+Maj+P** (pause/reprise), **Ctrl+Maj+S** (arrêt). Ctrl+Alt+Espace est écarté pour « lire » (conflit constaté sur la machine de référence). Amendement du 2026-11-18 sur demande : Espace pour « lire », plus accessible au clavier sans viser une lettre ; Ctrl+Maj+R restait libre mais n'est plus le défaut. En cas de conflit sur une autre machine, l'enregistrement signale l'échec avec un message clair (`RegistrationReport::failure_message`) ; les autres raccourcis restent actifs ; les raccourcis configurables relèvent de N-052.
+**Implication** : Le code `hotkey::register_defaults` enregistre indépendamment chaque raccourci et rapporte les échecs (ne panique plus ; échec partiel toléré). Le signalement utilisateur sera rattaché au tray/panneau (N-045/N-052).
+**Raison** : Comportement mesuré sur la machine de référence ; uniformité Ctrl+Maj ; détection possible uniquement à l'enregistrement (Windows n'expose pas le détenteur d'une hotkey).
+
+---
+
 ## Prochaine entrée de décision à consigner
 
 **Date à venir** : Suivre toute décision dans un sprint ultérieur.
