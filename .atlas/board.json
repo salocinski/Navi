@@ -285,8 +285,8 @@
       "id": "N-036",
       "title": "Détecter automatiquement le français et l'anglais",
       "description": "Indépendant du moteur TTS. Définir le comportement pour langue inconnue ou texte mixte.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-18T19:27:27Z",
       "assignee": ""
     },
     {
