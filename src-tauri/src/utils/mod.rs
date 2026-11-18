@@ -17,18 +17,9 @@ pub fn clean_text(text: &str) -> String {
     crate::text::normalize_ws(text)
 }
 
-/// Détecte la langue probable d'un texte (heuristique simple)
+/// Détecte la langue probable d'un texte (délègue à `text::detect_language`, retourne « fr »/« en »)
 pub fn detect_language(text: &str) -> &'static str {
-    let french_words = ["le", "la", "les", "un", "une", "des", "et", "ou", "mais", "donc", "car", "dans", "sur", "pour", "avec", "sans", "est", "sont", "était", "avez", "avez"];
-    let english_words = ["the", "and", "or", "but", "so", "for", "in", "on", "at", "to", "of", "a", "an", "is", "are", "was", "were", "have", "has"];
-    
-    let text_lower = text.to_lowercase();
-    let words: Vec<&str> = text_lower.split_whitespace().collect();
-    
-    let fr_count = words.iter().filter(|w| french_words.contains(w)).count();
-    let en_count = words.iter().filter(|w| english_words.contains(w)).count();
-    
-    if fr_count > en_count { "fr" } else { "en" }
+    crate::text::detect_language(text).as_tts_hint()
 }
 
 #[cfg(test)]
