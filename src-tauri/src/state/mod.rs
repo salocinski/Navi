@@ -230,4 +230,68 @@ mod tests {
         sm.play().unwrap();
         assert!(sm.resume().is_err());
     }
+
+    // --- Déclenchements rapides et répétés (carte TW-021) ---
+
+    #[test]
+    fn relance_pendant_lecture_est_refusee_mais_stable() {
+        let sm = PlaybackStateMachine::new();
+        sm.set_text("t".to_string(), 2);
+        sm.play().unwrap();
+        assert!(sm.play().is_err());
+        // après le refus, l'état est toujours Playing et la position est intacte
+        assert_eq!(sm.state(), PlaybackState::Playing);
+        assert_eq!(sm.progress(), (0, 2));
+    }
+
+    #[test]
+    fn pause_reprise_alternees_100_fois() {
+        let sm = PlaybackStateMachine::new();
+        sm.play().unwrap();
+        for _ in 0..100 {
+            sm.pause().unwrap();
+            sm.resume().unwrap();
+        }
+        assert_eq!(sm.state(), PlaybackState::Playing);
+    }
+
+    #[test]
+    fn stop_pendant_generation_annule_le_jeton() {
+        let sm = PlaybackStateMachine::new();
+        let generateur = sm.begin_generation();
+        sm.stop();
+        assert!(sm.is_generation_cancelled(generateur));
+        // une relance repart proprement, avec un nouveau jeton
+        sm.play().unwrap();
+        let nouveau = sm.begin_generation();
+        assert_ne!(generateur, nouveau);
+        assert!(!sm.is_generation_cancelled(nouveau));
+        assert!(sm.is_generation_cancelled(generateur));
+    }
+
+    #[test]
+    fn le_stop_rapide_en_boucle_reste_coherent() {
+        let sm = PlaybackStateMachine::new();
+        sm.set_text("texte".to_string(), 4);
+        for _ in 0..100 {
+            let id = sm.begin_generation();
+            sm.play().ok();
+            sm.next_chunk();
+            sm.stop(); // stop pendant "génération"
+            assert_eq!(sm.state(), PlaybackState::Stopped);
+            assert_eq!(sm.progress(), (0, 4));
+            assert!(sm.is_generation_cancelled(id));
+        }
+    }
+
+    #[test]
+    fn pause_apres_stop_est_refusee() {
+        let sm = PlaybackStateMachine::new();
+        sm.play().unwrap();
+        sm.stop();
+        assert!(sm.pause().is_err());
+        // et reprendre directement après un stop est un nouvel appel à play
+        sm.play().unwrap();
+        assert_eq!(sm.state(), PlaybackState::Playing);
+    }
 }

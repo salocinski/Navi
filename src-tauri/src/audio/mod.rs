@@ -220,4 +220,32 @@ mod tests {
         assert!(q.is_empty());
         assert_eq!(q.pop(), None);
     }
+
+    #[test]
+    fn file_stressee_1000_segments_fifo() {
+        let mut q = SegmentQueue::new();
+        for i in 0..1000u32 {
+            q.push(vec![i as f32]);
+        }
+        assert_eq!(q.len(), 1000);
+        for i in 0..1000u32 {
+            assert_eq!(q.pop(), Some(vec![i as f32]));
+        }
+        assert!(q.is_empty());
+    }
+
+    #[test]
+    fn file_arret_pendant_debit_en_cours() {
+        // Stop en plein milieu d'un débit de génération : les segments
+        // déjà consommés son partis, les restants sont vidés.
+        let mut q = SegmentQueue::new();
+        for i in 0..10u32 {
+            q.push(vec![i as f32]);
+        }
+        assert_eq!(q.pop(), Some(vec![0.0]));
+        assert_eq!(q.pop(), Some(vec![1.0]));
+        q.clear(); // arrêt
+        assert_eq!(q.len(), 0);
+        assert_eq!(q.pop(), None);
+    }
 }
