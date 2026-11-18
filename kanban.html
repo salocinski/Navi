@@ -699,7 +699,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 24,
       "title": "Produire le tableau de benchmarks et statuer sur le mode CPU",
-      "status": "doing",
+      "status": "done",
       "prio": "P1",
       "kind": "decision",
       "milestone": "M0",
@@ -708,7 +708,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-023"
       ],
-      "note": "Critères :\n- [ ] Verdict : le mode CPU est viable ou non\n\n[NOTE 2026-11-18 20:09] PRISE 2026-11-17 - Lancement du verdict CPU. [RESOLUTION 2026-11-17] TW-024 : verdict CPU viable livré (docs/s0-07c-cpu-verdict.md + décision insérée dans decisions.md). Médiane RUST RTF 0,36, 11/12 cellules ≤ 0,5 (seuil viable), aucune > 0,8 (seule déviation en_court_af_heart 0,58, 'limite', surveillée) ; RAM pic 329-1139 Mo ; CPU ~31-40% ; TTFA 1,9-9,9 s ; VRAM N/A (CPU). PR : https://github.com/salocinski/Navi/pull/15"
+      "note": "Critères :\n- [ ] Verdict : le mode CPU est viable ou non\n\n[NOTE 2026-11-18 20:09] PRISE 2026-11-17 - Lancement du verdict CPU. [RESOLUTION 2026-11-17] TW-024 : verdict CPU viable livré (docs/s0-07c-cpu-verdict.md + décision insérée dans decisions.md). Médiane RUST RTF 0,36, 11/12 cellules ≤ 0,5 (seuil viable), aucune > 0,8 (seule déviation en_court_af_heart 0,58, 'limite', surveillée) ; RAM pic 329-1139 Mo ; CPU ~31-40% ; TTFA 1,9-9,9 s ; VRAM N/A (CPU). PR : https://github.com/salocinski/Navi/pull/15\n\n[NOTE 2026-11-18 20:13] [RESOLUTION 2026-11-18] TW-024 : verdict mode CPU viable (PR #15 mergée, 88e9725). docs/s0-07c-cpu-verdict.md + décision dans decisions.md : RTF médiane 0,36 ; 11/12 cellules ≤ 0,5 ; aucune > 0,8 (en_court_af_heart 0,58, zone 'limite', surveillée) ; RAM 329-1139 Mo ; CPU ~31-40% ; TTFA 1,9-9,9 s ; VRAM N/A (CPU). CPU viable pour le Sprint 0 ; GPU optionnel (TW-8) ; préchargement à prévoir (TW-010) ; réserve Windows 10 Home à re-valider sur Win 11 si possible."
     },
     {
       "num": 25,
