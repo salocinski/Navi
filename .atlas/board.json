@@ -172,9 +172,9 @@
     {
       "id": "N-022",
       "title": "Définir le protocole de benchmark (S0-07)",
-      "description": "Textes court/moyen/long, FR/EN, reproductible.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Textes court/moyen/long, FR/EN, reproductible.\n\n[NOTE 2026-11-18 19:46] PRISE 2026-11-17 - Lancement du travail sur le protocole de benchmark. [RESOLUTION 2026-11-17] TW-022 : protocole livré (docs/s0-07a-benchmark-protocol.md) - textes court/moyen/long FR/EN fixes, métriques TTFA/RTF/RAM/CPU définies, protocole d'exécution reproductible (chauffe, 3 runs, médiane, CSV), seuils go/no-go proposés pour TW-024. PR : https://github.com/salocinski/Navi/pull/11",
+      "state": "doing",
+      "updated_at": "2026-11-18T00:45:13Z",
       "assignee": ""
     },
     {
