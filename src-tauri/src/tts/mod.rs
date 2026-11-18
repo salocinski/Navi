@@ -1,4 +1,8 @@
-//! Moteur TTS (Kokoro via ONNX Runtime)
+﻿//! Moteur TTS (Kokoro via ONNX Runtime)
+
+pub mod engine;
+pub use engine::{SynthesisOutput, SynthesisRequest, TtsError, TtsLanguage, TTS_SAMPLE_RATE};
+pub use engine::{TtsEngine};
 
 use ort::{environment::Environment, session::Session, session::builder::GraphOptimizationLevel, value::Tensor};
 use std::collections::HashMap;
@@ -37,7 +41,7 @@ impl Default for TtsConfig {
 }
 
 /// Moteur TTS Kokoro
-pub struct TtsEngine {
+pub struct KokoroEngine {
     config: TtsConfig,
     session: Arc<Mutex<Option<Session>>>,
     vocab: Arc<HashMap<String, i64>>,
@@ -51,7 +55,7 @@ struct Phonemizer {
     init: unsafe extern "system" fn(i32, i32, *const i8, i32) -> i32,
 }
 
-impl TtsEngine {
+impl KokoroEngine {
     pub fn new(config: TtsConfig) -> Result<Self, Box<dyn std::error::Error>> {
         // Charger vocabulaire
         let vocab_content = std::fs::read_to_string(&config.vocab_path)?;
