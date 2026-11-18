@@ -872,7 +872,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 36,
       "title": "Détecter automatiquement le français et l'anglais",
-      "status": "backlog",
+      "status": "doing",
       "prio": "P1",
       "kind": "tache",
       "milestone": "M1",
@@ -881,7 +881,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-031"
       ],
-      "note": "Indépendant du moteur TTS. Définir le comportement pour langue inconnue ou texte mixte."
+      "note": "Indépendant du moteur TTS. Définir le comportement pour langue inconnue ou texte mixte.\n\n[NOTE 2026-11-18 14:28] PR https://github.com/salocinski/Navi/pull/41 - detection FR/EN hors moteur : accents, stopwords, apostrophes, Mixed si perdant >= 35%, Unknown si < 3 tokens. Mixed/Unknown -> hint fr (decision produit). 6 tests, 56 verts. Fusion par l'humain puis done 36."
     },
     {
       "num": 37,

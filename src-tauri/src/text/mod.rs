@@ -385,6 +385,112 @@ fn replace_word(text: &str, from: &str, to: &str) -> String {
     out
 }
 
+mod language {
+    //! Détection FR/EN indépendante du moteur TTS (carte N-036).
+
+    /// Résultat de détection — jamais de panic, jamais « au hasard ».
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum LanguageDetection {
+        French,
+        English,
+        /// Les deux langues sont représentées (aucun gagnant clair) — documenter le comportement (voir `as_tts_hint`).
+        Mixed,
+        /// Texte trop court ou sans indice — même politique que `Mixed`.
+        Unknown,
+    }
+
+    impl LanguageDetection {
+        /// Libellé pour l'UI (« fr »/« en »/« mixed »/« unknown »).
+        pub fn label(&self) -> &'static str {
+            match self {
+                LanguageDetection::French => "fr",
+                LanguageDetection::English => "en",
+                LanguageDetection::Mixed => "mixed",
+                LanguageDetection::Unknown => "unknown",
+            }
+        }
+
+        /// Hint pour Kokoro/phonémisation : en cas de doute (Mixed/Unknown),
+        /// décision produit = **fr par défaut** (cible produit) — l'utilisateur
+        /// pourra forcer la langue via N-053. Documenté dans `docs/s1-36-...`.
+        pub fn as_tts_hint(&self) -> &'static str {
+            match self {
+                LanguageDetection::French | LanguageDetection::Mixed | LanguageDetection::Unknown => "fr",
+                LanguageDetection::English => "en",
+            }
+        }
+    }
+
+    const FR_STOPWORDS: &[&str] = &[
+        "le", "la", "les", "un", "une", "des", "est", "dans", "que", "qui", "pas", "avec", "pour", "sur",
+        "aux", "du", "ce", "cette", "ou", "mais", "donc", "car", "sous", "sont", "était", "nous", "vous",
+        "je", "tu", "il", "elle", "ils", "elles", "à", "au", "se", "son", "sa", "ses", "leur", "même",
+        "très", "être", "avoir", "sans", "chaque", "entre", "aussi", "peut", "peut-être", "avant", "après",
+        "alors", "encore", "ici", "là", "jamais", "toujours", "beaucoup", "votre", "notre", "son", "autre",
+        "autrement", "fait", "comme", "dès", "quand",
+    ];
+
+    const EN_STOPWORDS: &[&str] = &[
+        "the", "of", "and", "is", "in", "to", "for", "with", "that", "this", "it", "are", "was", "were",
+        "be", "been", "have", "has", "had", "not", "you", "we", "they", "he", "she", "its", "as", "on",
+        "at", "by", "an", "or", "from", "but", "not", "if", "then", "than", "so", "do", "does", "did",
+        "done", "their", "there", "here", "when", "what", "where", "which", "who", "how", "each", "other",
+        "than", "while", "about", "just", "into", "over", "under", "after", "before", "between",
+    ];
+
+    const FR_ACCENTS: &[char] = &[
+        'é', 'è', 'ê', 'ë', 'à', 'â', 'ä', 'ç', 'î', 'ï', 'ô', 'ö', 'ù', 'û', 'ü', 'ÿ', 'œ', 'æ',
+    ];
+
+    /// Détection heuristique hors moteur TTS : accents FR et stopwords des deux langues.
+    pub fn detect_language(text: &str) -> LanguageDetection {
+        let lower = text.to_lowercase();
+        let mut fr_score = 0.0f64;
+        let mut en_score = 0.0f64;
+
+        // 1) Accents français (poids forts)
+        fr_score += lower.chars().filter(|c| FR_ACCENTS.contains(c)).count() as f64 * 3.0;
+
+        // 2) Stopwords (poids 2 par occurrence)
+        let words: Vec<&str> = lower
+            .split(|c: char| !c.is_alphanumeric() && c != '\'')
+            .filter(|w| !w.is_empty())
+            .collect();
+        let token_count = words.len();
+
+        for word in &words {
+            if FR_STOPWORDS.contains(word) {
+                fr_score += 2.0;
+            }
+            if EN_STOPWORDS.contains(word) {
+                en_score += 2.0;
+            }
+        }
+
+        // 3) Français : apostrophe fréquente (l', d', n', s'…) — accent indirect
+        let apostrophes = lower.matches('\'').count();
+        fr_score += apostrophes as f64 * 1.5;
+
+        if token_count < 3 || (fr_score == 0.0 && en_score == 0.0) {
+            return LanguageDetection::Unknown;
+        }
+
+        let max = fr_score.max(en_score);
+        let min = fr_score.min(en_score);
+        // Mixte si aucun gagnant clair (le perdant pèse ≥ 35 % du gagnant)
+        if min > 0.0 && min / max >= 0.35 {
+            return LanguageDetection::Mixed;
+        }
+        if fr_score > en_score {
+            LanguageDetection::French
+        } else {
+            LanguageDetection::English
+        }
+    }
+}
+
+pub use language::{detect_language, LanguageDetection};
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -482,6 +588,46 @@ mod tests {
         assert_eq!(expand_abbrev_fr("et M. Dupont a dit"), "et Monsieur Dupont a dit");
         // pas de faux positif dans un mot composé
         assert_eq!(expand_abbrev_fr("num.ro"), "num.ro");
+    }
+
+    #[test]
+    fn language_francais_pur() {
+        assert_eq!(detect_language("Bonjour le monde, c'est un test très bien écrit"), LanguageDetection::French);
+        assert_eq!(detect_language("Il fait beau aujourd'hui et nous sommes très contents de vous"), LanguageDetection::French);
+    }
+
+    #[test]
+    fn language_anglais_pur() {
+        assert_eq!(detect_language("The quick brown fox jumps over the lazy dog"), LanguageDetection::English);
+        assert_eq!(detect_language("This is a simple test of the language detection system"), LanguageDetection::English);
+    }
+
+    #[test]
+    fn language_texte_mixte() {
+        let det = detect_language("C'est un excellent commit, the code is clean and it works");
+        assert_eq!(det, LanguageDetection::Mixed);
+    }
+
+    #[test]
+    fn language_texte_trop_court_ou_sans_indice() {
+        assert_eq!(detect_language("12345 999"), LanguageDetection::Unknown);
+        assert_eq!(detect_language(""), LanguageDetection::Unknown);
+        assert_eq!(detect_language("ab"), LanguageDetection::Unknown);
+    }
+
+    #[test]
+    fn language_tts_hint_et_label() {
+        assert_eq!(LanguageDetection::French.as_tts_hint(), "fr");
+        assert_eq!(LanguageDetection::English.as_tts_hint(), "en");
+        assert_eq!(LanguageDetection::Mixed.as_tts_hint(), "fr");
+        assert_eq!(LanguageDetection::Unknown.as_tts_hint(), "fr");
+        assert_eq!(LanguageDetection::French.label(), "fr");
+        assert_eq!(LanguageDetection::Mixed.label(), "mixed");
+    }
+
+    #[test]
+    fn language_francais_accents_fortes() {
+        assert_eq!(detect_language("Voilà, c'est à côté de l'hôpital où j'habite régulièrement"), LanguageDetection::French);
     }
 
     #[test]
