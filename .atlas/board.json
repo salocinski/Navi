@@ -116,7 +116,7 @@
     {
       "id": "N-015",
       "title": "Évaluer UI Automation / TextPattern en repli",
-      "description": "Critères :\n- [ ] Intérêt réel du repli tranché\n\n[NOTE 2026-11-18 13:20] PR https://github.com/salocinski/Navi/pull/31 - verdict NO-GO sur UI Automation en repli (sonde Notepad moderne : TextPattern vide ou placeholder ; UIPI cross-IL ; cout eleve). Reco : retirer N-044 du Sprint 1, reevaluer apres N-016 uniquement si besoin empirique prouve. Fusion par l'humain puis done 15.",
+      "description": "Critères :\n- [ ] Intérêt réel du repli tranché\n\n[NOTE 2026-11-18 13:20] PR https://github.com/salocinski/Navi/pull/31 - verdict NO-GO sur UI Automation en repli (sonde Notepad moderne : TextPattern vide ou placeholder ; UIPI cross-IL ; cout eleve). Reco : retirer N-044 du Sprint 1, reevaluer apres N-016 uniquement si besoin empirique prouve. Fusion par l'humain puis done 15.\n\n[NOTE 2026-11-18 13:23] [CORRECTION 2026-11-18] sonde rejouee sans interferences : Focus Pane Name = texte complet (non documente), TextPattern unsupported, ValuePattern unsupported, descendants 0. Preuve consolide, verdict NO-GO inchange (raison affinee). PR 31 mise a jour, branche feat/TW-15, commit a971516.",
       "state": "doing",
       "updated_at": "2026-11-18T18:18:45Z",
       "assignee": ""
