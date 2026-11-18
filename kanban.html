@@ -867,7 +867,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-031"
       ],
-      "note": "Espaces, sauts de ligne, URLs, symboles, nombres et abréviations de base.\n\n[NOTE 2026-11-18 11:34] [EXIGENCE 2026-11-18, issue de la revue TW-014] Exclure les elements non lisibles : HTML -> texte (fragment reel, sans en-tetes clipboard), suppression img/video/audio/script/style, liens (garder texte), URLs, base64/data URIs. RTF idem au possible. Une selection sans contenu texte exploitable doit renvoyer une erreur claire plutot que lire du markup."
+      "note": "Espaces, sauts de ligne, URLs, symboles, nombres et abréviations de base.\n\n[NOTE 2026-11-18 11:34] [EXIGENCE 2026-11-18, issue de la revue TW-014] Exclure les elements non lisibles : HTML -> texte (fragment reel, sans en-tetes clipboard), suppression img/video/audio/script/style, liens (garder texte), URLs, base64/data URIs. RTF idem au possible. Une selection sans contenu texte exploitable doit renvoyer une erreur claire plutot que lire du markup.\n\n[NOTE 2026-11-18 14:17] PR https://github.com/salocinski/Navi/pull/39 - clean_captured_text : fragment HTML reel, script/style/medias supprimes, urls et data URIs retirees, abbrev FR de base, NoText clair si rien d'exploitable. RTF meilleur effort. 16 tests, 50 verts. Fusion par l'humain puis done 35."
     },
     {
       "num": 36,
