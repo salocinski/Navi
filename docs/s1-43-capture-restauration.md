@@ -1,4 +1,4 @@
-# S1-043 — Capture presse-papiers durcie : snapshot + restauration garantie (carte TW-043)
+﻿# S1-043 — Capture presse-papiers durcie : snapshot + restauration garantie (carte TW-043)
 
 Date : 2026-11-18. Carte : N-043 (P1, L). Module : `src-tauri/src/capture/mod.rs`.
 Issu de l'exploration S0-13 / TW-13 (« exploré, restauration non validée ») et du report de N-013.
@@ -13,13 +13,13 @@ connu et accepté pour le Sprint 0 uniquement.
 
 ```
 capture_selection()
-  ├─ 1. snapshot_clipboard()        // AVANT WM_COPY : tous formats (mémoire globale)
+  ├─ 1. snapshot_clipboard()        // AVANT Ctrl+C simulé (SendInput) : tous formats (mémoire globale)
   │      ├─ OpenClipboard (5 tentatives × 100 ms)
   │      ├─ EnumClipboardFormats → format par format
   │      │    ├─ format GDI / atom / non-mémoire → ignoré, compté (skipped)
   │      │    └─ GlobalLock → copie octets → skipped sinon
   │      └─ CloseClipboard
-  ├─ 2. capture_steps()             // étapes TW-014 (WM_COPY timeout, séquence, lecture)
+  ├─ 2. capture_steps()             // étapes TW-014 (SendInput Ctrl+C, séquence, lecture)
   ├─ 3. restore_clipboard(snapshot) // TOUJOURS, même en cas d'erreur ou d'interruption
   │      ├─ OpenClipboard
   │      ├─ EmptyClipboard
@@ -33,7 +33,7 @@ capture_selection()
 - **Succès** : presse-papiers utilisateur retrouvé intégralement.
 - **Erreur** (aucune sélection, app gelée, presse-papiers verrouillé, texte vide…) :
   restauration quand même effectuée.
-- **Interruption** : tous les chemins d'attente sont bornés (1 200 ms WM_COPY, 1 500 ms séquence,
+- **Interruption** : tous les chemins d'attente sont bornés (1 500 ms séquence,
   retries) ; `restore_clipboard` est hors du chemin d'erreur et s'exécute quoi qu'il arrive.
 - **Snapshot impossible** (presse-papiers inaccessible avant la copie) : **capture refusée**
   (`SnapshotFailed`) — jamais d'écrasement sans sauvegarde.
@@ -75,12 +75,31 @@ test result: ok. 18 passed; 0 failed
 2. Fuite bornée sur échec `GlobalLock` après `GlobalAlloc` : `GlobalFree` n'est pas exposée par
    windows crate 0.58 ; chemin d'erreur rare, taille ≤ octets du format — accepté, documenté dans le code.
 3. **Validation terrain non automatisée** (une vraie restauration exige un presse-papiers réel et
-   muterait l'utilisateur) : protocole manuel de recette ci-dessous, à exécuter par l'humain.
+   muterait l'utilisateur) : 2 scénarios joués et validés par l'humain (texte riche Word, Chromium) ; 3 scénarios restants listés en validation terrain — non bloquants pour la clôture.
 4. Le presse-papiers est restauré même si l'utilisateur a **volontairement** re-copié pendant la
    capture (fenêtre ~1,5 s) : comportement connu — la restauration écrase ce nouveau contenu.
    Acceptable pour un Ctrl+C programmatique bref ; à réévaluer si des plaintes remontent.
 
-## Protocole de recette manuelle (à exécuter sur la machine)
+## Validation terrain (2026-11-18, machine de l'humain)
+
+Constat majeur : le `SendMessageTimeoutW`/`WM_COPY` d'origine (TW-014) **ne déclenchait pas la copie** —
+`WM_COPY` est un message de fenêtre, pas l'accélérateur clavier ; la lecture retournait le contenu du
+presse-papiers préexistant (faux positif du test S0-12). Corrigé par `SendInput` Ctrl+C (commit `31a6780`).
+
+Scénarios joués par l'humain, avec l'exemple CLI `cargo run --example capture_recipe` :
+
+| Scénario | Résultat |
+|---|---|
+| Texte riche Word copié en témoin → sélection ailleurs → capture → Ctrl+V | ✅ réussite ; **presse-papiers témoin restauré intégralement** |
+| App Electron/Chromium : sélection web → capture | ✅ texte capturé, presse-papiers restauré |
+| Sélection image (CF_DIB) / fichier (CF_HDROP) | non joué |
+| App gelée / SendInput bloqué | non joué |
+| Presse-papiers verrouillé par une app tierce | non joué |
+
+Le test de restauration vise les deux scénarios joués (texte riche multi-formats Word est le cas
+le plus exigeant : CF_UNICODETEXT + CF_HTML + formats internes) — résultat conforme.
+
+## Protocole de recette manuelle (intégralité non encore jouée)
 
 1. Copier un **texte riche** depuis Word (Ctrl+C). Vérifier le presse-papiers (coller ailleurs) : contenu riche OK.
 2. Sélectionner du texte dans Chromium, lancer Navi (une fois intégré) ou le prototype : capturer.
