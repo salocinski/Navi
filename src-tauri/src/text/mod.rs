@@ -489,6 +489,7 @@ mod language {
     }
 }
 
+pub mod segmentation;
 pub use language::{detect_language, LanguageDetection};
 
 #[cfg(test)]
