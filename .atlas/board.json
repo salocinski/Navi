@@ -141,8 +141,8 @@
       "id": "N-018",
       "title": "Tester les raccourcis proposés et leurs conflits",
       "description": "Ctrl+Alt+Espace / P / S. Échec d'enregistrement détecté et signalé.\n\nCritères :\n- [ ] Comportement en cas de conflit documenté",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-18T18:26:42Z",
       "assignee": ""
     },
     {
