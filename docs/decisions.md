@@ -105,6 +105,16 @@ Stack : Rust + Tauri 2 + React/TypeScript, Windows 11
 
 ---
 
+## Décision : Mode CPU viable pour le Sprint 0 (TW-024, S0-07c)
+
+**Date** : 2026-11-17
+**Contexte** : Verdict de viabilité après la campagne de benchmark Rust EP CPU + contrôle Python (TW-022/TW-023, `docs/s0-07a-benchmark-protocol.md`, `docs/s0-07b-measurement.md`, `docs/s0-07c-cpu-verdict.md`).
+**Décision** : Le mode CPU est **viable pour le Sprint 0** sur la machine de référence ; la chaîne produit repose sur ONNX Runtime CPU (`ort` 2.0.0-rc.15). Le GPU (cartes TW-8/S0-02c) devient un gain optionnel, pas un prérequis. Préchargement du modèle à l'inactivité/au démarrage planifié (carte TW-010) pour éviter le cold start utilisateur.
+**Implication** : Verdict = go CPU pour la démo Sprint 0 (TW-027) et la validation des critères de réussite (TW-028) ; `en_court_af_heart` (RTF 0,58) reste sous surveillance au prochain benchmark ; VRAM non applicable mesurée ; réserve « Windows 10 Home » à lever en re-validant sur Win 11 si possible.
+**Raison** : RTF médian 0,36 (11 cellules ≤ 0,5 sur 12 ; la déviation `en_court_af_heart` 0,58 reste « limite », aucun cas > 0,8) ; RAM pic 329–1 139 Mo (modèle inclus) ; CPU ~31–40 % de 8 threads ; marge CPU confortable en cohérence avec `docs/s0-02.md` (0,38).
+
+---
+
 ## Prochaine entrée de décision à consigner
 
 **Date à venir** : Suivre toute décision dans un sprint ultérieur.
