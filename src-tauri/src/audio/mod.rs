@@ -44,35 +44,207 @@ impl SegmentQueue {
     }
 }
 
+/// Messages reçus par le thread audio (propriétaire du périphérique).
+enum AudioMessage {
+    /// Enfile des échantillons (file FIFO).
+    Enqueue(Vec<f32>),
+    /// Pause la lecture (position conservée).
+    Pause,
+    /// Reprise.
+    Resume,
+    /// Arrêt : invalide le consommateur, vide la file, ferme le sink.
+    Stop,
+    /// Nouvelle session : vide la file, nouveau sink + consommateur.
+    Reset,
+    /// Volume (0.0–1.0).
+    SetVolume(f32),
+}
+
+/// Poignée Send + Sync vers le périphérique audio détenu par un thread dédié.
+///
+/// Le `OutputStream` rodio/cpal contient des pointeurs bruts → il ne **peut pas**
+/// vivre dans le state Tauri. Le thread audio le possède ; les commandes arrivent
+/// par un canal `mpsc` (ordre garanti) — aucun périphérique ne traverse les threads.
+#[derive(Clone)]
+pub struct AudioHandle {
+    tx: std::sync::mpsc::Sender<AudioMessage>,
+}
+
+impl AudioHandle {
+    /// Crée la poignée : spawn le thread audio et attend la confirmation d'ouverture
+    /// du périphérique (ou l'erreur).
+    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let (init_tx, init_rx) = std::sync::mpsc::channel();
+        let (tx, rx) = std::sync::mpsc::channel();
+
+        std::thread::spawn(move || {
+            let player = AudioPlayer::new();
+            match player {
+                Ok(player) => {
+                    let _ = init_tx.send(Ok(()));
+                    for message in rx {
+                        match message {
+                            AudioMessage::Enqueue(samples) => player.enqueue(samples),
+                            AudioMessage::Pause => player.pause(),
+                            AudioMessage::Resume => player.resume(),
+                            AudioMessage::Stop => player.stop(),
+                            AudioMessage::Reset => {
+                                let _ = player.reset();
+                            }
+                            AudioMessage::SetVolume(volume) => player.set_volume(volume),
+                        }
+                    }
+                }
+                Err(err) => {
+                    let _ = init_tx.send(Err(err.to_string()));
+                }
+            }
+        });
+
+        match init_rx.recv_timeout(std::time::Duration::from_secs(5)) {
+            Ok(Ok(())) => Ok(Self { tx }),
+            Ok(Err(message)) => Err(message.into()),
+            Err(_) => Err("Périphérique audio : timeout à l'ouverture".into()),
+        }
+    }
+
+    fn send(&self, message: AudioMessage) -> Result<(), String> {
+        self.tx.send(message).map_err(|_| "Périphérique audio : thread terminé".to_string())
+    }
+
+    /// Enfile des échantillons — non bloquant, ordre garanti par le canal.
+    pub fn enqueue(&self, samples: Vec<f32>) -> Result<(), String> {
+        self.send(AudioMessage::Enqueue(samples))
+    }
+
+    pub fn pause(&self) -> Result<(), String> {
+        self.send(AudioMessage::Pause)
+    }
+
+    pub fn resume(&self) -> Result<(), String> {
+        self.send(AudioMessage::Resume)
+    }
+
+    pub fn stop(&self) -> Result<(), String> {
+        self.send(AudioMessage::Stop)
+    }
+
+    /// Nouvelle session : file vidée, nouveau sink, consommateur réinitialisé.
+    pub fn reset(&self) -> Result<(), String> {
+        self.send(AudioMessage::Reset)
+    }
+
+    pub fn set_volume(&self, volume: f32) -> Result<(), String> {
+        self.send(AudioMessage::SetVolume(volume))
+    }
+}
+
+impl crate::pipeline::AudioSink for AudioHandle {
+    fn write(&self, samples: &[f32]) -> Result<(), String> {
+        self.enqueue(samples.to_vec())
+    }
+}
+
 /// Gestionnaire de lecture audio avec file (queue).
 ///
-/// Cycle de vie : `new` → `start_consumer` → `enqueue…` → `pause`/`resume`/`stop`.
-/// Après `stop`, la file est vidée et le sink est consommé ; appeler `reset`
-/// avant une nouvelle session de lecture.
+/// Cycle de vie : `new` → `reset()` → `enqueue…` → `pause`/`resume`/`stop`.
+/// `reset()` coupe tout consommateur précédent (via génération) et repart
+/// proprement — c'est l'entrée de chaque nouvelle session de lecture.
 pub struct AudioPlayer {
     _stream: OutputStream,
     handle: OutputStreamHandle,
     sink: Arc<Mutex<Option<Sink>>>,
     pending: Arc<Mutex<SegmentQueue>>,
     condvar: Arc<Condvar>,
-    stopped: Arc<Mutex<bool>>,
     paused: Arc<Mutex<bool>>,
+    consumer_generation: Arc<Mutex<u64>>,
 }
 
 impl AudioPlayer {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let (stream, handle) = OutputStream::try_default()?;
         let sink = Sink::try_new(&handle)?;
-
-        Ok(Self {
+        let player = Self {
             _stream: stream,
             handle,
             sink: Arc::new(Mutex::new(Some(sink))),
             pending: Arc::new(Mutex::new(SegmentQueue::new())),
             condvar: Arc::new(Condvar::new()),
-            stopped: Arc::new(Mutex::new(false)),
             paused: Arc::new(Mutex::new(false)),
-        })
+            consumer_generation: Arc::new(Mutex::new(0)),
+        };
+        player.spawn_consumer();
+        Ok(player)
+    }
+
+    /// Spawn (ou remplace) le consommateur audio.
+    /// Chaque remontée de `consumer_generation` fait sortir l'ancien.
+    fn spawn_consumer(&self) {
+        let sink = self.sink.clone();
+        let pending = self.pending.clone();
+        let condvar = self.condvar.clone();
+        let paused = self.paused.clone();
+        let generation = self.consumer_generation.clone();
+
+        let my_gen = {
+            let mut counter = generation.lock().unwrap();
+            *counter += 1;
+            *counter
+        };
+
+        thread::spawn(move || {
+            loop {
+                let is_current = {
+                    *generation.lock().unwrap() == my_gen
+                };
+                if !is_current {
+                    return;
+                }
+
+                let samples = {
+                    let mut pending = pending.lock().unwrap();
+                    loop {
+                        if let Some(samples) = pending.pop() {
+                            break Some(samples);
+                        }
+                        // Sortir proprement si ce consommateur n'est plus le courant
+                        if *generation.lock().unwrap() != my_gen {
+                            break None;
+                        }
+                        pending = condvar.wait(pending).unwrap();
+                    }
+                };
+
+                let Some(samples) = samples else {
+                    eprintln!("[audio] consommateur gen {my_gen} sorti");
+                    return;
+                };
+                eprintln!("[audio] consommateur gen {my_gen} : pop {} échantillons, append au sink", samples.len());
+
+                // Ne pas jouer si ce consommateur n'est plus le courant
+                if *generation.lock().unwrap() != my_gen {
+                    return;
+                }
+
+                // Attendre la reprise si en pause
+                while *paused.lock().unwrap() {
+                    if *generation.lock().unwrap() != my_gen {
+                        return;
+                    }
+                    thread::sleep(Duration::from_millis(50));
+                }
+
+                let sink_lock = sink.lock().unwrap();
+                if let Some(sink) = sink_lock.as_ref() {
+                    let n = samples.len();
+                    let source = SamplesBuffer::new(1, SAMPLE_RATE, samples);
+                    sink.append(source);
+                    eprintln!("[audio] sink appendé — {} échantillons en vol", n);
+                } else {
+                    eprintln!("[audio] SINK ABSENT — échantillons perdus (sink consommé ou absent)");
+                }
+            }
+        });
     }
 
     /// Enfile un chunk audio (f32, 24kHz mono).
@@ -92,49 +264,14 @@ impl AudioPlayer {
         self.pending.lock().unwrap().len()
     }
 
-    /// Démarre le consommateur audio (thread dédié).
-    pub fn start_consumer(&self) {
-        let sink = self.sink.clone();
-        let pending = self.pending.clone();
-        let condvar = self.condvar.clone();
-        let stopped = self.stopped.clone();
-        let paused = self.paused.clone();
+    /// File partagée (Send + Sync) — le pipeline y pousse les échantillons ; zéro périphérique requis côté écrivain.
+    pub fn shared_queue(&self) -> Arc<Mutex<SegmentQueue>> {
+        self.pending.clone()
+    }
 
-        thread::spawn(move || loop {
-            let samples = {
-                let mut pending = pending.lock().unwrap();
-                loop {
-                    if let Some(samples) = pending.pop() {
-                        break Some(samples);
-                    }
-                    if *stopped.lock().unwrap() {
-                        break None;
-                    }
-                    pending = condvar.wait(pending).unwrap();
-                }
-            };
-
-            let Some(samples) = samples else { return };
-
-            // Ne pas jouer si l'arrêt est survenu entre l'attente et ici.
-            if *stopped.lock().unwrap() {
-                return;
-            }
-
-            // Attendre la reprise si en pause.
-            while *paused.lock().unwrap() {
-                if *stopped.lock().unwrap() {
-                    return;
-                }
-                thread::sleep(Duration::from_millis(50));
-            }
-
-            let sink_lock = sink.lock().unwrap();
-            if let Some(sink) = sink_lock.as_ref() {
-                let source = SamplesBuffer::new(1, SAMPLE_RATE, samples);
-                sink.append(source);
-            }
-        });
+    /// Condvar de la file partagée — à `notify_one()` après chaque `push`.
+    pub fn shared_condvar(&self) -> Arc<Condvar> {
+        self.condvar.clone()
     }
 
     pub fn pause(&self) {
@@ -151,10 +288,10 @@ impl AudioPlayer {
         }
     }
 
-    /// Arrête la lecture : vide la file, signale l'arrêt (le consommateur
-    /// sort de sa boucle) et coupe le sink courant.
+    /// Arrête la lecture : invalide le consommateur courant (génération), vide la file,
+    /// coupe le sink — la position est abandonnée volontairement (arrêt ≠ pause).
     pub fn stop(&self) {
-        *self.stopped.lock().unwrap() = true;
+        *self.consumer_generation.lock().unwrap() += 1;
         *self.paused.lock().unwrap() = false;
         self.clear_queue();
         self.condvar.notify_all();
@@ -163,13 +300,13 @@ impl AudioPlayer {
         }
     }
 
-    /// Prépare une nouvelle session de lecture après un `stop`/`clear` :
-    /// nouveau sink, file vidée, drapeaux réinitialisés.
+    /// Prépare une nouvelle session de lecture : invalide le consommateur courant,
+    /// nouveau sink + consommateur spawné, file vidée.
     pub fn reset(&self) -> Result<(), rodio::PlayError> {
-        *self.stopped.lock().unwrap() = false;
         *self.paused.lock().unwrap() = false;
         self.clear_queue();
         *self.sink.lock().unwrap() = Some(Sink::try_new(&self.handle)?);
+        self.spawn_consumer();
         Ok(())
     }
 

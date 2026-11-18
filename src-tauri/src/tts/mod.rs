@@ -24,15 +24,47 @@ pub struct TtsConfig {
     pub default_language: String,
 }
 
+/// Chemin du modèle ONNX (nom unique sur la machine).
+pub const KOKORO_MODEL_FILE: &str = "kokoro-v1.0.int8.onnx";
+/// Nom du fichier de styles de voix.
+pub const KOKORO_VOICES_FILE: &str = "voices-v1.0.bin";
+/// Nom du vocabulaire.
+pub const KOKORO_VOCAB_FILE: &str = "vocab.json";
+
+impl TtsConfig {
+    /// Construit une config pour un répertoire de modèles donné (dev : `models/kokoro/`).
+    pub fn with_dir(dir: &std::path::Path) -> Self {
+        Self {
+            model_path: dir.join(KOKORO_MODEL_FILE),
+            voices_path: dir.join(KOKORO_VOICES_FILE),
+            vocab_path: dir.join(KOKORO_VOCAB_FILE),
+            ..Self::default()
+        }
+    }
+}
+
 impl Default for TtsConfig {
     fn default() -> Self {
-        let base = utils::models_dir().unwrap_or_else(|| PathBuf::from("./models"));
+        let base = crate::utils::resolve_models_dir();
+        let phonemizer_dir = base.parent().map(|p| p.join("phonemizer")).filter(|p| p.exists()).unwrap_or_else(|| base.clone());
+        let (espeak_lib_path, espeak_data_path) = {
+            let dll = phonemizer_dir.join("espeak-ng.dll");
+            if dll.exists() {
+                (dll.to_string_lossy().to_string(), phonemizer_dir.join("espeak-ng-data").to_string_lossy().to_string())
+            } else {
+                // Repli : installation système (Program Files)
+                (
+                    "C:\\Program Files\\eSpeak NG\\libespeak-ng.dll".to_string(),
+                    "C:\\Program Files\\eSpeak NG\\espeak-ng-data".to_string(),
+                )
+            }
+        };
         Self {
-            model_path: base.join("kokoro-v1.0.int8.onnx"),
-            voices_path: base.join("voices-v1.0.bin"),
-            vocab_path: base.join("vocab.json"),
-            espeak_lib_path: "C:\\Program Files\\eSpeak NG\\libespeak-ng.dll".to_string(),
-            espeak_data_path: "C:\\Program Files\\eSpeak NG\\espeak-ng-data".to_string(),
+            model_path: base.join(KOKORO_MODEL_FILE),
+            voices_path: base.join(KOKORO_VOICES_FILE),
+            vocab_path: base.join(KOKORO_VOCAB_FILE),
+            espeak_lib_path,
+            espeak_data_path,
             default_voice_female: "af_heart".to_string(),
             voice_male: "am_adam".to_string(),
             default_language: "auto".to_string(),
@@ -107,6 +139,13 @@ impl KokoroEngine {
         
         // Tokenisation
         let tokens = self.tokenize(&phonemes)?;
+        if tokens.len() + 2 > 510 {
+            return Err(format!(
+                "Segment trop long pour Kokoro : {} tokens phonémisés (max 508 + 2 padding) — réduisez la taille de segment",
+                tokens.len()
+            )
+            .into());
+        }
         
         // Récupérer style de voix
         let voice_styles = self.voice_styles.lock().unwrap();
@@ -151,27 +190,26 @@ impl KokoroEngine {
     }
     
     fn parse_voices_bin(data: &[u8]) -> Result<HashMap<String, Vec<f32>>, Box<dyn std::error::Error>> {
-        let known_voices = vec![
-            "af_heart", "af_alloy", "af_aoede", "af_bella", "af_jessica",
-            "af_kore", "af_nicole", "af_nova", "af_river", "af_sarah",
-            "af_sky", "am_adam", "am_echo", "am_eric", "am_fenrir",
-            "am_liam", "am_michael", "am_onyx", "am_puck", "am_santa",
-            "bf_alice", "bf_emma", "bf_isabella", "bf_lily",
-            "bm_daniel", "bm_fable", "bm_george", "bm_lewis",
-            "ff_siwis",
-        ];
-        
+        // voices-v1.0.bin est une archive .npz (zip) d'un .npy par voix, [510, 1, 256] f32
+        let reader = std::io::Cursor::new(data);
+        let mut archive = zip::ZipArchive::new(reader)?;
         let mut map = HashMap::new();
-        for (i, name) in known_voices.iter().enumerate() {
-            let start = i * 256 * 4;
-            let end = start + 256 * 4;
-            if end <= data.len() {
-                let slice = &data[start..end];
-                let vec: Vec<f32> = slice.chunks_exact(4)
-                    .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-                    .collect();
-                map.insert(name.to_string(), vec);
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+            let fname = file.name()?.to_string();
+            if !fname.ends_with(".npy") {
+                continue;
             }
+            let name = fname.trim_end_matches(".npy").to_string();
+            let npy = npyz::NpyFile::new(&mut file)?;
+            let shape = npy.shape().to_vec();
+            if shape != [510, 1, 256] {
+                return Err(format!("Voix {name}: forme inattendue {shape:?} (attendu [510, 1, 256])").into());
+            }
+            map.insert(name, npy.into_vec::<f32>()?);
+        }
+        if map.is_empty() {
+            return Err("voices-v1.0.bin : aucune voix trouvée dans l'archive .npz".into());
         }
         Ok(map)
     }

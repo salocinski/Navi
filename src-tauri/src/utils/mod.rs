@@ -7,9 +7,50 @@ pub fn app_data_dir() -> Option<PathBuf> {
     dirs::data_dir().map(|d| d.join("Navi"))
 }
 
-/// Retourne le chemin du répertoire des modèles
+/// Retourne le chemin du répertoire des modèles — dev ou utilisateur.
+///
+/// Ordre : `NAVI_MODELS_DIR` → `<repo>/models/kokoro/` (si l'ONNX y existe) →
+/// `<repo>/models/` → `%APPDATA%/Navi/models`.
+pub fn resolve_models_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("NAVI_MODELS_DIR") {
+        let path = PathBuf::from(&dir);
+        if path.join("kokoro-v1.0.int8.onnx").exists() {
+            return path;
+        }
+        if path.join("kokoro").join("kokoro-v1.0.int8.onnx").exists() {
+            return path.join("kokoro");
+        }
+    }
+
+    // Racine du dépôt : le crate est `src-tauri`, les modèles sont à `models/kokoro/`.
+    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    for candidate in [
+        manifest.join("..").join("models").join("kokoro"),
+        manifest.join("models").join("kokoro"),
+        manifest.join("..").join("models"),
+    ] {
+        if let Ok(normalized) = candidate.canonicalize() {
+            if normalized.join("kokoro-v1.0.int8.onnx").exists() {
+                return normalized;
+            }
+        }
+    }
+
+    // Repli cwd (lancer depuis la racine du projet)
+    if let Ok(local) = std::env::current_dir() {
+        for candidate in [local.join("models").join("kokoro"), local.join("models")] {
+            if candidate.join("kokoro-v1.0.int8.onnx").exists() {
+                return candidate;
+            }
+        }
+    }
+
+    app_data_dir().map(|d| d.join("models")).unwrap_or_else(|| PathBuf::from("./models"))
+}
+
+/// Retourne le chemin du répertoire de données de l'application
 pub fn models_dir() -> Option<PathBuf> {
-    app_data_dir().map(|d| d.join("models"))
+    Some(resolve_models_dir())
 }
 
 /// Nettoie et normalise un texte capturé (délègue à `text::normalize_ws`)

@@ -25,8 +25,16 @@ export default defineConfig(() => ({
         }
       : undefined,
     watch: {
-      // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      // 3. tell Vite to ignore watching `src-tauri`, `scratch/`, artefacts Rust et modèles
+      //     (sinon Vite noie le dev server sous des milliers de « page reload »)
+      ignored: [
+        "**/src-tauri/**",
+        "**/scratch/**",
+        "**/target/**",
+        "**/models/**",
+        "**/dist/**",
+        "**/worktrees/**",
+      ],
     },
   },
 }));
