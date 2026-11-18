@@ -46,15 +46,34 @@ Le `OutputStream` de rodio contient des pointeurs bruts → **non Send/Sync** �
 | Annulation coopérative entre segments | ✓ |
 | Limites | voir ci-dessous |
 
+## État final (2026-11-18, après recette terrain)
+
+Validation humaine de la chaîne complète : **la voix lit le texte à voix haute** (« Domio est une application… »). Décisions et défauts rencontrés/corrigés pendant le développement :
+
+| # | Défaut | Corrigé par |
+|---|---|---|
+| 1 | `voices-v1.0.bin` = archive `.npz` (zip de .npy), pas un dump binaire → slice mort, panic | parser `.npz` via `zip` + `npyz`, shape `[510,1,256]` validée |
+| 2 | eSpeak NG non installé sur la machine | `models/phonemizer/espeak-ng.dll` (wheel) + `espeak-ng-data/` ; repli Program Files |
+| 3 | `ort` en `load-dynamic` sans DLL à l'exécution | fonctionnalités par défaut (binaire embarquée) |
+| 4 | Double clic « Charger le modèle » + lecture auto → deux `Environment` ort (« only one environment… ») | garde anti double-chargement (`AtomicBool`) |
+| 5 | **`AudioHandle::drop` appelait `stop()` → fin de synthèse tuait la lecture** | `Drop` supprimé ; arrêt uniquement via « Arrêt » |
+| 6 | Progression jamais mise à jour (`next_chunk` jamais appelé) | callback `on_segment_done` |
+| 7 | Watcher Vite noyé par `scratch/` (page reload ×milliers) | `vite.config.ts` ignore `scratch/ target/ models/ dist/ worktrees/` |
+| 8 | Préchargement manuel obligatoire | `load_model` appelé au montage de l'UI (idempotent) |
+
 ## Limites actées
 
-1. **Validation terrain requise avant clôture** : l'humain doit lancer Navi, sélectionner un texte dans un éditeur, presser « Lire la sélection », entendre le résultat, tester pause/reprise/arrêt. L'intégration compile et les tests unitaires sont verts, mais le device n'a pas été sollicité.
-2. **premier clic sur Lire** : si le modèle n'est pas chargé, la commande déclenche le chargement en tâche de fond et renvoie « relancez dans quelques secondes » (UX assumée).
-3. **Pause/Reprise ne vident pas la file** : conforme rodio (position conservée) ; `Arrêt` vide la file et invalide le consommateur.
-4. **Au plus un segment orphelin** : si `Arrêt` survient entre la vérification du jeton et l'enqueue, un segment atterrit dans la file vidée — documenté (N-020).
-5. **Voix par défaut** = `af_heart` (féminine EN) pour le mixte ; langue détectée pilote le phonémiseur espeak, pas la voix. Choix/forçage voix : N-053.
-6. **`Stop` pendant `load_model`** : le chargement continue en tâche de fond et le modèle sera utilisable à la fin (le verrou est indépendant).
-7. **`TtsConfig::default`** : utilisé partout (dev) ; `with_dir` pour les tests/envs custom.
+1. La recette a été rejouée par l'humain : modèle chargé ✓, capture OK ✓, synthèse ✓, audio audible ✓, `Arrêt`/pause fonctionnels.
+2. Premier clic sur « Lire la sélection » : ~4–6 s de latence (phonémisation + inférence) — normal pour ce matériel (RTF médian 0,36, mesuré S0).
+3. Au plus un segment orphelin en vol (documenté N-020).
+4. Voix par défaut = `af_heart` ; forçage FR via N-053 (« Choix voix/vitesse/volume »).
+5. Le modèle ne persiste pas l'état de lecture à la fermeture ; la barre de progression repart à 0 à la prochaine session.
+
+## Traçabilité
+
+- Carte : N-039. Sources : `src-tauri/src/pipeline.rs`, `audio/mod.rs`, `lib.rs`, `tts/mod.rs`, `src/App.tsx`, `vite.config.ts`, tests 84 verts + `kokoro_smoke` (5 s, peak 0,62).
+- Critères de la carte : Kokoro derrière `TtsEngine` ✓ ; chargement en tâche de fond ✓.
+- Préfigurent N-040 (préchargement segments), N-041 (intégration machine d'états ↔ audio robuste).
 
 ## Traçabilité
 
