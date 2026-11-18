@@ -2,17 +2,16 @@
 //!
 //! Cas limites gérés (carte TW-014), chacun avec une erreur claire :
 //! - aucune fenêtre au premier plan → `NoForegroundWindow`
-//! - l'application ne traite pas WM_COPY dans le délai imparti
-//!   (copie bloquée / app gelée) → `ApplicationHung`
+//! - la simulation Ctrl+C (SendInput) est refusée par le système → `InjectionFailed`
 //! - copie asynchrone : la capture attend jusqu'à 1,5 s que le
 //!   presse-papiers change (numéro de séquence) au lieu d'un délai fixe
-//!   → `NoSelection` si rien ne change
+//!   → `NoSelection` si rien ne change (aucune sélection, app qui ne répond pas)
 //! - presse-papiers verrouillé par une autre application → `ClipboardBusy`
 //! - aucun format texte exploitable (ou texte vide) → `NoTextContent`
-//! - interruption : fenêtre détruite pendant la capture / timeout → erreurs ci-dessus
+//! - interruption : tous les chemins d'attente sont bornés
 //!
 //! Restauration du presse-papiers utilisateur (carte TW-043) :
-//! un snapshot complet (tous les formats hors GDI) est pris **avant** WM_COPY ;
+//! un snapshot complet (tous les formats hors GDI) est pris **avant** Ctrl+C simul� (SendInput) ;
 //! il est **toujours** restauré en sortie, y compris en cas d'erreur ou
 //! d'interruption. Les formats non restaurables (handles GDI) sont ignorés
 //! explicitement et comptés.
@@ -20,10 +19,12 @@
 use std::fmt;
 use std::thread;
 use std::time::{Duration, Instant};
-use windows::Win32::Foundation::{HWND, LPARAM, WPARAM, HGLOBAL, HANDLE, GetLastError};
-use windows::Win32::UI::WindowsAndMessaging::{
-    GetForegroundWindow, SendMessageTimeoutW, SMTO_ABORTIFHUNG,
+use windows::Win32::Foundation::{HWND, HGLOBAL, HANDLE};
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYEVENTF_KEYUP, KEYBDINPUT, KEYBD_EVENT_FLAGS,
+    VK_C, VK_CONTROL,
 };
+use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 use windows::Win32::System::DataExchange::{
     CloseClipboard, EmptyClipboard, EnumClipboardFormats, GetClipboardData,
     GetClipboardSequenceNumber, IsClipboardFormatAvailable, OpenClipboard,
@@ -32,14 +33,11 @@ use windows::Win32::System::Memory::{
     GlobalAlloc, GlobalLock, GlobalSize, GlobalUnlock, GMEM_MOVEABLE,
 };
 
-const WM_COPY: u32 = 0x0301;
 const CF_UNICODETEXT: u32 = 13;
 const CF_TEXT: u32 = 1;
 const CF_HTML: u32 = 0xC00E;
 const CF_RTF: u32 = 0xC00F;
 
-/// Délai maximal de réponse à WM_COPY (app gelée / copie bloquée).
-const COPY_MESSAGE_TIMEOUT_MS: u32 = 1200;
 /// Attente maximale d'un changement du presse-papiers (copie asynchrone).
 const CLIPBOARD_CHANGE_TIMEOUT: Duration = Duration::from_millis(1500);
 /// Intervalle de sondage du numéro de séquence du presse-papiers.
@@ -53,9 +51,9 @@ const OPEN_CLIPBOARD_RETRY_DELAY: Duration = Duration::from_millis(100);
 pub enum CaptureError {
     /// Aucune fenêtre au premier plan.
     NoForegroundWindow,
-    /// L'application ne traite pas WM_COPY dans le délai imparti (app gelée / copie bloquée).
-    ApplicationHung { timeout_ms: u32 },
-    /// Le presse-papiers n'a pas changé après WM_COPY (aucune sélection ou copie non effectuée).
+    /// La simulation Ctrl+C (SendInput) a été refusée par le système.
+    InjectionFailed { sent: u32 },
+    /// Le presse-papiers n'a pas changé après le Ctrl+C simulé (aucune sélection, ou copie non effectuée).
     NoSelection,
     /// Le presse-papiers est verrouillé par une autre application.
     ClipboardBusy { attempts: usize },
@@ -74,13 +72,13 @@ impl fmt::Display for CaptureError {
             CaptureError::NoForegroundWindow => {
                 write!(f, "Aucune fenêtre au premier plan — impossible de cibler la sélection")
             }
-            CaptureError::ApplicationHung { timeout_ms } => write!(
+            CaptureError::InjectionFailed { sent } => write!(
                 f,
-                "L'application au premier plan ne répond pas à la demande de copie (délai de {timeout_ms} ms dépassé — application gelée ou copie bloquée)"
+                "Impossible de simuler Ctrl+C — Windows a bloqué l'injection clavier ({sent}/4 événements acceptés). Une protection (antivirus, sandbox, app élevée) l'a peut-être refusée, ou aucune fenêtre n'accepte l'entrée"
             ),
             CaptureError::NoSelection => write!(
                 f,
-                "Aucune sélection détectée — le presse-papiers n'a pas changé après la copie (aucune sélection, ou copie non effectuée par l'application)"
+                "Aucune sélection détectée — le presse-papiers n'a pas changé après Ctrl+C (aucune sélection, copie non effectuée, ou application qui ne répond pas)"
             ),
             CaptureError::ClipboardBusy { attempts } => write!(
                 f,
@@ -352,13 +350,13 @@ fn wait_for_clipboard_change(
 /// **toujours** restauré en sortie (succès, erreur, interruption).
 /// Ne bloque jamais indéfiniment : un délai maximum est appliqué à chaque étape.
 pub fn capture_selection() -> CaptureResult {
-    // 1. Snapshot complet du presse-papiers AVANT d'envoyer WM_COPY.
+    // 1. Snapshot complet du presse-papiers AVANT la copie.
     let snapshot = match snapshot_clipboard() {
         Ok(s) => s,
         Err(err) => return CaptureResult::failure(err),
     };
 
-    // 2. Capture (peut échouer : timeout WM_COPY, aucune sélection, lecture…).
+    // 2. Capture (peut échouer : injection refusée, aucune sélection, lecture…).
     let result = capture_steps();
 
     // 3. Restauration systématique — même en cas d'erreur.
@@ -378,6 +376,29 @@ pub fn capture_selection() -> CaptureResult {
     }
 }
 
+/// Simule Ctrl+C dans la fenêtre au premier plan (SendInput, 4 événements).
+///
+/// Contrairement à un `WM_COPY` envoyé à la fenêtre, ceci passe par la file de
+/// messages clavier : c'est ce que les applications traitent réellement (Ctrl+C
+/// est un accélérateur de menu, pas seulement un message de fenêtre).
+fn send_copy_keystroke() -> Result<(), CaptureError> {
+    let down = KEYBD_EVENT_FLAGS(0);
+    let up = KEYEVENTF_KEYUP;
+
+    let inputs = [
+        INPUT { r#type: INPUT_KEYBOARD, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_CONTROL, wScan: 0, dwFlags: down, time: 0, dwExtraInfo: 0 } } },
+        INPUT { r#type: INPUT_KEYBOARD, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_C, wScan: 0, dwFlags: down, time: 0, dwExtraInfo: 0 } } },
+        INPUT { r#type: INPUT_KEYBOARD, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_C, wScan: 0, dwFlags: up, time: 0, dwExtraInfo: 0 } } },
+        INPUT { r#type: INPUT_KEYBOARD, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_CONTROL, wScan: 0, dwFlags: up, time: 0, dwExtraInfo: 0 } } },
+    ];
+
+    let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
+    if sent != inputs.len() as u32 {
+        return Err(CaptureError::InjectionFailed { sent });
+    }
+    Ok(())
+}
+
 fn capture_steps() -> Result<CaptureResult, CaptureError> {
     // 1. Fenêtre au premier plan
     let hwnd = unsafe { GetForegroundWindow() };
@@ -388,23 +409,8 @@ fn capture_steps() -> Result<CaptureResult, CaptureError> {
     // 2. Mémoriser le numéro de séquence du presse-papiers avant la copie
     let seq_before = unsafe { GetClipboardSequenceNumber() };
 
-    // 3. Envoyer WM_COPY avec timeout (une app gelée ne doit pas bloquer la capture)
-    let mut result: usize = 0;
-    let send_ok = unsafe {
-        SendMessageTimeoutW(
-            HWND(hwnd.0),
-            WM_COPY,
-            WPARAM(0 as usize),
-            LPARAM(0 as isize),
-            SMTO_ABORTIFHUNG,
-            COPY_MESSAGE_TIMEOUT_MS,
-            Some(&mut result),
-        )
-    };
-    if send_ok.0 == 0 {
-        let _last_error = unsafe { GetLastError() };
-        return Err(CaptureError::ApplicationHung { timeout_ms: COPY_MESSAGE_TIMEOUT_MS });
-    }
+    // 3. Simuler Ctrl+C via SendInput
+    send_copy_keystroke()?;
 
     // 4. Copie asynchrone : attendre que le presse-papiers change
     if !wait_for_clipboard_change(seq_before, CLIPBOARD_CHANGE_TIMEOUT, || unsafe {
@@ -511,7 +517,7 @@ mod tests {
     fn messages_derreur_clairs_pour_chaque_cas() {
         let cas = [
             CaptureError::NoForegroundWindow,
-            CaptureError::ApplicationHung { timeout_ms: 1200 },
+            CaptureError::InjectionFailed { sent: 0 },
             CaptureError::NoSelection,
             CaptureError::ClipboardBusy { attempts: 5 },
             CaptureError::NoTextContent,
