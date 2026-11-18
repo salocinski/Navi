@@ -12,13 +12,9 @@ pub fn models_dir() -> Option<PathBuf> {
     app_data_dir().map(|d| d.join("models"))
 }
 
-/// Nettoie et normalise un texte capturé
+/// Nettoie et normalise un texte capturé (délègue à `text::normalize_ws`)
 pub fn clean_text(text: &str) -> String {
-    text.chars()
-        .filter(|c| !c.is_control() || *c == '\n' || *c == '\t')
-        .collect::<String>()
-        .trim()
-        .to_string()
+    crate::text::normalize_ws(text)
 }
 
 /// Détecte la langue probable d'un texte (heuristique simple)
