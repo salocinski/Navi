@@ -16,6 +16,7 @@ pub mod hotkey;
 pub mod tts;
 pub mod audio;
 pub mod state;
+pub mod text;
 pub mod ui;
 pub mod utils;
 
