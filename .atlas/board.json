@@ -189,8 +189,8 @@
       "id": "N-024",
       "title": "Produire le tableau de benchmarks et statuer sur le mode CPU",
       "description": "Critères :\n- [ ] Verdict : le mode CPU est viable ou non",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-18T01:08:19Z",
       "assignee": ""
     },
     {
