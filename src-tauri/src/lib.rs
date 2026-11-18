@@ -37,6 +37,8 @@ pub struct NaviState {
     pub machine: crate::state::PlaybackStateMachine,
     pub engine: Arc<Mutex<Option<crate::tts::KokoroEngine>>>,
     pub audio: Arc<Mutex<Option<crate::audio::AudioHandle>>>,
+    /// Garde anti double-chargement (ort n'autorise qu'un seul `Environment` par processus).
+    pub loading: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl NaviState {
@@ -45,6 +47,7 @@ impl NaviState {
             machine: crate::state::PlaybackStateMachine::new(),
             engine: Arc::new(Mutex::new(None)),
             audio: Arc::new(Mutex::new(None)),
+            loading: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         }
     }
 }
@@ -72,16 +75,21 @@ fn get_status(state: tauri::State<NaviState>) -> StatusDto {
 }
 
 /// Charge le modèle Kokoro en tâche de fond (idempotent ; ~11 s au premier appel).
+/// Un seul chargement simultané est autorisé — ort refuse plusieurs `Environment`.
 #[tauri::command]
 fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
     if state.engine.lock().map_err(|_| "verrou moteur".to_string())?.is_some() {
         return Ok(());
     }
+    if state.loading.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return Ok(()); // un chargement est déjà en cours
+    }
     let engine = state.engine.clone();
+    let loading = state.loading.clone();
     let machine = state.machine.clone();
     std::thread::spawn(move || {
-        let dir = crate::utils::resolve_models_dir();
         let result = (|| -> Result<crate::tts::KokoroEngine, String> {
+            let dir = crate::utils::resolve_models_dir();
             let config = crate::tts::TtsConfig::with_dir(&dir);
             let mut kokoro = crate::tts::KokoroEngine::new(config)
                 .map_err(|e| format!("chargement moteur impossible ({e}). Modèles attendus dans {}", dir.display()))?;
@@ -96,9 +104,11 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
                 }
             }
             Err(message) => {
+                eprintln!("[navi] chargement moteur échoué : {message}");
                 machine.set_error(message);
             }
         }
+        loading.store(false, std::sync::atomic::Ordering::SeqCst);
     });
     Ok(())
 }
@@ -162,7 +172,8 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
     if state.engine.lock().map_err(|_| "verrou moteur".to_string())?.is_none() {
         let engine = state.engine.clone();
         let machine = state.machine.clone();
-        load_model_bg(engine, machine);
+        let loading = state.loading.clone();
+        load_model_bg(engine, machine, loading);
         let message = "Modèle Kokoro en cours de chargement… relancez la lecture dans quelques secondes".to_string();
         state.machine.set_error(message.clone());
         return Err(message);
@@ -177,6 +188,7 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
     let segments = segments;
     let audio = state.audio.clone();
     std::thread::spawn(move || {
+        eprintln!("[navi] thread de synthèse démarré ({} segments)", segments.len());
         let outcome = (|| -> Result<usize, String> {
             let engine_guard = engine.lock().map_err(|_| "verrou moteur".to_string())?;
             let kokoro = engine_guard.as_ref().ok_or_else(|| "Modèle Kokoro non chargé".to_string())?;
@@ -192,10 +204,17 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
                 &sink,
                 &|| machine.is_generation_cancelled(token),
                 language,
+                &|| {
+                    let _ = machine.next_chunk();
+                },
             )
         })();
-        if let Err(message) = outcome {
-            machine.set_error(message);
+        match outcome {
+            Ok(done) => eprintln!("[navi] synthèse terminée — {done} segments envoyés dans la file audio"),
+            Err(message) => {
+                eprintln!("[navi] synthèse échouée : {message}");
+                machine.set_error(message);
+            }
         }
     });
 
@@ -203,9 +222,17 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
 }
 
 /// Variante sans accès à `State` — utilisée par `start_reading` pour démarrer un chargement.
-fn load_model_bg(engine: Arc<Mutex<Option<crate::tts::KokoroEngine>>>, machine: crate::state::PlaybackStateMachine) {
+/// Refuse de spawned si un chargement est déjà en cours (ort : un seul Environment).
+fn load_model_bg(
+    engine: Arc<Mutex<Option<crate::tts::KokoroEngine>>>,
+    machine: crate::state::PlaybackStateMachine,
+    loading: Arc<std::sync::atomic::AtomicBool>,
+) {
     if engine.lock().map(|e| e.is_some()).unwrap_or(true) {
         return;
+    }
+    if loading.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return; // déjà en cours
     }
     std::thread::spawn(move || {
         let dir = crate::utils::resolve_models_dir();
@@ -224,6 +251,7 @@ fn load_model_bg(engine: Arc<Mutex<Option<crate::tts::KokoroEngine>>>, machine: 
             }
             Err(message) => machine.set_error(message),
         }
+        loading.store(false, std::sync::atomic::Ordering::SeqCst);
     });
 }
 

@@ -1,4 +1,4 @@
-//! Pipeline de lecture — texte → segments → Kokoro → file audio (carte N-039).
+﻿//! Pipeline de lecture — texte → segments → Kokoro → file audio (carte N-039).
 //!
 //! L'objectif de cette carte : brancher Kokoro derrière `TtsEngine` avec un
 //! chargement en tâche de fond et alimenter la file audio en segments synthétisés,
@@ -59,12 +59,15 @@ pub fn synthesize_segments(
     sink: &dyn AudioSink,
     is_cancelled: &dyn Fn() -> bool,
     language: Option<TtsLanguage>,
+    on_segment_done: &dyn Fn(),
 ) -> Result<usize, String> {
     let mut count = 0;
     for seg in segments {
         if is_cancelled() {
+            eprintln!("[navi] synthèse annulée après {count}/{} segments", segments.len());
             return Ok(count);
         }
+        eprintln!("[navi] synthèse segment {}/{} ({} chars)…", seg.index + 1, segments.len(), seg.text.chars().count());
         let out = engine
             .synthesize(&SynthesisRequest {
                 text: seg.text.clone(),
@@ -75,6 +78,8 @@ pub fn synthesize_segments(
             .map_err(|e| format!("Synthèse du segment {}/{} impossible : {e}", seg.index + 1, segments.len()))?;
         sink.write(&out.samples)?;
         count += 1;
+        on_segment_done();
+        eprintln!("[navi] segment {}/{} synthétisé ({} échantillons)", count, segments.len(), out.samples.len());
     }
     Ok(count)
 }
@@ -115,7 +120,7 @@ mod tests {
     fn synthetise_tous_les_segments_dans_l_ordre() {
         let sink = MemorySink::new();
         let engine = StubEngine { loaded: true };
-        let n = synthesize_segments(&engine, &segments(5), &sink, &|| false, Some(TtsLanguage::French)).unwrap();
+        let n = synthesize_segments(&engine, &segments(5), &sink, &|| false, Some(TtsLanguage::French), &|| ()).unwrap();
         assert_eq!(n, 5);
         let chunks = sink.chunks.lock().unwrap();
         assert_eq!(chunks.len(), 5);
@@ -133,7 +138,7 @@ mod tests {
             count.set(count.get() + 1);
             count.get() > 2 // après 2 segments, on annule
         };
-        let n = synthesize_segments(&engine, &segments(5), &sink, &is_cancelled, Some(TtsLanguage::French)).unwrap();
+        let n = synthesize_segments(&engine, &segments(5), &sink, &is_cancelled, Some(TtsLanguage::French), &|| ()).unwrap();
         assert_eq!(n, 2);
         assert_eq!(sink.chunks.lock().unwrap().len(), 2);
     }
@@ -158,7 +163,7 @@ mod tests {
         let seen = Arc::new(Mutex::new(None));
         let probe = LangProbe { seen: seen.clone() };
         let segs = segments(1);
-        synthesize_segments(&probe, &segs, &sink, &|| false, Some(TtsLanguage::English)).unwrap();
+        synthesize_segments(&probe, &segs, &sink, &|| false, Some(TtsLanguage::English), &|| ()).unwrap();
         assert_eq!(*seen.lock().unwrap(), Some(TtsLanguage::English));
     }
 }
