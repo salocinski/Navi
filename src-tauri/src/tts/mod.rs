@@ -139,6 +139,13 @@ impl KokoroEngine {
         
         // Tokenisation
         let tokens = self.tokenize(&phonemes)?;
+        if tokens.len() + 2 > 510 {
+            return Err(format!(
+                "Segment trop long pour Kokoro : {} tokens phonémisés (max 508 + 2 padding) — réduisez la taille de segment",
+                tokens.len()
+            )
+            .into());
+        }
         
         // Récupérer style de voix
         let voice_styles = self.voice_styles.lock().unwrap();
@@ -183,27 +190,26 @@ impl KokoroEngine {
     }
     
     fn parse_voices_bin(data: &[u8]) -> Result<HashMap<String, Vec<f32>>, Box<dyn std::error::Error>> {
-        let known_voices = vec![
-            "af_heart", "af_alloy", "af_aoede", "af_bella", "af_jessica",
-            "af_kore", "af_nicole", "af_nova", "af_river", "af_sarah",
-            "af_sky", "am_adam", "am_echo", "am_eric", "am_fenrir",
-            "am_liam", "am_michael", "am_onyx", "am_puck", "am_santa",
-            "bf_alice", "bf_emma", "bf_isabella", "bf_lily",
-            "bm_daniel", "bm_fable", "bm_george", "bm_lewis",
-            "ff_siwis",
-        ];
-        
+        // voices-v1.0.bin est une archive .npz (zip) d'un .npy par voix, [510, 1, 256] f32
+        let reader = std::io::Cursor::new(data);
+        let mut archive = zip::ZipArchive::new(reader)?;
         let mut map = HashMap::new();
-        for (i, name) in known_voices.iter().enumerate() {
-            let start = i * 256 * 4;
-            let end = start + 256 * 4;
-            if end <= data.len() {
-                let slice = &data[start..end];
-                let vec: Vec<f32> = slice.chunks_exact(4)
-                    .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
-                    .collect();
-                map.insert(name.to_string(), vec);
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+            let fname = file.name()?.to_string();
+            if !fname.ends_with(".npy") {
+                continue;
             }
+            let name = fname.trim_end_matches(".npy").to_string();
+            let npy = npyz::NpyFile::new(&mut file)?;
+            let shape = npy.shape().to_vec();
+            if shape != [510, 1, 256] {
+                return Err(format!("Voix {name}: forme inattendue {shape:?} (attendu [510, 1, 256])").into());
+            }
+            map.insert(name, npy.into_vec::<f32>()?);
+        }
+        if map.is_empty() {
+            return Err("voices-v1.0.bin : aucune voix trouvée dans l'archive .npz".into());
         }
         Ok(map)
     }

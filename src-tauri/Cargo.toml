@@ -51,6 +51,8 @@ libc = "0.2"
 # Tests
 #[cfg(test)]
 tempfile = "3"
+zip = "9.7.0"
+npyz = "0.9.1"
 
 [profile.release]
 codegen-units = 1
