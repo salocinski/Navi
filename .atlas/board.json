@@ -156,9 +156,9 @@
     {
       "id": "N-020",
       "title": "Valider pause, reprise, arrêt et gestion de la file",
-      "description": "Arrêt : vider la file, annuler proprement la génération en cours.\n\nCritères :\n- [ ] Sans perte de position ni désynchronisation majeure\n\n[NOTE 2026-11-18 11:11] PR https://github.com/salocinski/Navi/pull/22 - FIFO corrigee, stop vide la file + reset sink, jetons d'annulation de generation, 13 tests verts. Fusion par l'humain puis done 20.",
-      "state": "doing",
-      "updated_at": "2026-11-18T16:07:18Z",
+      "description": "Arrêt : vider la file, annuler proprement la génération en cours.\n\nCritères :\n- [ ] Sans perte de position ni désynchronisation majeure\n\n[NOTE 2026-11-18 11:11] PR https://github.com/salocinski/Navi/pull/22 - FIFO corrigee, stop vide la file + reset sink, jetons d'annulation de generation, 13 tests verts. Fusion par l'humain puis done 20.\n\n[RESOLUTION 2026-11-18] [RESOLUTION 2026-11-18] PR #22 fusionnee (merge 0890cab, squash). Pause/reprise/arret et file corriges : FIFO, arret vide la file, reset sink, jetons d'annulation de generation ; cargo test 13 verts ; limites consignees dans docs/s1-20-pause-reprise-arret.md (verification audible multi-chunks reportee a l'integration verticale N-039/N-041).",
+      "state": "done",
+      "updated_at": "2026-11-18T16:14:20Z",
       "assignee": ""
     },
     {
