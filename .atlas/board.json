@@ -340,9 +340,9 @@
     {
       "id": "N-043",
       "title": "Durcir la capture presse-papiers",
-      "description": "Formats, restauration garantie, tests d'erreur et d'interruption.\n\n[NOTE 2026-11-18 11:43] PR https://github.com/salocinski/Navi/pull/27 - snapshot integral avant WM_COPY + restauration systematique (meme en erreur) ; capture refusee si snapshot impossible ; formats GDI exclus et comptes ; 18 tests verts. Recette terrain a executer par l'humain avant merge. Fusion puis done 43.\n\n[NOTE 2026-11-18 12:12] [RETOUR 2026-11-18] Recette terrain par l'humain : Chromium OK, texte riche Word + restauration OK. Constat majeur : WM_COPY ne declenchait pas la copie -> corrige par SendInput Ctrl+C (31a6780). Scenarios image/fichier, app gelee, presse-papiers verrouille non joues. Exemple CLI src-tauri/examples/capture_recipe.rs pour rejouer. PR #27 mise a jour.",
-      "state": "doing",
-      "updated_at": "2026-11-18T16:40:20Z",
+      "description": "Formats, restauration garantie, tests d'erreur et d'interruption.\n\n[NOTE 2026-11-18 11:43] PR https://github.com/salocinski/Navi/pull/27 - snapshot integral avant WM_COPY + restauration systematique (meme en erreur) ; capture refusee si snapshot impossible ; formats GDI exclus et comptes ; 18 tests verts. Recette terrain a executer par l'humain avant merge. Fusion puis done 43.\n\n[NOTE 2026-11-18 12:12] [RETOUR 2026-11-18] Recette terrain par l'humain : Chromium OK, texte riche Word + restauration OK. Constat majeur : WM_COPY ne declenchait pas la copie -> corrige par SendInput Ctrl+C (31a6780). Scenarios image/fichier, app gelee, presse-papiers verrouille non joues. Exemple CLI src-tauri/examples/capture_recipe.rs pour rejouer. PR #27 mise a jour.\n\n[RESOLUTION 2026-11-18] [RESOLUTION 2026-11-18] PR 27 fusionnee, merge a3fbb5b squash. Snapshot integral avant copie, SendInput Ctrl+C remplace WM_COPY qui ne declenchait pas la copie, faux positif S0-12 corrige. Restauration systematique du presse-papiers meme en erreur. Recette terrain humain : Chromium OK, texte riche Word et restauration OK, trois scenarios non joues documentes. 18 tests verts. docs/s1-43-capture-restauration.md",
+      "state": "done",
+      "updated_at": "2026-11-18T17:56:02Z",
       "assignee": ""
     },
     {
