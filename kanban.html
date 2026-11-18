@@ -917,7 +917,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 39,
       "title": "Intégrer Kokoro derrière TtsEngine",
-      "status": "doing",
+      "status": "done",
       "prio": "P1",
       "kind": "tache",
       "milestone": "M1",
@@ -927,7 +927,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
         "N-009",
         "N-031"
       ],
-      "note": "Chargement du modèle en tâche de fond.\n\n[NOTE 2026-11-18 14:55] PR https://github.com/salocinski/Navi/pull/47 - Kokoro derriere TtsEngine avec chargement tache de fond, thread audio dedie (OutputStream non Send), pipeline complet capture->nettoyage->langue->segments->synthese->file audio. 84 tests verts, build TS OK. Recette terrain a executer par l'humain avant done.\n\n[NOTE 2026-11-18 15:36] [VALIDATION TERRAIN 2026-11-18] la voix lit le texte a voix haute, capture->synthese->audio end-to-end. 8 defauts corriges dont AudioHandle::drop->stop() supprimant l'audio en fin de synthese. Prechargement auto au demarrage. PR 47 mise a jour."
+      "note": "Chargement du modèle en tâche de fond.\n\n[NOTE 2026-11-18 14:55] PR https://github.com/salocinski/Navi/pull/47 - Kokoro derriere TtsEngine avec chargement tache de fond, thread audio dedie (OutputStream non Send), pipeline complet capture->nettoyage->langue->segments->synthese->file audio. 84 tests verts, build TS OK. Recette terrain a executer par l'humain avant done.\n\n[NOTE 2026-11-18 15:36] [VALIDATION TERRAIN 2026-11-18] la voix lit le texte a voix haute, capture->synthese->audio end-to-end. 8 defauts corriges dont AudioHandle::drop->stop() supprimant l'audio en fin de synthese. Prechargement auto au demarrage. PR 47 mise a jour.\n\n[RESOLUTION 2026-11-18] [RESOLUTION 2026-11-19] PR 47 fusionnee, merge eede105 squash. Pipeline lecture complet terrain-valide : voix Kokoro audible, capture->nettoyage->segmentation->synthese->rodio 24kHz. 8 defauts corriges dont AudioHandle::drop en fin de synthese. Prechargement modele au demarrage. 84 tests verts. docs/s1-39-kokoro-integration.md."
     },
     {
       "num": 40,
