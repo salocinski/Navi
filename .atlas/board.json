@@ -140,9 +140,9 @@
     {
       "id": "N-018",
       "title": "Tester les raccourcis proposés et leurs conflits",
-      "description": "Ctrl+Alt+Espace / P / S. Échec d'enregistrement détecté et signalé.\n\nCritères :\n- [ ] Comportement en cas de conflit documenté\n\n[NOTE 2026-11-18 13:28] PR https://github.com/salocinski/Navi/pull/33 - mesure sur machine de reference : Ctrl+Maj+R/P/S OK, Ctrl+Alt+Espace deja reserve (HotKey already registered). Defaut retenu Ctrl+Maj+R/P/S. Echecs isoles avec failure_message clair, partiel tolere. 25 tests verts. Fusion par l'humain puis done 18.\n\n[NOTE 2026-11-18 13:35] [AMENDEMENT 2026-11-18] defaut lire remplace par Ctrl+Maj+Espace (mesure OK sur machine de reference, demande humain : main sans viser une lettre). Ctrl+Maj+P/S inchanges. 3564c93 ; PR 33 mise a jour ; decisions.md amende.",
-      "state": "doing",
-      "updated_at": "2026-11-18T18:26:42Z",
+      "description": "Ctrl+Alt+Espace / P / S. Échec d'enregistrement détecté et signalé.\n\nCritères :\n- [ ] Comportement en cas de conflit documenté\n\n[NOTE 2026-11-18 13:28] PR https://github.com/salocinski/Navi/pull/33 - mesure sur machine de reference : Ctrl+Maj+R/P/S OK, Ctrl+Alt+Espace deja reserve (HotKey already registered). Defaut retenu Ctrl+Maj+R/P/S. Echecs isoles avec failure_message clair, partiel tolere. 25 tests verts. Fusion par l'humain puis done 18.\n\n[NOTE 2026-11-18 13:35] [AMENDEMENT 2026-11-18] defaut lire remplace par Ctrl+Maj+Espace (mesure OK sur machine de reference, demande humain : main sans viser une lettre). Ctrl+Maj+P/S inchanges. 3564c93 ; PR 33 mise a jour ; decisions.md amende.\n\n[RESOLUTION 2026-11-18] [RESOLUTION 2026-11-18] PR 33 fusionnee, merge f6a2015 squash. Defauts retenus Ctrl+Maj+Espace lire et Ctrl+Maj+P pause et Ctrl+Maj+S arret, mesures sur machine de reference, Ctrl+Alt+Espace deja reserve. Echec isole avec failure_message clair, echec partiel tolere, 25 tests verts, docs/s1-18-raccourcis-conflits.md.",
+      "state": "done",
+      "updated_at": "2026-11-18T18:38:19Z",
       "assignee": ""
     },
     {
