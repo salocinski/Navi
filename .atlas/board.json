@@ -292,7 +292,7 @@
     {
       "id": "N-037",
       "title": "Segmenter le texte en production",
-      "description": "Préparation de la file de segments.",
+      "description": "Préparation de la file de segments.\n\n[NOTE 2026-11-18 14:33] PR https://github.com/salocinski/Navi/pull/43 - segment_text -> Vec<Segment> (index, texte, estimated_tokens). Liste abbrev FR/EN + initiale majuscule, MAX_TOKENS=480, dur splitting d'un mot trop long, 10 tests, 66 verts. Fusion par l'humain puis done 37.",
       "state": "doing",
       "updated_at": "2026-11-18T19:31:29Z",
       "assignee": ""
