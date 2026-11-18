@@ -309,8 +309,8 @@
       "id": "N-039",
       "title": "Intégrer Kokoro derrière TtsEngine",
       "description": "Chargement du modèle en tâche de fond.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-18T19:47:07Z",
       "assignee": ""
     },
     {
