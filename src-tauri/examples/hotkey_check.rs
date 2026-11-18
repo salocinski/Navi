@@ -17,6 +17,7 @@ fn main() {
         ("Ctrl+Shift+P (pause)", Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyP),
         ("Ctrl+Shift+S (arrêt)", Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyS),
         ("Ctrl+Alt+Espace (lire)", Modifiers::CONTROL | Modifiers::ALT, Code::Space),
+        ("Ctrl+Maj+Espace (lire)", Modifiers::CONTROL | Modifiers::SHIFT, Code::Space),
         ("Ctrl+Alt+P (pause)", Modifiers::CONTROL | Modifiers::ALT, Code::KeyP),
         ("Ctrl+Alt+S (arrêt)", Modifiers::CONTROL | Modifiers::ALT, Code::KeyS),
     ];

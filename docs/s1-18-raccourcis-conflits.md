@@ -13,20 +13,21 @@ Question : quel jeu de raccourcis par défaut retenir, et que se passe-t-il en c
 
 | Combinaison | Résultat |
 |---|---|
-| Ctrl+Maj+R (lire) | ✅ OK |
+| Ctrl+Maj+R (lire, candidat) | ✅ OK (libre mais non retenu pour « lire » après amendement du 2026-11-18) |
+| Ctrl+Maj+Espace (lire) | ✅ OK (amendement du 2026-11-18 : défaut « lire » demandé) |
 | Ctrl+Maj+P (pause/reprise) | ✅ OK |
 | Ctrl+Maj+S (arrêt) | ✅ OK |
 | Ctrl+Alt+Espace (lire) | ❌ **HotKey already registered** — réservée par l'OS ou une application (non identifiable depuis l'extérieur ; Windows ne l'attribue qu'à un seul détenteur) |
 | Ctrl+Alt+P (pause) | ✅ OK |
 | Ctrl+Alt+S (arrêt) | ✅ OK |
 
-Fait nouveau : le candidat initial (Ctrl+Alt+Espace) est **déjà occupé** sur la machine de référence.
+Fait nouveau : le candidat initial (Ctrl+Alt+Espace) est **déjà occupé** sur la machine de référence ; Ctrl+Maj+R restait libre mais cède sa place à Espace pour « lire » (demande du 2026-11-18).
 Les conflits peuvent différer selon les machines — la détection se fait **à l'enregistrement**, jamais en amont.
 
 ## Décision
 
-**Par défaut = Ctrl+Maj+R / Ctrl+Maj+P / Ctrl+Maj+S** (alignement sur les prototypes Sprint 0).
-**Ctrl+Alt+* est écarté pour « lire »** (conflit constaté) ; Ctrl+Alt+P/S restaient disponibles mais l'uniformité Ctrl+Maj prime.
+**Par défaut = Ctrl+Maj+Espace (lire) / Ctrl+Maj+P (pause-reprise) / Ctrl+Maj+S (arrêt)** (amendement du 2026-11-18 sur demande : Espace pour « lire », plus ergonomique au clavier ; Ctrl+Maj+R reste un candidat possible via N-052).
+**Ctrl+Alt+Espace est écarté** (conflit constaté sur la machine de référence).
 Consigné dans `docs/decisions.md` (TW-018).
 
 ## Comportement en cas de conflit (critère de la carte)
