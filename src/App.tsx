@@ -1,49 +1,105 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import "./App.css";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+type Phase =
+  | "idle"
+  | "capturing"
+  | "generating"
+  | "playing"
+  | "paused"
+  | "stopped"
+  | "error";
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+interface StatusDto {
+  phase: Phase;
+  current_chunk: number;
+  total_chunks: number;
+}
+
+interface StateEventPayload {
+  type: "phase-changed" | "progress" | "error";
+  from?: Phase;
+  to?: Phase;
+  current?: number;
+  total?: number;
+  message?: string;
+}
+
+const PHASE_LABEL: Record<Phase, string> = {
+  idle: "Inactif",
+  capturing: "Capture…",
+  generating: "Génération…",
+  playing: "Lecture",
+  paused: "Pause",
+  stopped: "Arrêté",
+  error: "Erreur",
+};
+
+function App() {
+  const [status, setStatus] = useState<StatusDto>({ phase: "idle", current_chunk: 0, total_chunks: 0 });
+  const [lastError, setLastError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    invoke<StatusDto>("get_status").then((dto) => {
+      if (mounted) setStatus(dto);
+    });
+
+    const unlisten = listen<StateEventPayload>("navi-state", (event) => {
+      const payload = event.payload;
+      if (payload.type === "phase-changed" && payload.to) {
+        setStatus((s) => ({ ...s, phase: payload.to! }));
+      } else if (payload.type === "progress") {
+        setStatus((s) => ({
+          ...s,
+          current_chunk: payload.current ?? s.current_chunk,
+          total_chunks: payload.total ?? s.total_chunks,
+        }));
+      } else if (payload.type === "error" && payload.message) {
+        setLastError(payload.message);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  const progressPercent =
+    status.total_chunks > 0 ? Math.round((status.current_chunk / status.total_chunks) * 100) : 0;
 
   return (
     <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+      <h1>Navi</h1>
+      <p className="subtitle">Lecteur local — contrat machine d'états → UI (N-032)</p>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <div className="status-row">
+        <span className={`phase-badge phase-${status.phase}`}>{PHASE_LABEL[status.phase]}</span>
+        {status.total_chunks > 0 && (
+          <span className="progress-text">
+            {status.current_chunk}/{status.total_chunks} segments ({progressPercent}%)
+          </span>
+        )}
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
+      <progress max={Math.max(status.total_chunks, 1)} value={status.current_chunk} />
+
+      {lastError && <p className="error-box">{lastError}</p>}
+
+      <div className="action-row">
+        <button disabled title="Branché par N-041/N-045 (moteur et raccourcis)">Lire</button>
+        <button disabled title="Branché par N-041/N-045 (moteur et raccourcis)">Pause</button>
+        <button disabled title="Branché par N-041/N-045 (moteur et raccourcis)">Arrêt</button>
+      </div>
+
+      <p className="note">
+        Les commandes de lecture sont affichées en lecture seule : la capture, le moteur Kokoro et
+        les raccourcis seront branchés par N-039/N-041/N-045.
+      </p>
     </main>
   );
 }
