@@ -220,9 +220,9 @@
     {
       "id": "N-028",
       "title": "Vérifier les critères de réussite du Sprint 0",
-      "description": "Critères :\n- [ ] Les 8 critères du doc §11 contrôlés\n- [ ] Incertitudes restantes listées\n\n[NOTE 2026-11-18 07:47] [PRISE 2026-11-18] Vérification des critères de réussite du Sprint 0\n\n[NOTE 2026-11-18 07:52] PR https://github.com/salocinski/Navi/pull/19 - controle des 8 criteres, reconstruction car docx absent, 17 incertitudes, verdict go conditionnel Sprint 1. Merge par l'humain puis done 28.",
-      "state": "doing",
-      "updated_at": "2026-11-18T12:47:04Z",
+      "description": "Critères :\n- [ ] Les 8 critères du doc §11 contrôlés\n- [ ] Incertitudes restantes listées\n\n[NOTE 2026-11-18 07:47] [PRISE 2026-11-18] Vérification des critères de réussite du Sprint 0\n\n[NOTE 2026-11-18 07:52] PR https://github.com/salocinski/Navi/pull/19 - controle des 8 criteres, reconstruction car docx absent, 17 incertitudes, verdict go conditionnel Sprint 1. Merge par l'humain puis done 28.\n\n[RESOLUTION 2026-11-18] [RESOLUTION 2026-11-18] PR #19 fusionnee (merge 500563c), controle des 8 criteres Sprint 0 documente dans docs/s0-09b-criteres-reussite.md, 17 incertitudes listees, verdict go conditionnel Sprint 1. Branche feat/TW-28 supprimee locale et distante ; main synchronise en fast-forward.",
+      "state": "done",
+      "updated_at": "2026-11-18T14:22:38Z",
       "assignee": ""
     },
     {
