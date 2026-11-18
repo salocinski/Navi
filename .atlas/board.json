@@ -284,9 +284,9 @@
     {
       "id": "N-036",
       "title": "Détecter automatiquement le français et l'anglais",
-      "description": "Indépendant du moteur TTS. Définir le comportement pour langue inconnue ou texte mixte.\n\n[NOTE 2026-11-18 14:28] PR https://github.com/salocinski/Navi/pull/41 - detection FR/EN hors moteur : accents, stopwords, apostrophes, Mixed si perdant >= 35%, Unknown si < 3 tokens. Mixed/Unknown -> hint fr (decision produit). 6 tests, 56 verts. Fusion par l'humain puis done 36.",
-      "state": "doing",
-      "updated_at": "2026-11-18T19:27:27Z",
+      "description": "Indépendant du moteur TTS. Définir le comportement pour langue inconnue ou texte mixte.\n\n[NOTE 2026-11-18 14:28] PR https://github.com/salocinski/Navi/pull/41 - detection FR/EN hors moteur : accents, stopwords, apostrophes, Mixed si perdant >= 35%, Unknown si < 3 tokens. Mixed/Unknown -> hint fr (decision produit). 6 tests, 56 verts. Fusion par l'humain puis done 36.\n\n[RESOLUTION 2026-11-18] [RESOLUTION 2026-11-18] PR 41 fusionnee, merge 15b6a8b squash. Detection FR/EN hors moteur : accents, stopwords, apostrophes, Mixed si perdant >= 35%, Unknown si < 3 tokens ; Mixed/Unknown -> hint fr (decision produit). 6 tests, 56 verts. docs/s1-36-detection-langue.md.",
+      "state": "done",
+      "updated_at": "2026-11-18T19:29:30Z",
       "assignee": ""
     },
     {
