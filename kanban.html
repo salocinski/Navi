@@ -559,7 +559,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 14,
       "title": "Gérer les cas limites de capture",
-      "status": "doing",
+      "status": "done",
       "prio": "P1",
       "kind": "spike",
       "milestone": "M0",
@@ -568,7 +568,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-012"
       ],
-      "note": "Aucune sélection, copie asynchrone, copie bloquée, interruption.\n\nCritères :\n- [ ] Chaque cas renvoie une erreur claire\n\n[NOTE 2026-11-18 11:32] PR https://github.com/salocinski/Navi/pull/24 - cas limites couverts (WM_COPY timeout 1200ms, attente sequence presse-papiers 1500ms, 5 retries open clipboard, erreurs claires). 16 tests verts. Fusion par l'humain puis done 14."
+      "note": "Aucune sélection, copie asynchrone, copie bloquée, interruption.\n\nCritères :\n- [ ] Chaque cas renvoie une erreur claire\n\n[NOTE 2026-11-18 11:32] PR https://github.com/salocinski/Navi/pull/24 - cas limites couverts (WM_COPY timeout 1200ms, attente sequence presse-papiers 1500ms, 5 retries open clipboard, erreurs claires). 16 tests verts. Fusion par l'humain puis done 14.\n\n[RESOLUTION 2026-11-18] [RESOLUTION 2026-11-18] PR #24 fusionnee (merge 2689b17, squash). Cas limites de capture couverts : SendMessageTimeoutW+SMTO_ABORTIFHUNG (1200ms), attente sequence presse-papiers 1500ms (copie asynchrone), 5 retries OpenClipboard, erreurs claires FR pour chaque cas ; 16 tests verts ; docs/s1-14-cas-limites-capture.md. Limite : restauration presse-papiers reportee vers N-043/N-016 pour tests manuels."
     },
     {
       "num": 15,
