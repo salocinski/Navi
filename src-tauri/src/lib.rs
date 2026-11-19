@@ -1,4 +1,4 @@
-﻿//! Navi - Lecteur de texte à voix haute 100% local
+//! Navi - Lecteur de texte à voix haute 100% local
 //!
 //! Architecture modulaire :
 //! - config: gestion de configuration persistante
@@ -21,15 +21,30 @@ static LAST_FOREGROUND: std::sync::atomic::AtomicUsize = std::sync::atomic::Atom
 /// de viser la bonne cible (au lieu de Navi lui-même quand la Steam/Chromium a le focus).
 fn track_last_foreground() {
     std::thread::spawn(move || {
-        use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+        use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetForegroundWindow, GetWindowThreadProcessId};
         use windows::Win32::System::Threading::GetCurrentProcessId;
         let own = unsafe { GetCurrentProcessId() };
+        let mut cls = [0u16; 256];
         loop {
             let hwnd = unsafe { GetForegroundWindow() };
             if !hwnd.0.is_null() {
                 let mut pid: u32 = 0;
                 unsafe { GetWindowThreadProcessId(HWND(hwnd.0), Some(&mut pid)) };
-                if pid != 0 && pid != own {
+                // Ignore les fenêtres Shell (taskbar, overflow, menu, bureau) — mémoire réservée aux fenêtres applicatives.
+                let len_class = unsafe { GetClassNameW(hwnd, &mut cls) };
+                let class_name = String::from_utf16_lossy(&cls[..len_class as usize]);
+                let is_shell_ui = matches!(
+                    class_name.as_str(),
+                    "NotifyIconOverflowWindow"
+                        | "Shell_TrayWnd"
+                        | "Shell_SecondaryTrayWnd"
+                        | "SysShadow"
+                        | "#32768"
+                        | "ToolbarWindow32"
+                        | "Progman"
+                        | "WorkerW"
+                );
+                if pid != 0 && pid != own && !is_shell_ui {
                     LAST_FOREGROUND.store(hwnd.0 as usize, std::sync::atomic::Ordering::SeqCst);
                 }
             }
@@ -206,7 +221,7 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
     read_selection_impl(&state.view())
 }
 
-fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
+pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     touch_user_activity();
     state.machine.begin_capture().map_err(|e| e)?;
 
@@ -361,7 +376,7 @@ fn pause_reading(state: tauri::State<NaviState>) -> Result<(), String> {
     pause_reading_impl(&state.view())
 }
 
-fn pause_reading_impl(state: &NaviRef) -> Result<(), String> {
+pub(crate) fn pause_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
     state.machine.pause().map_err(|e| e)?;
     state
@@ -378,7 +393,7 @@ fn resume_reading(state: tauri::State<NaviState>) -> Result<(), String> {
     resume_reading_impl(&state.view())
 }
 
-fn resume_reading_impl(state: &NaviRef) -> Result<(), String> {
+pub(crate) fn resume_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
     state.machine.resume().map_err(|e| e)?;
     state
@@ -395,7 +410,7 @@ fn stop_reading(state: tauri::State<NaviState>) -> Result<(), String> {
     stop_reading_impl(&state.view())
 }
 
-fn stop_reading_impl(state: &NaviRef) -> Result<(), String> {
+pub(crate) fn stop_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
     state.machine.stop();
     if let Ok(audio) = state.audio.lock() {
@@ -428,6 +443,15 @@ pub fn run() {
                 // Événements consommés par l'UI via @tauri-apps/api/event (`navi-state`).
                 let _ = handle.emit("navi-state", event);
             });
+
+            // Icône de zone de notification + menu (carte N-047) — feuille DA docs/pistes-interface.html.
+            {
+                let view = state.view();
+                let tray_handle = app.handle().clone();
+                if let Err(err) = crate::ui::create_system_tray(&tray_handle, view) {
+                    eprintln!("[navi] tray indisponible : {err}");
+                }
+            }
 
             // Raccourcis globaux — défauts, écoute via GlobalHotKeyEvent.
             {

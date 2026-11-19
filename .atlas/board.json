@@ -372,9 +372,9 @@
     {
       "id": "N-047",
       "title": "Créer l'icône de zone de notification et son menu",
-      "description": "Icône = logo fourni (rond). Clic gauche : ouvre le panneau. Clic droit : menu court (lire, pause/reprise, arrêt, paramètres, démarrer avec Windows, quitter).\n\nCritères :\n- [ ] Icône visible dans la zone de notification\n- [ ] Clic gauche et clic droit fonctionnent",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Icône = logo fourni (rond). Clic gauche : ouvre le panneau. Clic droit : menu court (lire, pause/reprise, arrêt, paramètres, démarrer avec Windows, quitter).\n\nCritères :\n- [ ] Icône visible dans la zone de notification\n- [ ] Clic gauche et clic droit fonctionnent\n\n[NOTE 2026-11-19 09:10] [NOTE 2026-11-19] Implementation sur feat/TW-047-tray : tray icon medaillon sphere neon, clic gauche bascule fenetre principale, clic droit menu (Lire / Pause-Reprise / Arreter / Parametres desactive N-051 / Quitter Navi). Actions = memes impl que hotkeys (garde lecture-en-cours). show_menu_on_left_click=false. DA docs/pistes-interface.html. 70 tests verts ; recette humaine en attente.\n\n[NOTE 2026-11-19 10:05] [NOTE 2026-11-19] CAUSE TROUVEE ET CORRIGEE : conflit de classname tray_icon_app entre global-hotkey et tray-icon -> la window tray recoit DefWindowProc au lieu de tray_proc ; clics inactifs. Fix : global-hotkey vendored en patches/ avec classname renommee (navi_global_hotkey_app) ; tray-icon garde la classe tray_icon_app. Build OK, 70 tests verts.\n\n[NOTE 2026-11-19 10:32] [NOTE 2026-11-19] FIX VALIDEE PAR L'HUMAIN : track_last_foreground filtrait les fenetres Shell (NotifyIconOverflowWindow, Shell_TrayWnd, Shell_SecondaryTrayWnd, SysShadow, etc.). La capture cible maintenant la derniere fenetre applicative ; Ctrl+C est envoye dans Chrome_WidgetWin_1. Lecture via menu tray OK.",
+      "state": "doing",
+      "updated_at": "2026-11-19T14:07:36Z",
       "assignee": ""
     },
     {

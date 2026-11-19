@@ -1,140 +1,106 @@
-//! Interface utilisateur : zone de notification, panneau, menu
+//! Interface utilisateur : icône de la zone de notification et menu (carte N-047).
+//!
+//! Conforme à la DA (`docs/pistes-interface.html`) : icône ronde sphère néon, menu
+//! ancré à la notification avec Lire la sélection / Pause-Reprise / Arrêter /
+//! Paramètres (désactivé — livré par N-051) / Quitter Navi.
+//!
+//! - Clic gauche : bascule l'affichage de la fenêtre principale.
+//! - Clic droit : menu.
+//! - Raccourcis réels : Win+Alt+S (lire), Ctrl+Maj+P (pause/reprise), Ctrl+Maj+S (arrêt) —
+//!   les libellés du mockup (Ctrl Alt Espace) sont obsolètes (TW-072).
+//! - « Démarrer avec Windows » n'est pas encore câblé (N-054) — pas de faux item.
 
-use tauri::{AppHandle, Emitter, Manager, WebviewUrl};
+use tauri::{AppHandle, Manager};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
-use tauri::tray::{TrayIconBuilder, TrayIconEvent};
-use tauri::webview::WebviewWindowBuilder;
+use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton};
 
-/// Crée le menu de la zone de notification (Tauri 2.x)
-pub fn create_system_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+/// Crée le menu et l'icône de la zone de notification (appeler depuis `setup`).
+pub fn create_system_tray(app: &AppHandle, view: crate::NaviRef) -> Result<(), Box<dyn std::error::Error>> {
     let read_item = MenuItemBuilder::new("Lire la sélection")
         .id("read")
-        .accelerator("Ctrl+Shift+R")
+        .enabled(true)
         .build(app)?;
     let pause_item = MenuItemBuilder::new("Pause / Reprise")
         .id("pause")
-        .accelerator("Ctrl+Shift+P")
+        .enabled(true)
         .build(app)?;
-    let stop_item = MenuItemBuilder::new("Arrêt")
+    let stop_item = MenuItemBuilder::new("Arrêter")
         .id("stop")
-        .accelerator("Ctrl+Shift+S")
+        .enabled(true)
         .build(app)?;
     let separator = PredefinedMenuItem::separator(app)?;
+    // Paramètres : désactivé tant que N-051 (fenêtre réglages + persistance) n'est pas livré.
     let settings_item = MenuItemBuilder::new("Paramètres")
         .id("settings")
+        .enabled(false)
         .build(app)?;
-    let quit_item = MenuItemBuilder::new("Quitter")
+    let quit_item = MenuItemBuilder::new("Quitter Navi")
         .id("quit")
+        .enabled(true)
         .build(app)?;
 
-    let menu = tauri::menu::MenuBuilder::new(app)
+    let menu = MenuBuilder::new(app)
         .items(&[&read_item, &pause_item, &stop_item, &separator, &settings_item, &separator, &quit_item])
         .build()?;
 
+    let icon = app.default_window_icon().ok_or("icône par défaut introuvable")?.clone();
+
     TrayIconBuilder::new()
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(icon)
         .menu(&menu)
-        .tooltip("Navi - Lecteur TTS local")
-        .on_tray_icon_event(|_tray, event| {
-            if let TrayIconEvent::Click { button: _, .. } = event {
-                // Click simple - pourrait afficher le panneau
+        .show_menu_on_left_click(false)
+        .tooltip("Navi — Lecteur de texte à voix haute (local)")
+        .on_menu_event(move |_app, event| {
+            match event.id.as_ref() {
+                "read" => {
+                    let phase = view.machine.state();
+                    let busy = matches!(
+                        phase,
+                        crate::state::PlaybackState::Capturing
+                            | crate::state::PlaybackState::Generating
+                            | crate::state::PlaybackState::Playing
+                            | crate::state::PlaybackState::Paused
+                    );
+                    if busy {
+                        eprintln!("[navi] tray — lecture déjà en cours, ignoré");
+                        return;
+                    }
+                    if let Err(err) = crate::read_selection_impl(&view) {
+                        view.machine.set_error(err.clone());
+                        eprintln!("[navi] tray — lecture échouée : {err}");
+                    }
+                }
+                "pause" => {
+                    let outcome = match view.machine.state() {
+                        crate::state::PlaybackState::Paused => crate::resume_reading_impl(&view),
+                        _ => crate::pause_reading_impl(&view),
+                    };
+                    if let Err(err) = outcome {
+                        view.machine.set_error(err.clone());
+                        eprintln!("[navi] tray — pause/reprise échouée : {err}");
+                    }
+                }
+                "stop" => {
+                    let _ = crate::stop_reading_impl(&view);
+                }
+                "quit" => std::process::exit(0),
+                _ => {}
             }
         })
-        .on_menu_event(|app, event| match event.id.as_ref() {
-            "read" => { let _ = app.emit("hotkey_read", ()); }
-            "pause" => { let _ = app.emit("hotkey_pause", ()); }
-            "stop" => { let _ = app.emit("hotkey_stop", ()); }
-            "settings" => {
-                if let Some(window) = app.get_webview_window("settings") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
+        .on_tray_icon_event(|tray, event| {
+            // Clic gauche : bascule l'affichage de la fenêtre principale (panneau A = N-048).
+            if let TrayIconEvent::Click { button: MouseButton::Left, .. } = event {
+                if let Some(window) = tray.app_handle().get_webview_window("main") {
+                    if window.is_visible().unwrap_or(false) {
+                        let _ = window.hide();
+                    } else {
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
                 }
             }
-            "quit" => { std::process::exit(0); }
-            _ => {}
         })
         .build(app)?;
 
     Ok(())
-}
-
-/// Gère les événements de la zone de notification
-pub fn handle_system_tray_event(_app: &tauri::AppHandle, event: TrayIconEvent) {
-    if let TrayIconEvent::Click { button: _, .. } = event {
-        // Click simple - pourrait afficher le panneau
-    }
-}
-
-/// Configuration de la fenêtre principale (cachée au démarrage)
-pub fn setup_main_window(app: &AppHandle) {
-    if let Some(window) = app.get_webview_window("main") {
-        let _ = window.hide();
-    }
-}
-
-/// Crée la fenêtre de paramètres
-pub fn create_settings_window(app: &AppHandle) -> Result<tauri::WebviewWindow, Box<dyn std::error::Error>> {
-    let window = tauri::webview::WebviewWindowBuilder::new(
-        app,
-        "settings",
-        tauri::WebviewUrl::App("settings.html".into()),
-    )
-    .title("Paramètres Navi")
-    .inner_size(400.0, 500.0)
-    .resizable(false)
-    .maximizable(false)
-    .decorations(true)
-    .always_on_top(false)
-    .build()?;
-
-    Ok(window)
-}
-
-/// Panneau flottant ancré à l'icône de notification
-pub struct FloatingPanel {
-    window: Option<tauri::WebviewWindow>,
-}
-
-impl FloatingPanel {
-    pub fn new(app: &AppHandle) -> Result<Self, Box<dyn std::error::Error>> {
-        let window = tauri::webview::WebviewWindowBuilder::new(
-            app,
-            "panel",
-            tauri::WebviewUrl::App("panel.html".into()),
-        )
-        .title("")
-        .inner_size(280.0, 320.0)
-        .resizable(false)
-        .maximizable(false)
-        .minimizable(false)
-        .decorations(false)
-        .always_on_top(true)
-        .skip_taskbar(true)
-        .visible(false)
-        .build()?;
-        
-        Ok(Self { window: Some(window) })
-    }
-    
-    pub fn show(&self) {
-        if let Some(window) = &self.window {
-            let _ = window.show();
-        }
-    }
-    
-    pub fn hide(&self) {
-        if let Some(window) = &self.window {
-            let _ = window.hide();
-        }
-    }
-    
-    pub fn toggle(&self) {
-        if let Some(window) = &self.window {
-            if window.is_visible().unwrap_or(false) {
-                let _ = window.hide();
-            } else {
-                let _ = window.show();
-            }
-        }
-    }
 }
