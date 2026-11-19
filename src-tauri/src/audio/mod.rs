@@ -58,6 +58,8 @@ enum AudioMessage {
     Reset,
     /// Volume (0.0–1.0).
     SetVolume(f32),
+    /// Demande d'état lecture (réponse oneshot depuis le thread audio).
+    IsPlaying(std::sync::mpsc::Sender<bool>),
 }
 
 /// Poignée Send + Sync vers le périphérique audio détenu par un thread dédié.
@@ -92,6 +94,9 @@ impl AudioHandle {
                                 let _ = player.reset();
                             }
                             AudioMessage::SetVolume(volume) => player.set_volume(volume),
+                            AudioMessage::IsPlaying(reply) => {
+                                let _ = reply.send(player.is_playing());
+                            }
                         }
                     }
                 }
@@ -137,6 +142,15 @@ impl AudioHandle {
     pub fn set_volume(&self, volume: f32) -> Result<(), String> {
         self.send(AudioMessage::SetVolume(volume))
     }
+
+    /// Demande (oneshot) si un sink joue réellement un flux. Ne bloque jamais (timeout 200 ms).
+    pub fn is_playing(&self) -> bool {
+        let (tx, rx) = std::sync::mpsc::channel();
+        if self.tx.send(AudioMessage::IsPlaying(tx)).is_err() {
+            return false;
+        }
+        rx.recv_timeout(std::time::Duration::from_millis(200)).unwrap_or(false)
+    }
 }
 
 impl crate::pipeline::AudioSink for AudioHandle {
@@ -158,6 +172,7 @@ pub struct AudioPlayer {
     condvar: Arc<Condvar>,
     paused: Arc<Mutex<bool>>,
     consumer_generation: Arc<Mutex<u64>>,
+    consumer_alive: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl AudioPlayer {
@@ -172,19 +187,27 @@ impl AudioPlayer {
             condvar: Arc::new(Condvar::new()),
             paused: Arc::new(Mutex::new(false)),
             consumer_generation: Arc::new(Mutex::new(0)),
+            consumer_alive: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         };
         player.spawn_consumer();
         Ok(player)
     }
 
     /// Spawn (ou remplace) le consommateur audio.
-    /// Chaque remontée de `consumer_generation` fait sortir l'ancien.
+    /// Chaque spawn incrémente `consumer_generation` ; les anciens consommateurs sortent d'eux-mêmes.
+    ///
+    /// Ne fait rien si un consommateur est déjà en vie (évite la multiplication des threads).
     fn spawn_consumer(&self) {
+        if self.consumer_alive.load(std::sync::atomic::Ordering::SeqCst) {
+            return;
+        }
+        self.consumer_alive.store(true, std::sync::atomic::Ordering::SeqCst);
         let sink = self.sink.clone();
         let pending = self.pending.clone();
         let condvar = self.condvar.clone();
         let paused = self.paused.clone();
         let generation = self.consumer_generation.clone();
+        let alive = self.consumer_alive.clone();
 
         let my_gen = {
             let mut counter = generation.lock().unwrap();
@@ -198,7 +221,7 @@ impl AudioPlayer {
                     *generation.lock().unwrap() == my_gen
                 };
                 if !is_current {
-                    return;
+                    break;
                 }
 
                 let samples = {
@@ -217,21 +240,24 @@ impl AudioPlayer {
 
                 let Some(samples) = samples else {
                     eprintln!("[audio] consommateur gen {my_gen} sorti");
-                    return;
+                    break;
                 };
                 eprintln!("[audio] consommateur gen {my_gen} : pop {} échantillons, append au sink", samples.len());
 
                 // Ne pas jouer si ce consommateur n'est plus le courant
                 if *generation.lock().unwrap() != my_gen {
-                    return;
+                    break;
                 }
 
                 // Attendre la reprise si en pause
                 while *paused.lock().unwrap() {
                     if *generation.lock().unwrap() != my_gen {
-                        return;
+                        break;
                     }
                     thread::sleep(Duration::from_millis(50));
+                }
+                if *generation.lock().unwrap() != my_gen {
+                    break;
                 }
 
                 let sink_lock = sink.lock().unwrap();
@@ -244,6 +270,7 @@ impl AudioPlayer {
                     eprintln!("[audio] SINK ABSENT — échantillons perdus (sink consommé ou absent)");
                 }
             }
+            alive.store(false, std::sync::atomic::Ordering::SeqCst);
         });
     }
 
@@ -251,7 +278,9 @@ impl AudioPlayer {
     pub fn enqueue(&self, samples: Vec<f32>) {
         let mut pending = self.pending.lock().unwrap();
         pending.push(samples);
-        self.condvar.notify_one();
+        // Tous les consommateurs se réveillent ; seuls ceux dont la génération
+        // est à jour puisent effectivement (les autres sortent immédiatement).
+        self.condvar.notify_all();
     }
 
     /// Vide la file sans toucher au sink (arrêt de la génération).

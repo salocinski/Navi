@@ -409,6 +409,38 @@ pub fn run() {
                 }
             }
 
+            // Surveillance de fin de lecture : le sink audio retombe vide → machine → Idle
+            // (sans ça, le bouton « Lire » reste bloqué en Playing après une lecture complète).
+            {
+                let view = state.view();
+                std::thread::spawn(move || {
+                    loop {
+                        std::thread::sleep(std::time::Duration::from_millis(400));
+                        let phase = view.machine.state();
+                        if !matches!(phase, crate::state::PlaybackState::Playing) {
+                            continue;
+                        }
+                        // N'enclenche le retour à Inactif qu'une fois que tous les
+                        // chunks ont été écrits dans la file (sinon le sink est toujours
+                        // « vide » quelques secondes, et on couperait la lecture trop tôt).
+                        let (current_chunk, total_chunks) = view.machine.progress();
+                        if total_chunks == 0 || current_chunk < total_chunks {
+                            continue;
+                        }
+                        let playing = view
+                            .audio
+                            .lock()
+                            .ok()
+                            .and_then(|h| h.as_ref().map(|h| h.is_playing()))
+                            .unwrap_or(false);
+                        if !playing {
+                            eprintln!("[navi] lecture terminée — retour à l'état Inactif");
+                            view.machine.set_idle();
+                        }
+                    }
+                });
+            }
+
             app.manage(state);
             Ok(())
         })
