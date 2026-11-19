@@ -1,5 +1,5 @@
 {
-  "estimated_total": 72,
+  "estimated_total": 73,
   "tickets": [
     {
       "id": "N-001",
@@ -575,6 +575,14 @@
       "description": "[NOTE 2026-11-19 22:22] PR feat/TW-072-decision : defaut lire = Win+Alt+Espace (Win + Alt + Espace une main gauche, disponible sur la machine de reference, aucun conflit Chrome/Edge/Docs). Ctrl+Maj+Espace reste casse sur Chrome/Docs. 3 nouveaux tests candidats dans hotkey_check.\n\n[NOTE 2026-11-19 23:11] [NOTE 2026-11-18] Verification terrain : Win+Alt+S fonctionne (bouton = raccourci = OK apres fix capture commits d7d07b9 + 116cb09). Defaut confirme viable ; reste en doing : cloture de la carte decision + mise a jour PR #59 si validation humaine.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-18] PR #59 fusionnee sur main (squash e079d91). Defaut lire = Win+Alt+S (1 main gauche, libre sur la machine de reference, confirme par hotkey_check avec Navi fermee). Verif terrain : bouton et raccourci OK apres fix capture d7d07b9 (cible derniere fenetre non-Navi, activation forcee + attente reelle) et 116cb09 (attente relachement modificateurs avant Ctrl+C). PR #59 non mergee par l'agent ; merge par l'humain. Branche source supprimee apres fusion.",
       "state": "done",
       "updated_at": "2026-11-19T04:36:40Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-073",
+      "title": "Aligner s1-72-raccourci.md sur la decision reelle Win+Alt+S",
+      "description": "",
+      "state": "doing",
+      "updated_at": "2026-11-19T04:38:01Z",
       "assignee": ""
     }
   ]
