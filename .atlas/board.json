@@ -324,9 +324,9 @@
     {
       "id": "N-041",
       "title": "Intégrer lecture, pause, reprise et arrêt à la machine d'états",
-      "description": "Critères :\n- [ ] Pas de désynchronisation majeure",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Critères :\n- [ ] Pas de désynchronisation majeure\n\n[NOTE 2026-11-19 20:44] PR https://github.com/salocinski/Navi/pull/54 - cycle complet documente+teste (3 tests d'integration, transitions interdites refusees, Error terminal), bouton Lire phase-gate. 73 verts. docs/s1-41-cycle-lecture.md.",
+      "state": "doing",
+      "updated_at": "2026-11-19T01:42:34Z",
       "assignee": ""
     },
     {

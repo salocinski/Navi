@@ -159,7 +159,10 @@ function App() {
       {lastError && <p className="error-box">{lastError}</p>}
 
       <div className="action-row">
-        <button onClick={handleRead} disabled={busy}>
+        <button
+          onClick={handleRead}
+          disabled={busy || status.phase === "capturing" || status.phase === "generating" || status.phase === "playing"}
+        >
           {busy ? "Capture…" : "Lire la sélection"}
         </button>
         <button onClick={handlePauseResume} disabled={status.phase !== "playing" && status.phase !== "paused"}>
