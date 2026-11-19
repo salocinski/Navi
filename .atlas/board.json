@@ -564,9 +564,9 @@
     {
       "id": "N-071",
       "title": "Migrer le pipeline TTS de Kokoro vers Qwen3-TTS 0.6B CustomVoice (Ryan voix officielle)",
-      "description": "[NOTE 2026-11-19 00:03] [NOTE 2026-11-19] Implementation completee sur feat/TW-071-qwen3-tts (PR #64 ouverte). RTF mesure RTX 3060 Ti bf16 sdpa : FR 3.0-3.8, EN 3.0-3.5. Defaut auto = Qwen d'abord, repli Kokoro (decision owner). Recette humaine en attente ; distribution conditionnee a RTF <= 1 ou validation UX. Kokoro reste le secours effectif.",
-      "state": "doing",
-      "updated_at": "2026-11-19T04:44:34Z",
+      "description": "[NOTE 2026-11-19 00:03] [NOTE 2026-11-19] Implementation completee sur feat/TW-071-qwen3-tts (PR #64 ouverte). RTF mesure RTX 3060 Ti bf16 sdpa : FR 3.0-3.8, EN 3.0-3.5. Defaut auto = Qwen d'abord, repli Kokoro (decision owner). Recette humaine en attente ; distribution conditionnee a RTF <= 1 ou validation UX. Kokoro reste le secours effectif.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] PR #64 fusionnee sur main (squash 0e5bac9) : pipeline TTS migre Kokoro -> Qwen3-TTS-12Hz-0.6B-CustomVoice (sidecar Python JSONL, voix Ryan, carte N-070). Repli automatique Qwen -> Kokoro (NAVI_TTS_ENGINE=auto). RTF mesure RTX 3060 Ti bf16 sdpa : FR ~3.0-3.8, EN ~3.0-3.5 ; defaut auto=Qwen d'abord assume par l'owner pour recette. Distribution conditionnee a un RTF <= 1 (GPU/flash-attn) ou validation UX explicite. Branche source supprimee apres fusion. Detail : docs/s2-71-migration-qwen3-tts.md et docs/decisions.md.",
+      "state": "done",
+      "updated_at": "2026-11-19T05:11:33Z",
       "assignee": ""
     },
     {
