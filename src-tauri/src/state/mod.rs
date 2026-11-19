@@ -198,6 +198,16 @@ impl PlaybackStateMachine {
         }
     }
 
+    /// Fin de lecture : passe à `Idle`, remet la progression à zéro, émet les événements.
+    /// Appelé automatiquement par la boucle de contrôle quand le sink est vide et la phase active.
+    pub fn set_idle(&self) {
+        *self.current_chunk.lock().unwrap() = 0;
+        *self.total_chunks.lock().unwrap() = 0;
+        *self.current_text.lock().unwrap() = String::new();
+        self.set_phase(PlaybackState::Idle);
+        self.emit(StateEvent::Progress { current: 0, total: 0 });
+    }
+
     /// Arrêt : Stopped, position remise à zéro, génération annulée.
     pub fn stop(&self) {
         self.set_phase(PlaybackState::Stopped);
