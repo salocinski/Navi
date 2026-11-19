@@ -16,10 +16,12 @@ pub(crate) fn create_floating_window(app: &AppHandle) -> Result<(), Box<dyn std:
     let monitor = app.primary_monitor().ok().flatten();
     let (x, y) = match &monitor {
         Some(m) => {
-            // Bas-droite de la zone de travail (au-dessus de la barre des tâches).
+            // Bas-droite de la zone de travail (au-dessus de la barre des tâches),
+            // décalé d'un cercle vers la gauche (demande humaine 2026-11-19) :
+            // l'ancienne position extrême gauche devient l'extrême droite du cercle décalé.
             let wa = m.work_area();
             (
-                (wa.position.x + wa.size.width as i32 - SIZE as i32 - MARGIN) as f64,
+                (wa.position.x + wa.size.width as i32 - 2 * SIZE as i32 - MARGIN) as f64,
                 (wa.position.y + wa.size.height as i32 - SIZE as i32 - MARGIN) as f64,
             )
         }
