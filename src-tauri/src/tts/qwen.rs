@@ -170,12 +170,35 @@ impl QwenTtsEngine {
 
         // Lecture de la ligne de disponibilité depuis un thread — le délai de chargement
         // du modèle peut être long (téléchargement 2,3 Go au premier run) mais reste borné.
+        // Les lignes non-protocol (bannières de libs, JSON tronqué…) sont ignorées avec un log.
         let (tx, rx) = mpsc::channel();
         std::thread::spawn(move || {
             let mut reader = BufReader::new(stdout);
-            let mut line = String::new();
-            let result = reader.read_line(&mut line).map(|_| line);
-            let _ = tx.send((reader, result));
+            loop {
+                let mut line = String::new();
+                match reader.read_line(&mut line) {
+                    Ok(0) => {
+                        let _ = tx.send((reader, Err("le sidecar s'est terminé avant la ligne ready".to_string())));
+                        return;
+                    }
+                    Ok(_) => match parse_response_line(&line) {
+                        Ok(SidecarResponse::Ready { .. }) => {
+                            let _ = tx.send((reader, Ok(line)));
+                            return;
+                        }
+                        Ok(SidecarResponse::Result { .. }) => {
+                            eprintln!("[navi] ligne non-protocol ignorée (résultat avant ready) : {}", line.trim());
+                        }
+                        Err(_) => {
+                            eprintln!("[navi] ligne ignorée (non JSON) : {}", line.trim());
+                        }
+                    },
+                    Err(e) => {
+                        let _ = tx.send((reader, Err(format!("lecture impossible : {e}"))));
+                        return;
+                    }
+                }
+            }
         });
 
         let (reader, first) = match rx.recv_timeout(self.config.startup_timeout) {
@@ -267,16 +290,28 @@ impl TtsEngine for QwenTtsEngine {
             TtsError::Inference(format!("écriture vers le sidecar impossible : {e}"))
         })?;
 
+        // Lecture de la réponse — on ignore les lignes non-protocol (bannières résiduelles).
         let mut line = String::new();
-        match sidecar.stdout.read_line(&mut line) {
-            Ok(0) => {
-                self.alive.store(false, Ordering::SeqCst);
-                return Err(TtsError::Inference("le sidecar Qwen s'est arrêté (EOF)".to_string()));
-            }
-            Ok(_) => {}
-            Err(e) => {
-                self.alive.store(false, Ordering::SeqCst);
-                return Err(TtsError::Inference(format!("lecture du sidecar impossible : {e}")));
+        loop {
+            line.clear();
+            match sidecar.stdout.read_line(&mut line) {
+                Ok(0) => {
+                    self.alive.store(false, Ordering::SeqCst);
+                    return Err(TtsError::Inference("le sidecar Qwen s'est arrêté (EOF)".to_string()));
+                }
+                Ok(_) => match parse_response_line(&line) {
+                    Ok(SidecarResponse::Result { id: Some(rid), .. }) => {
+                        if rid == id {
+                            break;
+                        }
+                        eprintln!("[navi] réponse ignorée (id {rid} ≠ {id})");
+                    }
+                    Ok(_) | Err(_) => eprintln!("[navi] ligne ignorée : {}", line.trim()),
+                },
+                Err(e) => {
+                    self.alive.store(false, Ordering::SeqCst);
+                    return Err(TtsError::Inference(format!("lecture du sidecar impossible : {e}")));
+                }
             }
         }
 

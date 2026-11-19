@@ -41,32 +41,47 @@ def load_model():
 
     cuda = bool(torch.cuda.is_available())
     if cuda:
-        kwargs = dict(device_map="cuda:0", dtype=torch.bfloat16)
+        # sdpa = attention fusionnée torch (plus rapide que eager, sans dépendance supplémentaire).
+        kwargs = dict(device_map="cuda:0", dtype=torch.bfloat16, attn_implementation="sdpa")
     else:
         # CPU : bf16 mal supporté → float32 (plus lent mais fiable).
-        kwargs = dict(device_map="cpu", dtype=torch.float32)
+        kwargs = dict(device_map="cpu", dtype=torch.float32, attn_implementation="sdpa")
     log("chargement du modèle", MODEL_ID, "sur", "cuda:0" if cuda else "cpu", "…")
-    model = Qwen3TTSModel.from_pretrained(MODEL_ID, attn_implementation="eager", **kwargs)
+    try:
+        model = Qwen3TTSModel.from_pretrained(MODEL_ID, **kwargs)
+    except Exception as exc:
+        if kwargs.get("attn_implementation") == "sdpa":
+            log("sdpa indisponible (", exc, ") — retour à eager")
+            kwargs["attn_implementation"] = "eager"
+            model = Qwen3TTSModel.from_pretrained(MODEL_ID, **kwargs)
+        else:
+            raise
     log("modèle chargé")
     return model, ("cuda:0" if cuda else "cpu")
 
 
 def synthesize(model, req):
     import numpy as np
+    from contextlib import redirect_stdout
 
     text = str(req.get("text") or "").strip()
     if not text:
         raise ValueError("texte vide")
     language = "French" if str(req.get("language") or "French").lower().startswith("fr") else "English"
     speaker = str(req.get("speaker") or "Ryan")
-    wavs, sr = model.generate_custom_voice(text=text, language=language, speaker=speaker)
+    with redirect_stdout(sys.stderr):
+        wavs, sr = model.generate_custom_voice(text=text, language=language, speaker=speaker)
     samples = np.asarray(wavs[0], dtype=np.float32)
     return samples, int(sr)
 
 
 def main():
+    # qwen_tts/librosa/torch impriment des bannières (flash-attn, SoX…) sur stdout :
+    # redirection vers stderr pour que stdout ne porte que le protocole JSONL.
+    from contextlib import redirect_stdout
     try:
-        model, device = load_model()
+        with redirect_stdout(sys.stderr):
+            model, device = load_model()
     except Exception as exc:  # torch absent, modèle introuvable/corrompu, VRAM…
         emit({"ready": False, "error": f"chargement du modèle impossible : {exc}"})
         return 1
