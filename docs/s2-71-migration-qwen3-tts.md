@@ -36,13 +36,15 @@ Sortie constatée sur la machine de référence (MSI MS-7A71, **RTX 3060 Ti**, b
 
 ## ⚠️ Point bloquant : RTF ≈ 3
 
-Sur RTX 3060 Ti, la synthèse est ~3× plus lente que la lecture en temps réel : la lecture progressive (S0-03) avec Qwen serait largement en retrait. Kokoro (CPU) reste aujourd'hui le seul moteur capable de tenir la lecture progressive pour l'utilisateur final. La migration Qwen est donc **fonctionnelle mais non viable en UX** sur cette machine à ce stade.
+Sur RTX 3060 Ti, la synthèse est ~3× plus lente que la lecture en temps réel : la lecture progressive (S0-03) avec Qwen serait largement en retrait. Kokoro (CPU) reste aujourd'hui le seul moteur capable de tenir la lecture progressive pour l'utilisateur final.
 
-Pistes avant de faire de Qwen le défaut produit :
+**Décision produit (2026-11-19)** : le défaut `NAVI_TTS_ENGINE=auto` est **Qwen d'abord, repli Kokoro** (repli au chargement ou à la première panne de synthèse). L'owner assume ce défaut en l'état pour la recette et la démo ; la distribution exigera soit un RTF ≲ 1 (GPU supérieur, flash-attn, optimisation), soit une validation UX explicite de la latence.
+
+Pistes d'optimisation :
 1. `flash-attn` (attention mémoire/vitesse ; pas de wheel Windows stable pour torch 2.11 aujourd'hui, compilation nécessaire — pari risqué) ;
 2. GPU plus rapide / VRAM plus grande (RTF scale avec le GPU) ;
 3. génération plus rapide (top_k/température, `max_new_tokens`, distillation — hors périmètre) ;
-4. accepter un délai de démarrage de segmentation (pré-générer les premiers segments avant la lecture) et tolérer la latence par segment.
+4. pré-générer les premiers segments avant la lecture (masquer la latence du début de document) et tolérer la latence par segment.
 
 ## Recette humaine restante (avant clôture N-071)
 
