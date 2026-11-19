@@ -590,6 +590,10 @@ pub fn run() {
                 });
             }
 
+            // Signature sonore de démarrage : joue « Hey listen » (original, voix aiguë)
+            // une seule fois, une fois raccourcis et capture prêts.
+            crate::audio::play_signature_once();
+
             app.manage(state);
             Ok(())
         })

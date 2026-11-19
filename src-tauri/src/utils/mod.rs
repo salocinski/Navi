@@ -7,6 +7,42 @@ pub fn app_data_dir() -> Option<PathBuf> {
     dirs::data_dir().map(|d| d.join("Navi"))
 }
 
+/// Chemin de la signature sonore de démarrage (`hey_listen.wav`).
+///
+/// Ordre : variable `NAVI_SIGNATURE_WAV` → `CARGO_MANIFEST_DIR/../resources/hey_listen.wav`
+/// (dév) → dossier `resources/` à côté de l'exécutable / dans le bundle.
+pub fn resolve_signature_wav() -> PathBuf {
+    if let Ok(path) = std::env::var("NAVI_SIGNATURE_WAV") {
+        let p = PathBuf::from(path);
+        if p.exists() {
+            return p;
+        }
+    }
+    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let candidates = [
+        manifest.join("..").join("resources").join("hey_listen.wav"),
+        manifest.join("resources").join("hey_listen.wav"),
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("resources").join("hey_listen.wav")))
+            .unwrap_or_else(|| PathBuf::from("resources/hey_listen.wav")),
+        std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|d| d.join("..").join("resources").join("hey_listen.wav")))
+            .unwrap_or_else(|| PathBuf::from("../resources/hey_listen.wav")),
+    ];
+    for candidate in candidates {
+        if let Ok(p) = candidate.canonicalize() {
+            if p.exists() {
+                return p;
+            }
+        } else if candidate.exists() {
+            return candidate;
+        }
+    }
+    manifest.join("resources").join("hey_listen.wav")
+}
+
 /// Retourne le chemin du répertoire des modèles — dev ou utilisateur.
 ///
 /// Ordre : `NAVI_MODELS_DIR` → `<repo>/models/kokoro/` (si l'ONNX y existe) →
