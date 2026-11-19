@@ -1,5 +1,5 @@
 {
-  "estimated_total": 70,
+  "estimated_total": 71,
   "tickets": [
     {
       "id": "N-001",
@@ -559,6 +559,14 @@
       "description": "[NOTE 2026-11-18 18:11] [ECHANTILLONAGE 2026-11-19] 6 WAVs generes avec Qwen3-TTS-12Hz-0.6B-CustomVoice sur RTX 3060 Ti (cuda, bf16) : fr_serena_f.wav (F), fr_vivian_f.wav (F), fr_ryan_m.wav (M, natif EN), en_ryan_m.wav, en_aiden_m.wav, en_serena_f.wav. Texte Domio identique dans les deux langues. Fichiers : scratch/qwen_test312/qwen_out/. A charge humaine d'ecouter et trancher vs Kokoro.",
       "state": "doing",
       "updated_at": "2026-11-18T23:11:27Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-071",
+      "title": "Migrer le pipeline TTS de Kokoro vers Qwen3-TTS 0.6B CustomVoice (Ryan voix officielle)",
+      "description": "",
+      "state": "todo",
+      "updated_at": "2026-11-19T01:30:32Z",
       "assignee": ""
     }
   ]
