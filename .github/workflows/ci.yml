@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-test-lint:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # ---- Frontend ----
+      - name: Installer les dépendances npm
+        run: npm ci
+
+      - name: Prettier (vérification)
+        run: npm run format:check
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Build frontend (tsc + vite)
+        run: npm run build
+
+      # ---- Rust (src-tauri) ----
+      - name: rustfmt (vérification)
+        working-directory: src-tauri
+        run: cargo fmt --check
+
+      - name: clippy (-D warnings)
+        working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Tests Rust
+        working-directory: src-tauri
+        run: cargo test
+        # Le test de fumée Kokoro (kokoro_smoke) est ignoré par défaut :
+        # il exige les modèles (gitignorés) — machine de développement uniquement.
