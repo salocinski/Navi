@@ -1,5 +1,5 @@
 {
-  "estimated_total": 73,
+  "estimated_total": 74,
   "tickets": [
     {
       "id": "N-001",
@@ -583,6 +583,14 @@
       "description": "[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-18] PR #61 fusionnee sur main (squash a15ceb7) : s1-72-raccourci.md aligne sur la decision reelle Win+Alt+S (fusion initiale PR #59). Verification terrain 2026-11-18 (bouton et raccourci OK apres fix d7d07b9 + 116cb09). Branche source supprimee apres fusion.",
       "state": "done",
       "updated_at": "2026-11-19T04:40:17Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-074",
+      "title": "Retirer Qwen3-TTS du code, rester sur Kokoro seul",
+      "description": "",
+      "state": "doing",
+      "updated_at": "2026-11-19T12:44:44Z",
       "assignee": ""
     }
   ]
