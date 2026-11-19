@@ -2,6 +2,8 @@
 //!
 //! Cas limites gérés (carte TW-014), chacun avec une erreur claire :
 //! - aucune fenêtre au premier plan → `NoForegroundWindow`
+//! - Navi au premier plan (bouton/panneau) et Windows refuse de redonner l'avant-plan
+//!   à la fenêtre qui détient la sélection → `WindowSwitchFailed`
 //! - la simulation Ctrl+C (SendInput) est refusée par le système → `InjectionFailed`
 //! - copie asynchrone : la capture attend jusqu'à 1,5 s que le
 //!   presse-papiers change (numéro de séquence) au lieu d'un délai fixe
@@ -19,12 +21,18 @@
 use std::fmt;
 use std::thread;
 use std::time::{Duration, Instant};
-use windows::Win32::Foundation::{HWND, HGLOBAL, HANDLE};
+use windows::Win32::Foundation::{HWND, HGLOBAL, HANDLE, BOOL};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYEVENTF_KEYUP, KEYBDINPUT, KEYBD_EVENT_FLAGS,
-    VK_C, VK_CONTROL,
+    VK_C, VK_CONTROL, VK_MENU, keybd_event,
 };
-use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+use windows::Win32::UI::WindowsAndMessaging::{
+    BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, IsIconic, IsWindow,
+    SetForegroundWindow, ShowWindow, SW_RESTORE,
+};
+use windows::Win32::System::Threading::{
+    AttachThreadInput, GetCurrentProcessId, GetCurrentThreadId,
+};
 use windows::Win32::System::DataExchange::{
     CloseClipboard, EmptyClipboard, EnumClipboardFormats, GetClipboardData,
     GetClipboardSequenceNumber, IsClipboardFormatAvailable, OpenClipboard,
@@ -64,6 +72,9 @@ pub enum CaptureError {
     /// Impossible de sauvegarder le presse-papiers avant la copie :
     /// sans snapshot, l'utilisateur perdrait son presse-papiers → capture refusée.
     SnapshotFailed(String),
+    /// Navi avait le focus (clic sur bouton/panneau) et Windows a refusé de
+    /// redonner l'avant-plan à la fenêtre qui détient la sélection.
+    WindowSwitchFailed(String),
 }
 
 impl fmt::Display for CaptureError {
@@ -94,6 +105,10 @@ impl fmt::Display for CaptureError {
             CaptureError::SnapshotFailed(detail) => write!(
                 f,
                 "Sauvegarde du presse-papiers impossible avant la copie ({detail}). Capture annulée pour ne pas écraser le presse-papiers utilisateur"
+            ),
+            CaptureError::WindowSwitchFailed(detail) => write!(
+                f,
+                "Impossible d'activer la fenêtre qui contient la sélection ({detail}). Cliquez sur cette fenêtre puis relancez la lecture"
             ),
         }
     }
@@ -399,35 +414,130 @@ fn send_copy_keystroke() -> Result<(), CaptureError> {
     Ok(())
 }
 
-fn capture_steps() -> Result<CaptureResult, CaptureError> {
-    // 1. Fenêtre au premier plan
-    let hwnd = unsafe { GetForegroundWindow() };
+/// PID du processus propriétaire d'une fenêtre (0 si la fenêtre est null ou invalide).
+fn window_pid(hwnd: HWND) -> u32 {
     if hwnd.0.is_null() {
-        return Err(CaptureError::NoForegroundWindow);
+        return 0;
+    }
+    let mut pid: u32 = 0;
+    unsafe { GetWindowThreadProcessId(hwnd, Some(&mut pid)) };
+    pid
+}
+
+/// Force l'activation d'une fenêtre : deux astuces combinées, car Windows refuse
+/// `SetForegroundWindow` aux processus sans droit d'avant-plan (cas Navi bouton/panneau
+/// après réception d'un clic, ou raccourci global) :
+/// - la touche Alt factice accorde le droit d'avant-plan au processus ;
+/// - `AttachThreadInput` rattache le thread courant aux threads des deux fenêtres
+///   (file d'entrée partagée → l'activation est honorée).
+fn force_foreground(target: HWND) {
+    unsafe {
+        let current = GetCurrentThreadId();
+        let foreground = GetForegroundWindow();
+        let fg_thread = if foreground.0.is_null() {
+            0
+        } else {
+            GetWindowThreadProcessId(foreground, None)
+        };
+        let target_thread = GetWindowThreadProcessId(target, None);
+
+        let _ = keybd_event(VK_MENU.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
+        let _ = keybd_event(VK_MENU.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+
+        if fg_thread != 0 {
+            let _ = AttachThreadInput(current, fg_thread, BOOL(1));
+        }
+        if target_thread != 0 {
+            let _ = AttachThreadInput(current, target_thread, BOOL(1));
+        }
+        let _ = SetForegroundWindow(target);
+        let _ = BringWindowToTop(target);
+        if target_thread != 0 {
+            let _ = AttachThreadInput(current, target_thread, BOOL(0));
+        }
+        if fg_thread != 0 {
+            let _ = AttachThreadInput(current, fg_thread, BOOL(0));
+        }
+    }
+}
+
+/// Attend que `target` devienne la fenêtre au premier plan (borné).
+fn wait_for_foreground(target: HWND, timeout: Duration) -> bool {
+    let start = Instant::now();
+    while start.elapsed() < timeout {
+        let now = unsafe { GetForegroundWindow() };
+        if now.0 == target.0 {
+            return true;
+        }
+        thread::sleep(Duration::from_millis(20));
+    }
+    false
+}
+
+fn capture_steps() -> Result<CaptureResult, CaptureError> {
+    // 1. Fenêtre cible.
+    //    - Navi n'est PAS au premier plan (raccourci global) : la fenêtre active EST la
+    //      bonne cible — on n'y touche pas (pas de focus volé, pas de fenêtre démaximisée).
+    //    - Navi EST au premier plan (bouton/panneau) : la sélection vit dans la dernière
+    //      fenêtre non-Navi mémorisée ; il faut la réactiver avant d'envoyer Ctrl+C,
+    //      sinon le Ctrl+C part dans le webview Navi et le presse-papiers ne change pas.
+    let own_pid = unsafe { GetCurrentProcessId() };
+    let foreground = unsafe { GetForegroundWindow() };
+    let fg_pid = window_pid(foreground);
+    let (hwnd, needs_switch) = if foreground.0.is_null() || fg_pid == own_pid {
+        match crate::last_foreground() {
+            Some(raw) => {
+                let target = HWND(raw);
+                if unsafe { IsWindow(target) }.as_bool() {
+                    (target, true)
+                } else {
+                    // Fenêtre mémorisée détruite — ne pas lui envoyer quoi que ce soit.
+                    crate::clear_last_foreground();
+                    return Err(CaptureError::NoForegroundWindow);
+                }
+            }
+            None => return Err(CaptureError::NoForegroundWindow),
+        }
+    } else {
+        (foreground, false)
+    };
+
+    // 2. Si Navi a le focus, réactiver la fenêtre cible et vérifier qu'elle l'a bien eu
+    //    (SW_RESTORE uniquement si elle est minimisée — ne pas toucher aux maximisées).
+    if needs_switch {
+        if unsafe { IsIconic(hwnd) }.as_bool() {
+            let _ = unsafe { ShowWindow(hwnd, SW_RESTORE) };
+        }
+        force_foreground(hwnd);
+        if !wait_for_foreground(hwnd, Duration::from_millis(800)) {
+            return Err(CaptureError::WindowSwitchFailed(
+                "Windows a refusé de redonner l'avant-plan à la fenêtre mémorisée".to_string(),
+            ));
+        }
     }
 
-    // 2. Mémoriser le numéro de séquence du presse-papiers avant la copie
+    // 3. Mémoriser le numéro de séquence du presse-papiers avant la copie
     let seq_before = unsafe { GetClipboardSequenceNumber() };
 
-    // 3. Simuler Ctrl+C via SendInput
+    // 4. Simuler Ctrl+C via SendInput
     send_copy_keystroke()?;
 
-    // 4. Copie asynchrone : attendre que le presse-papiers change
+    // 5. Copie asynchrone : attendre que le presse-papiers change
     if !wait_for_clipboard_change(seq_before, CLIPBOARD_CHANGE_TIMEOUT, || unsafe {
         GetClipboardSequenceNumber()
     }) {
         return Err(CaptureError::NoSelection);
     }
 
-    // 5. Ouvrir le presse-papiers (retries : peut être verrouillé par une autre app)
+    // 6. Ouvrir le presse-papiers (retries : peut être verrouillé par une autre app)
     if !open_clipboard() {
         return Err(CaptureError::ClipboardBusy { attempts: OPEN_CLIPBOARD_ATTEMPTS });
     }
 
-    // 6. Lire le contenu (priorité : Unicode > HTML > RTF > ANSI)
+    // 7. Lire le contenu (priorité : Unicode > HTML > RTF > ANSI)
     let result = read_clipboard_content();
 
-    // 7. Fermer le presse-papiers (toujours)
+    // 8. Fermer le presse-papiers (toujours)
     let _ = unsafe { CloseClipboard() };
 
     result
@@ -523,6 +633,7 @@ mod tests {
             CaptureError::NoTextContent,
             CaptureError::ReadFailure("échec GlobalLock".to_string()),
             CaptureError::SnapshotFailed("presse-papiers verrouillé".to_string()),
+            CaptureError::WindowSwitchFailed("fenêtre refusée".to_string()),
         ];
         for err in cas {
             let msg = err.to_string();

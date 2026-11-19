@@ -14,6 +14,41 @@
 
 pub mod config;
 pub mod capture;
+
+static LAST_FOREGROUND: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Suit en arrière-plan la fenêtre active non-Navi — permet à la capture
+/// de viser la bonne cible (au lieu de Navi lui-même quand la Steam/Chromium a le focus).
+fn track_last_foreground() {
+    std::thread::spawn(move || {
+        use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+        use windows::Win32::System::Threading::GetCurrentProcessId;
+        let own = unsafe { GetCurrentProcessId() };
+        loop {
+            let hwnd = unsafe { GetForegroundWindow() };
+            if !hwnd.0.is_null() {
+                let mut pid: u32 = 0;
+                unsafe { GetWindowThreadProcessId(HWND(hwnd.0), Some(&mut pid)) };
+                if pid != 0 && pid != own {
+                    LAST_FOREGROUND.store(hwnd.0 as usize, std::sync::atomic::Ordering::SeqCst);
+                }
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+    });
+}
+
+/// Dernière fenêtre non-Navi mémorisée (0 si aucune).
+pub(crate) fn last_foreground() -> Option<*mut core::ffi::c_void> {
+    let v = LAST_FOREGROUND.load(std::sync::atomic::Ordering::SeqCst);
+    if v == 0 { None } else { Some(v as *mut core::ffi::c_void) }
+}
+
+/// Oublie la fenêtre mémorisée (appelée quand elle est détruite ou invalide,
+/// pour ne pas viser un HWND recyclé).
+pub(crate) fn clear_last_foreground() {
+    LAST_FOREGROUND.store(0, std::sync::atomic::Ordering::SeqCst);
+}
 pub mod hotkey;
 pub mod tts;
 pub mod audio;
@@ -26,6 +61,7 @@ pub mod utils;
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Manager};
+use windows::Win32::Foundation::HWND;
 
 /// Vue partagée entre les commandes Tauri et le thread d'écoute des raccourcis.
 /// Chaque champ est clonable (compteurs Arc internes) — construire un `NaviRef`
@@ -348,6 +384,7 @@ pub fn run() {
         ])
         .setup(|app| {
             let state = NaviState::new();
+            track_last_foreground();
             let handle = app.handle().clone();
             state.machine.subscribe(move |event| {
                 // Événements consommés par l'UI via @tauri-apps/api/event (`navi-state`).
