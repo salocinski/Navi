@@ -534,8 +534,8 @@ fn force_foreground(target: HWND) {
         };
         let target_thread = GetWindowThreadProcessId(target, None);
 
-        let _ = keybd_event(VK_MENU.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
-        let _ = keybd_event(VK_MENU.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+        keybd_event(VK_MENU.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
+        keybd_event(VK_MENU.0 as u8, 0, KEYEVENTF_KEYUP, 0);
 
         if fg_thread != 0 {
             let _ = AttachThreadInput(current, fg_thread, BOOL(1));
@@ -692,7 +692,9 @@ fn read_format_raw(format: u32) -> Result<String, String> {
 
     let result = if format == CF_UNICODETEXT {
         let utf16: Vec<u16> = slice
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|c| u16::from_le_bytes([c[0], c[1]]))
             .take_while(|&c| c != 0)
             .collect();

@@ -370,6 +370,53 @@ impl Drop for AudioPlayer {
     }
 }
 
+/// Joue la signature sonore de démarrage (« Hey listen » — voix féminine aiguë, original).
+///
+/// Non-bloquant : un thread dédié joue la WAV intégralement.
+/// Ne panique jamais : toute erreur de périphérique/fichier/format est journalisée et tolérée.
+pub fn play_signature_once() {
+    let path = crate::utils::resolve_signature_wav();
+    std::thread::spawn(move || {
+        let file = match std::fs::File::open(&path) {
+            Ok(f) => f,
+            Err(err) => {
+                eprintln!(
+                    "[navi] signature introuvable ({}) : {}",
+                    path.display(),
+                    err
+                );
+                return;
+            }
+        };
+        let stream = match OutputStream::try_default() {
+            Ok(s) => s,
+            Err(err) => {
+                eprintln!(
+                    "[navi] périphérique audio indisponible pour la signature : {}",
+                    err
+                );
+                return;
+            }
+        };
+        let sink = match Sink::try_new(&stream.1) {
+            Ok(s) => s,
+            Err(err) => {
+                eprintln!("[navi] initialisation sink signature impossible : {}", err);
+                return;
+            }
+        };
+        let source = match Decoder::new(std::io::BufReader::new(file)) {
+            Ok(s) => s,
+            Err(err) => {
+                eprintln!("[navi] décodage signature impossible : {}", err);
+                return;
+            }
+        };
+        sink.append(source);
+        sink.sleep_until_end();
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -424,51 +471,4 @@ mod tests {
         assert_eq!(q.len(), 0);
         assert_eq!(q.pop(), None);
     }
-}
-
-/// Joue la signature sonore de démarrage (« Hey listen » — voix féminine aiguë, original).
-///
-/// Non-bloquant : un thread dédié joue la WAV intégralement.
-/// Ne panique jamais : toute erreur de périphérique/fichier/format est journalisée et tolérée.
-pub fn play_signature_once() {
-    let path = crate::utils::resolve_signature_wav();
-    std::thread::spawn(move || {
-        let file = match std::fs::File::open(&path) {
-            Ok(f) => f,
-            Err(err) => {
-                eprintln!(
-                    "[navi] signature introuvable ({}) : {}",
-                    path.display(),
-                    err
-                );
-                return;
-            }
-        };
-        let stream = match OutputStream::try_default() {
-            Ok(s) => s,
-            Err(err) => {
-                eprintln!(
-                    "[navi] périphérique audio indisponible pour la signature : {}",
-                    err
-                );
-                return;
-            }
-        };
-        let sink = match Sink::try_new(&stream.1) {
-            Ok(s) => s,
-            Err(err) => {
-                eprintln!("[navi] initialisation sink signature impossible : {}", err);
-                return;
-            }
-        };
-        let source = match Decoder::new(std::io::BufReader::new(file)) {
-            Ok(s) => s,
-            Err(err) => {
-                eprintln!("[navi] décodage signature impossible : {}", err);
-                return;
-            }
-        };
-        sink.append(source);
-        sink.sleep_until_end();
-    });
 }

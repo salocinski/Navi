@@ -4,13 +4,9 @@ use global_hotkey::{
     GlobalHotKeyEvent, GlobalHotKeyManager,
     hotkey::{Code, HotKey, Modifiers},
 };
-use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
-
-static HOTKEY_MANAGER: Lazy<GlobalHotKeyManager> =
-    Lazy::new(|| GlobalHotKeyManager::new().expect("Failed to create GlobalHotKeyManager"));
 
 /// Actions possibles via raccourcis
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

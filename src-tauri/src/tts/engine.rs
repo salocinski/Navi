@@ -185,10 +185,10 @@ impl TtsEngine for super::KokoroEngine {
             });
 
         // Langue non supportée → erreur claire (pas d'anglais silencieux pour du français).
-        if let Some(lang) = &language {
-            if TtsLanguage::from_str_lenient(lang).is_none() {
-                return Err(TtsError::UnsupportedLanguage(lang.clone()));
-            }
+        if let Some(lang) = &language
+            && TtsLanguage::from_str_lenient(lang).is_none()
+        {
+            return Err(TtsError::UnsupportedLanguage(lang.clone()));
         }
 
         let samples = self

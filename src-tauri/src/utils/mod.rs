@@ -71,10 +71,10 @@ pub fn resolve_models_dir() -> PathBuf {
         manifest.join("models").join("kokoro"),
         manifest.join("..").join("models"),
     ] {
-        if let Ok(normalized) = candidate.canonicalize() {
-            if normalized.join("kokoro-v1.0.int8.onnx").exists() {
-                return normalized;
-            }
+        if let Ok(normalized) = candidate.canonicalize()
+            && normalized.join("kokoro-v1.0.int8.onnx").exists()
+        {
+            return normalized;
         }
     }
 

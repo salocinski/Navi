@@ -101,7 +101,7 @@ impl PlaybackStateMachine {
     }
 
     pub fn state(&self) -> PlaybackState {
-        self.state.lock().unwrap().clone()
+        *self.state.lock().unwrap()
     }
 
     /// Enregistre un écouteur d'événements (appelé synchronement, donc non bloquant).

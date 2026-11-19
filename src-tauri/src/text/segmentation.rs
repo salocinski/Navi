@@ -12,7 +12,7 @@
 /// Surchargeable via `NAVI_MAX_SEGMENT_TOKENS` (benchmarks, carte TW-040).
 pub(crate) fn parse_max_tokens(raw: Option<&str>) -> usize {
     raw.and_then(|v| v.parse::<usize>().ok())
-        .filter(|&n| n >= 16 && n <= 510)
+        .filter(|&n| (16..=510).contains(&n))
         .unwrap_or(480)
 }
 

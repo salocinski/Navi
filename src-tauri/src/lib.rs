@@ -242,7 +242,7 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
 
 pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     touch_user_activity();
-    state.machine.begin_capture().map_err(|e| e)?;
+    state.machine.begin_capture()?;
 
     // 0. Chargement du modèle en parallèle de la capture (carte N-075) :
     //    ~11 s à froid ; la capture (~1 s) se déroule pendant ce temps.
@@ -343,7 +343,7 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     }
 
     let segment_count = segments.len();
-    state.machine.begin_generation_phase().map_err(|e| e)?;
+    state.machine.begin_generation_phase()?;
     state.machine.set_text(cleaned, segment_count);
 
     // 6. Audio : reset (nouvelle session) ou création (thread audio) si absent
@@ -361,11 +361,10 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
 
     // 7. Jeton de génération + thread de synthèse
     let token = state.machine.begin_generation();
-    state.machine.play().map_err(|e| e)?;
+    state.machine.play()?;
 
     let machine = state.machine.clone();
     let engine = state.engine.clone();
-    let segments = segments;
     let audio = state.audio.clone();
     std::thread::spawn(move || {
         eprintln!(
@@ -415,7 +414,7 @@ fn pause_reading(state: tauri::State<NaviState>) -> Result<(), String> {
 
 pub(crate) fn pause_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
-    state.machine.pause().map_err(|e| e)?;
+    state.machine.pause()?;
     state
         .audio
         .lock()
@@ -432,7 +431,7 @@ fn resume_reading(state: tauri::State<NaviState>) -> Result<(), String> {
 
 pub(crate) fn resume_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
-    state.machine.resume().map_err(|e| e)?;
+    state.machine.resume()?;
     state
         .audio
         .lock()
@@ -450,10 +449,10 @@ fn stop_reading(state: tauri::State<NaviState>) -> Result<(), String> {
 pub(crate) fn stop_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
     state.machine.stop();
-    if let Ok(audio) = state.audio.lock() {
-        if let Some(handle) = audio.as_ref() {
-            let _ = handle.stop();
-        }
+    if let Ok(audio) = state.audio.lock()
+        && let Some(handle) = audio.as_ref()
+    {
+        let _ = handle.stop();
     }
     Ok(())
 }
@@ -625,13 +624,11 @@ pub fn run() {
                         if !loaded {
                             continue;
                         }
-                        if let Ok(mut guard) = view.engine.lock() {
-                            if let Some(engine) = guard.as_mut() {
-                                if engine.unload_session() {
+                        if let Ok(mut guard) = view.engine.lock()
+                            && let Some(engine) = guard.as_mut()
+                                && engine.unload_session() {
                                     eprintln!("[navi] modèle déchargé après {idle_limit} s sans utilisation (carte N-075)");
                                 }
-                            }
-                        }
                     }
                 });
             }

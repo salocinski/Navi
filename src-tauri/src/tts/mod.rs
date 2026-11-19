@@ -12,8 +12,6 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use crate::utils;
-
 /// Configuration du moteur TTS
 #[derive(Debug, Clone)]
 pub struct TtsConfig {
@@ -100,7 +98,6 @@ pub struct KokoroEngine {
 struct Phonemizer {
     set_voice: unsafe extern "system" fn(*const i8) -> i32,
     to_phonemes: unsafe extern "system" fn(*mut *const i8, i32, i32) -> *const i8,
-    init: unsafe extern "system" fn(i32, i32, *const i8, i32) -> i32,
 }
 
 impl KokoroEngine {
@@ -284,7 +281,6 @@ impl Phonemizer {
         Ok(Self {
             set_voice,
             to_phonemes,
-            init,
         })
     }
 

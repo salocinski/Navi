@@ -11,6 +11,7 @@
 //!   entre chaque segment ; testable sans périphérique.
 //! - Le câblage Tauri (commandes, états, events) vit dans `lib.rs`.
 
+#[cfg(test)]
 use std::sync::{Arc, Mutex};
 
 use crate::text::segmentation::Segment;
@@ -24,13 +25,20 @@ pub trait AudioSink: Send + Sync {
     fn write(&self, samples: &[f32]) -> Result<(), String>;
 }
 
-/// Sortie production : `crate::audio::AudioHandle` implémente ce trait
-/// (envoi `Enqueue` par canal mpsc vers le thread audio) — aucun périphérique requis côté écrivain.
+// Sortie production : `crate::audio::AudioHandle` implémente AudioSink
+// (envoi `Enqueue` par canal mpsc vers le thread audio) — aucun périphérique requis côté écrivain.
 
 /// Sortie mémoire pour les tests (aucun device requis).
 #[cfg(test)]
 pub struct MemorySink {
     pub chunks: Arc<Mutex<Vec<Vec<f32>>>>,
+}
+
+#[cfg(test)]
+impl Default for MemorySink {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]
