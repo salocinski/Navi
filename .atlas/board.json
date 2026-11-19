@@ -509,8 +509,8 @@
       "id": "N-064",
       "title": "Documenter les limites connues de compatibilité",
       "description": "Applications et contrôles non pris en charge.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-19T17:41:57Z",
       "assignee": ""
     },
     {
