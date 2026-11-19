@@ -1,15 +1,24 @@
-//! Segmentation en production (carte N-037) — texte nettoyé → file de segments.
+﻿//! Segmentation en production (carte N-037) — texte nettoyé → file de segments.
 //!
 //! Stratégie héritée du prototype S0-10, durcie pour la production :
 //! - découpage sur ponctuation forte `. ! ?` **et sauts de ligne** (frontière sûre) ;
 //! - protection des abréviations FR/EN (`Dr.`, `M.`, `Mme`, `etc.`, `p.ex.`…) ;
 //! - regroupement en chunks ≤ 480 tokens estimés (marge sous 510 chez Kokoro) ;
 //! - segment isolé > limite → découpage aux frontières de mots ; un **mot** plus long que la
-//!   limite est scindé en dur (le contrat `estimated_tokens ≤ MAX_TOKENS_PER_CHUNK` prime toujours) ;
+//!   limite est scindé en dur (le contrat `estimated_tokens ≤ max_tokens_per_chunk()` prime toujours) ;
 //! - aucun `unicode-segmentation` : la ponctuation forte est ASCII, les compteurs en chars.
 
 /// Limite d'inférence Kokoro 510 tokens → marge de sécurité.
-pub const MAX_TOKENS_PER_CHUNK: usize = 480;
+/// Surchargeable via `NAVI_MAX_SEGMENT_TOKENS` (benchmarks, carte TW-040).
+pub(crate) fn parse_max_tokens(raw: Option<&str>) -> usize {
+    raw.and_then(|v| v.parse::<usize>().ok())
+        .filter(|&n| n >= 16 && n <= 510)
+        .unwrap_or(480)
+}
+
+pub fn max_tokens_per_chunk() -> usize {
+    parse_max_tokens(std::env::var("NAVI_MAX_SEGMENT_TOKENS").ok().as_deref())
+}
 
 /// Estimation grossière : 1 token ≈ 4 caractères (FR/EN). Documentée comme approximation ;
 /// le comptage exact se fait à la tokenisation (N-039).
@@ -28,7 +37,7 @@ pub struct Segment {
 /// Segmente un texte nettoyé (N-035) en chunks destinés à l'inférence Kokoro.
 pub fn segment_text(text: &str) -> Vec<Segment> {
     let sentences = split_sentences(text);
-    let chunks = chunk_by_token_limit(&sentences, MAX_TOKENS_PER_CHUNK);
+    let chunks = chunk_by_token_limit(&sentences, max_tokens_per_chunk());
     chunks
         .into_iter()
         .enumerate()
@@ -204,12 +213,22 @@ mod tests {
     }
 
     #[test]
+    fn max_tokens_env_override() {
+        assert_eq!(parse_max_tokens(None), 480);
+        assert_eq!(parse_max_tokens(Some("64")), 64);
+        assert_eq!(parse_max_tokens(Some("3")), 480);   // sous le plancher : refusé
+        assert_eq!(parse_max_tokens(Some("511")), 480); // au-dessus de 510 : refusé
+        assert_eq!(parse_max_tokens(Some("abc")), 480);
+        assert_eq!(parse_max_tokens(Some("")), 480);
+    }
+
+    #[test]
     fn chunk_limit_respectee() {
         let s = "a".repeat(2500); // ~625 tokens, sans ponctuation
         let chunks = segment_text(&s);
         assert!(chunks.len() >= 2);
         for seg in &chunks {
-            assert!(seg.estimated_tokens <= MAX_TOKENS_PER_CHUNK + 1, "segment trop gros : {} tokens", seg.estimated_tokens);
+            assert!(seg.estimated_tokens <= max_tokens_per_chunk() + 1, "segment trop gros : {} tokens", seg.estimated_tokens);
         }
     }
 
