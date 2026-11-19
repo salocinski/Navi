@@ -1,5 +1,5 @@
 //! Navi - Lecteur de texte à voix haute 100% local
-//! 
+//!
 //! Architecture modulaire :
 //! - config: gestion de configuration persistante
 //! - capture: capture presse-papiers et texte sélectionné
@@ -27,18 +27,28 @@ use serde::Serialize;
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Manager};
 
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-/// État partagé de Navi (machines à états + moteur Kokoro + audio).
-pub struct NaviState {
+/// Vue partagée entre les commandes Tauri et le thread d'écoute des raccourcis.
+/// Chaque champ est clonable (compteurs Arc internes) — construire un `NaviRef`
+/// est bon marché et ne prend pas la propriété de l'état global.
+#[derive(Clone)]
+pub struct NaviRef {
     pub machine: crate::state::PlaybackStateMachine,
     pub engine: Arc<Mutex<Option<crate::tts::KokoroEngine>>>,
     pub audio: Arc<Mutex<Option<crate::audio::AudioHandle>>>,
     /// Garde anti double-chargement (ort n'autorise qu'un seul `Environment` par processus).
     pub loading: Arc<std::sync::atomic::AtomicBool>,
+    /// Rapport d'enregistrement des raccourcis (pour l'UI).
+    pub hotkey_report: Arc<Mutex<crate::hotkey::RegistrationReport>>,
+}
+
+
+/// État partagé de Navi (machines à états + moteur Kokoro + audio).
+pub struct NaviState {
+    machine: crate::state::PlaybackStateMachine,
+    engine: Arc<Mutex<Option<crate::tts::KokoroEngine>>>,
+    audio: Arc<Mutex<Option<crate::audio::AudioHandle>>>,
+    loading: Arc<std::sync::atomic::AtomicBool>,
+    hotkey_report: Arc<Mutex<crate::hotkey::RegistrationReport>>,
 }
 
 impl NaviState {
@@ -48,8 +58,24 @@ impl NaviState {
             engine: Arc::new(Mutex::new(None)),
             audio: Arc::new(Mutex::new(None)),
             loading: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            hotkey_report: Arc::new(Mutex::new(crate::hotkey::RegistrationReport::default())),
         }
     }
+
+    fn view(&self) -> NaviRef {
+        NaviRef {
+            machine: self.machine.clone(),
+            engine: self.engine.clone(),
+            audio: self.audio.clone(),
+            loading: self.loading.clone(),
+            hotkey_report: self.hotkey_report.clone(),
+        }
+    }
+}
+
+#[tauri::command]
+fn greet(name: &str) -> String {
+    format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
 /// DTO de statut exposé à l'UI (lecture seule).
@@ -60,33 +86,36 @@ struct StatusDto {
     total_chunks: usize,
     engine_loaded: bool,
     audio_ready: bool,
+    /// Message d'échec d'enregistrement des raccourcis, s'il y en a un.
+    hotkey_error: Option<String>,
 }
 
 #[tauri::command]
 fn get_status(state: tauri::State<NaviState>) -> StatusDto {
     let (current_chunk, total_chunks) = state.machine.progress();
+    let hotkey_error = state.hotkey_report.lock().ok().and_then(|r| r.failure_message());
     StatusDto {
         phase: state.machine.state(),
         current_chunk,
         total_chunks,
         engine_loaded: state.engine.lock().map(|e| e.is_some()).unwrap_or(false),
         audio_ready: state.audio.lock().map(|a| a.is_some()).unwrap_or(false),
+        hotkey_error,
     }
 }
 
 /// Charge le modèle Kokoro en tâche de fond (idempotent ; ~11 s au premier appel).
-/// Un seul chargement simultané est autorisé — ort refuse plusieurs `Environment`.
+/// Un seul chargement simultané autorisé — ort refuse plusieurs `Environment`.
 #[tauri::command]
 fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
-    if state.engine.lock().map_err(|_| "verrou moteur".to_string())?.is_some() {
+    let view = state.view();
+    if view.engine.lock().map_err(|_| "verrou moteur".to_string())?.is_some() {
         return Ok(());
     }
-    if state.loading.swap(true, std::sync::atomic::Ordering::SeqCst) {
+    if view.loading.swap(true, std::sync::atomic::Ordering::SeqCst) {
         return Ok(()); // un chargement est déjà en cours
     }
-    let engine = state.engine.clone();
-    let loading = state.loading.clone();
-    let machine = state.machine.clone();
+    let machine = view.machine.clone();
     std::thread::spawn(move || {
         let result = (|| -> Result<crate::tts::KokoroEngine, String> {
             let dir = crate::utils::resolve_models_dir();
@@ -99,7 +128,7 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
         })();
         match result {
             Ok(kokoro) => {
-                if let Ok(mut guard) = engine.lock() {
+                if let Ok(mut guard) = view.engine.lock() {
                     *guard = Some(kokoro);
                 }
             }
@@ -108,7 +137,7 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
                 machine.set_error(message);
             }
         }
-        loading.store(false, std::sync::atomic::Ordering::SeqCst);
+        view.loading.store(false, std::sync::atomic::Ordering::SeqCst);
     });
     Ok(())
 }
@@ -116,6 +145,10 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
 /// Lance la lecture de la sélection courante : capture → nettoyage → langue → segments → audio.
 #[tauri::command]
 fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
+    read_selection_impl(&state.view())
+}
+
+fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     state.machine.begin_capture().map_err(|e| e)?;
 
     // 1. Capture (snapshot presse-papiers + SendInput Ctrl+C + restauration)
@@ -170,10 +203,8 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
 
     // 6. Modèle requis — sinon déclencher un chargement en tâche de fond et demander un retry
     if state.engine.lock().map_err(|_| "verrou moteur".to_string())?.is_none() {
-        let engine = state.engine.clone();
-        let machine = state.machine.clone();
-        let loading = state.loading.clone();
-        load_model_bg(engine, machine, loading);
+        let view = state.clone();
+        load_model_bg(view.engine.clone(), view.machine.clone(), view.loading.clone());
         let message = "Modèle Kokoro en cours de chargement… relancez la lecture dans quelques secondes".to_string();
         state.machine.set_error(message.clone());
         return Err(message);
@@ -221,8 +252,8 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
     Ok(format!("Lecture en cours — {segment_count} segments"))
 }
 
-/// Variante sans accès à `State` — utilisée par `start_reading` pour démarrer un chargement.
-/// Refuse de spawned si un chargement est déjà en cours (ort : un seul Environment).
+/// Variante sans accès à `State` — utilisée par `read_selection_impl` pour démarrer un chargement.
+/// Refuse de spawner si un chargement est déjà en cours (ort : un seul Environment).
 fn load_model_bg(
     engine: Arc<Mutex<Option<crate::tts::KokoroEngine>>>,
     machine: crate::state::PlaybackStateMachine,
@@ -257,6 +288,10 @@ fn load_model_bg(
 
 #[tauri::command]
 fn pause_reading(state: tauri::State<NaviState>) -> Result<(), String> {
+    pause_reading_impl(&state.view())
+}
+
+fn pause_reading_impl(state: &NaviRef) -> Result<(), String> {
     state.machine.pause().map_err(|e| e)?;
     state
         .audio
@@ -269,6 +304,10 @@ fn pause_reading(state: tauri::State<NaviState>) -> Result<(), String> {
 
 #[tauri::command]
 fn resume_reading(state: tauri::State<NaviState>) -> Result<(), String> {
+    resume_reading_impl(&state.view())
+}
+
+fn resume_reading_impl(state: &NaviRef) -> Result<(), String> {
     state.machine.resume().map_err(|e| e)?;
     state
         .audio
@@ -281,6 +320,10 @@ fn resume_reading(state: tauri::State<NaviState>) -> Result<(), String> {
 
 #[tauri::command]
 fn stop_reading(state: tauri::State<NaviState>) -> Result<(), String> {
+    stop_reading_impl(&state.view())
+}
+
+fn stop_reading_impl(state: &NaviRef) -> Result<(), String> {
     state.machine.stop();
     if let Ok(audio) = state.audio.lock() {
         if let Some(handle) = audio.as_ref() {
@@ -310,6 +353,62 @@ pub fn run() {
                 // Événements consommés par l'UI via @tauri-apps/api/event (`navi-state`).
                 let _ = handle.emit("navi-state", event);
             });
+
+            // Raccourcis globaux — défauts, écoute via GlobalHotKeyEvent.
+            {
+                let view = state.view();
+                match crate::hotkey::HotkeyManager::new() {
+                    Ok(mut manager) => {
+                        let report = manager.register_defaults().unwrap_or_else(|err| crate::hotkey::RegistrationReport {
+                            registered: vec![],
+                            failed: vec![(
+                                crate::hotkey::HotkeyAction::ReadSelection,
+                                "?".to_string(),
+                                err.to_string(),
+                            )],
+                        });
+                        if let Ok(mut guard) = view.hotkey_report.lock() {
+                            *guard = report;
+                        }
+                        let hotkeys = manager.hotkeys();
+                        // Le manager Windows doit survivre à la setup — on le forget pour conserver les hotkeys actifs.
+                        // (Le window caché est créé sur le thread de la boucle Tauri qui pompe les messages.)
+                        std::mem::forget(manager);
+                        let exec = view.clone();
+                        std::thread::spawn(move || {
+                            use global_hotkey::GlobalHotKeyEvent;
+                            for event in GlobalHotKeyEvent::receiver() {
+                                let Some(action) = hotkeys.get(&event.id) else { continue };
+                                match *action {
+                                    crate::hotkey::HotkeyAction::ReadSelection => {
+                                        if let Err(err) = read_selection_impl(&exec) {
+                                            exec.machine.set_error(err.clone());
+                                            eprintln!("[navi] raccourci lecture échoué : {err}");
+                                        }
+                                    }
+                                    crate::hotkey::HotkeyAction::PauseResume => {
+                                        let outcome = match exec.machine.state() {
+                                            crate::state::PlaybackState::Paused => resume_reading_impl(&exec),
+                                            _ => pause_reading_impl(&exec),
+                                        };
+                                        if let Err(err) = outcome {
+                                            exec.machine.set_error(err.clone());
+                                            eprintln!("[navi] raccourci pause/reprise échoué : {err}");
+                                        }
+                                    }
+                                    crate::hotkey::HotkeyAction::Stop => {
+                                        let _ = stop_reading_impl(&exec);
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    Err(err) => {
+                        eprintln!("[navi] raccourcis indisponibles — pas disponibles sur cet OS : {err}");
+                    }
+                }
+            }
+
             app.manage(state);
             Ok(())
         })
