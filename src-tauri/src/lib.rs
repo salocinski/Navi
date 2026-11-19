@@ -429,6 +429,15 @@ pub fn run() {
                 let _ = handle.emit("navi-state", event);
             });
 
+            // Icône de zone de notification + menu (carte N-047) — feuille DA docs/pistes-interface.html.
+            {
+                let view = state.view();
+                let tray_handle = app.handle().clone();
+                if let Err(err) = crate::ui::create_system_tray(&tray_handle, view) {
+                    eprintln!("[navi] tray indisponible : {err}");
+                }
+            }
+
             // Raccourcis globaux — défauts, écoute via GlobalHotKeyEvent.
             {
                 let view = state.view();
@@ -484,15 +493,6 @@ pub fn run() {
                     Err(err) => {
                         eprintln!("[navi] raccourcis indisponibles — pas disponibles sur cet OS : {err}");
                     }
-                }
-            }
-
-            // Icône de zone de notification + menu (carte N-047) — feuille DA docs/pistes-interface.html.
-            {
-                let view = state.view();
-                let tray_handle = app.handle().clone();
-                if let Err(err) = crate::ui::create_system_tray(&tray_handle, view) {
-                    eprintln!("[navi] tray indisponible : {err}");
                 }
             }
 
