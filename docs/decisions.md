@@ -167,6 +167,17 @@ Stack : Rust + Tauri 2 + React/TypeScript, Windows 11
 
 ---
 
+## Décision : retrait de Qwen3-TTS — Navi reste sur Kokoro uniquement (N-074, 2026-11-19)
+
+**Date** : 2026-11-19
+**Contexte** : la migration N-071 (PR #64) est implémentée et fonctionnelle de bout en bout, mais non viable en production : RTF ≈ 3 sur RTX 3060 Ti (bf16, `sdpa` ; `eager` ≈ 3,8) — lecture progressive temps réel impossible. `flash-attn` non applicable durablement sous Windows (pas de wheel stable pour torch 2.11 + CUDA 12.8 ; compilation nécessaire) ; `torch.compile`/`cudagraphs` échouent dans l'architecture Qwen3-TTS ; seul un GPU de classe nettement supérieure (A100/RTX 4090) ramènerait le RTF ≤ 1. La conversion ONNX reste « non triviale » (décision d'origine).
+**Décision** (owner) : **retirer du code les occurrences de Qwen3-TTS** et rester sur **Kokoro uniquement**. `ResilientEngine`, `QwenTtsEngine`, le sidecar Python, l'exemple `qwen_check`, la dépendance `base64` et le câblage conditionnel sont supprimés ; `lib.rs` est restauré à l'état pré-migration (KokoroEngine derrière `TtsEngine`).
+**Supersede explicite** : cette décision remplace celle surchargeant `NAVI_TTS_ENGINE=auto` = Qwen d'abord (même date), la mise en œuvre TW-071 et la consigne « migration vers Qwen3-TTS » de la décision Ryan (N-070). La voix officielle Ryan et l'étude N-070 conservent leur valeur documentaire ; la migration est annulée sans livraison.
+**Notes** : le venv de recette (`scratch/qwen_test312*`, non versionné) et le cache Hugging Face (~2,33 Go) restent hors dépôt — retrait local à la charge de l'humain s'il souhaite libérer de la place. `docs/s2-71-migration-qwen3-tts.md` est marquée supersédée, conservée pour historique. 70 tests unitaires verts (retour au décompte pré-migration).
+**Conséquence** : N-071 (done) close sans livraison effective ; carte N-074 (P2 M) pour le retrait.
+
+---
+
 ## Prochaine entrée de décision à consigner
 
 **Date à venir** : Suivre toute décision dans un sprint ultérieur.
