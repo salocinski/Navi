@@ -565,8 +565,8 @@
       "id": "N-071",
       "title": "Migrer le pipeline TTS de Kokoro vers Qwen3-TTS 0.6B CustomVoice (Ryan voix officielle)",
       "description": "",
-      "state": "todo",
-      "updated_at": "2026-11-19T01:30:32Z",
+      "state": "doing",
+      "updated_at": "2026-11-19T04:44:34Z",
       "assignee": ""
     },
     {
