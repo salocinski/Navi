@@ -1,4 +1,4 @@
-﻿//! Navi - Lecteur de texte à voix haute 100% local
+//! Navi - Lecteur de texte à voix haute 100% local
 //!
 //! Architecture modulaire :
 //! - config: gestion de configuration persistante
@@ -206,7 +206,7 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
     read_selection_impl(&state.view())
 }
 
-fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
+pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     touch_user_activity();
     state.machine.begin_capture().map_err(|e| e)?;
 
@@ -361,7 +361,7 @@ fn pause_reading(state: tauri::State<NaviState>) -> Result<(), String> {
     pause_reading_impl(&state.view())
 }
 
-fn pause_reading_impl(state: &NaviRef) -> Result<(), String> {
+pub(crate) fn pause_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
     state.machine.pause().map_err(|e| e)?;
     state
@@ -378,7 +378,7 @@ fn resume_reading(state: tauri::State<NaviState>) -> Result<(), String> {
     resume_reading_impl(&state.view())
 }
 
-fn resume_reading_impl(state: &NaviRef) -> Result<(), String> {
+pub(crate) fn resume_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
     state.machine.resume().map_err(|e| e)?;
     state
@@ -395,7 +395,7 @@ fn stop_reading(state: tauri::State<NaviState>) -> Result<(), String> {
     stop_reading_impl(&state.view())
 }
 
-fn stop_reading_impl(state: &NaviRef) -> Result<(), String> {
+pub(crate) fn stop_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
     state.machine.stop();
     if let Ok(audio) = state.audio.lock() {
@@ -484,6 +484,15 @@ pub fn run() {
                     Err(err) => {
                         eprintln!("[navi] raccourcis indisponibles — pas disponibles sur cet OS : {err}");
                     }
+                }
+            }
+
+            // Icône de zone de notification + menu (carte N-047) — feuille DA docs/pistes-interface.html.
+            {
+                let view = state.view();
+                let tray_handle = app.handle().clone();
+                if let Err(err) = crate::ui::create_system_tray(&tray_handle, view) {
+                    eprintln!("[navi] tray indisponible : {err}");
                 }
             }
 
