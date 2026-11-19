@@ -548,7 +548,7 @@
     {
       "id": "N-069",
       "title": "Produire l'icône multi-tailles à partir du logo (.ico) et valider sa lisibilité",
-      "description": "Source : « navi icon.jfif » (2048×2048, à utiliser tel quel). Générer 16/20/24/32/48/256 px.\n\nCritères :\n- [ ] Rendu vérifié sur la vraie barre Windows 11, thèmes clair et sombre\n- [ ] Si illisible à 16-24 px : décider d'un recadrage sur le sujet pour l'icône seule\n\nRisque : détails perdus à petite taille.",
+      "description": "Source : « navi icon.jfif » (2048×2048, à utiliser tel quel). Générer 16/20/24/32/48/256 px.\n\nCritères :\n- [ ] Rendu vérifié sur la vraie barre Windows 11, thèmes clair et sombre\n- [ ] Si illisible à 16-24 px : décider d'un recadrage sur le sujet pour l'icône seule\n\nRisque : détails perdus à petite taille.\n\n[NOTE 2026-11-19 08:22] [NOTE 2026-11-19] Ico multi-tailles produit depuis le logo 512px : 16/24/32/48/64/128/256. Couches 16 et 24 en variante forte MaxFilter 3 pour lisibilite ; validation visuelle OK identifiable, geometrie molle sous 24px - limite du logo a traits fins. Une image simplifiee dediee donnerait un meilleur rendu 16/24px si besoin.",
       "state": "doing",
       "updated_at": "2026-11-19T13:18:41Z",
       "assignee": ""
