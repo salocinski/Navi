@@ -50,7 +50,7 @@ pub fn create_system_tray(app: &AppHandle, view: crate::NaviRef) -> Result<(), B
         .menu(&menu)
         .show_menu_on_left_click(false)
         .tooltip("Navi — Lecteur de texte à voix haute (local)")
-        .on_menu_event(move |app, event| {
+        .on_menu_event(move |_app, event| {
             match event.id.as_ref() {
                 "read" => {
                     let phase = view.machine.state();
