@@ -596,7 +596,7 @@
     {
       "id": "N-075",
       "title": "Chargement a la demande du modele Kokoro au raccourci + dechargement apres 5 min sans utilisation + verification pre-lecture",
-      "description": "",
+      "description": "[NOTE 2026-11-19 08:02] [NOTE 2026-11-19] Implementation sur feat/TW-075-chargement-on-demand : chargement en parallele de la capture (thread dedie, engine ensure_session idempotent), lecture ne demarre moteur pret ; dechargement session ONNX apres 300 s sans utilisation (defaut, NAVI_MODEL_IDLE_UNLOAD_SECS pour la recette) ; environnement ONNX conserve (process-global) donc rechargement OK ; touch_user_activity sur lecture/pause/reprise/arret ; preload boot conserve. 70 tests verts ; recette humaine en attente.",
       "state": "doing",
       "updated_at": "2026-11-19T12:58:45Z",
       "assignee": ""
