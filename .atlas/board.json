@@ -493,8 +493,8 @@
       "id": "N-062",
       "title": "Mettre en place les tests (capture, file audio, machine d'états) et la CI",
       "description": "Build, tests, lint.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-19T16:49:44Z",
       "assignee": ""
     },
     {
