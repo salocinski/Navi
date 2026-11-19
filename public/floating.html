@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Navi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      /* Pastille flottante du cercle animé — révision TW-68 (TW-077).
+         Fenêtre frameless, toujours-au-dessus, sans focus, non cliquable. */
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+        user-select: none;
+      }
+      body {
+        display: grid;
+        place-items: center;
+      }
+      svg {
+        width: 56px;
+        height: 56px;
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55));
+        display: none;
+      }
+      body[data-state='generating'] #gen,
+      body[data-state='error'] #error {
+        display: block;
+      }
+      body[data-state='playing'] #read {
+        display: block;
+      }
+      body[data-state='paused'] #pause {
+        display: block;
+      }
+      /* génération : arc bleu en rotation */
+      #gen .arc {
+        animation: spin 0.9s linear infinite;
+        transform-origin: 50% 50%;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      /* lecture : anneau cyan qui pulse */
+      #read .ring {
+        animation: pulse 1.35s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          stroke-opacity: 0.45;
+        }
+        50% {
+          stroke-opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #gen .arc,
+        #read .ring {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body data-state="generating">
+    <!-- Génération / capture : piste + arc bleu tournant -->
+    <svg id="gen" viewBox="0 0 56 56" role="img" aria-label="Génération en cours">
+      <circle cx="28" cy="28" r="24" fill="#1a0533" fill-opacity="0.9" />
+      <circle
+        cx="28"
+        cy="28"
+        r="21.5"
+        fill="none"
+        stroke="#38bdf8"
+        stroke-opacity="0.22"
+        stroke-width="3"
+      />
+      <g class="arc">
+        <circle
+          cx="28"
+          cy="28"
+          r="21.5"
+          fill="none"
+          stroke="#38bdf8"
+          stroke-width="3.2"
+          stroke-linecap="round"
+          stroke-dasharray="34 101"
+          stroke-dashoffset="0"
+        />
+      </g>
+    </svg>
+    <!-- Lecture : anneau cyan pulsatile -->
+    <svg id="read" viewBox="0 0 56 56" role="img" aria-label="Lecture en cours">
+      <circle cx="28" cy="28" r="24" fill="#1a0533" fill-opacity="0.9" />
+      <circle
+        class="ring"
+        cx="28"
+        cy="28"
+        r="21.5"
+        fill="none"
+        stroke="#22d3ee"
+        stroke-width="3.2"
+      />
+    </svg>
+    <!-- Pause : anneau ambre fixe -->
+    <svg id="pause" viewBox="0 0 56 56" role="img" aria-label="Lecture en pause">
+      <circle cx="28" cy="28" r="24" fill="#1a0533" fill-opacity="0.9" />
+      <circle cx="28" cy="28" r="21.5" fill="none" stroke="#fbbf24" stroke-width="3.2" />
+    </svg>
+    <!-- Erreur : pastille rouge sur sphère -->
+    <svg id="error" viewBox="0 0 56 56" role="img" aria-label="Erreur">
+      <circle cx="28" cy="28" r="24" fill="#1a0533" fill-opacity="0.9" />
+      <circle cx="38" cy="38" r="10" fill="#ef4444" stroke="#111827" stroke-width="2" />
+      <rect x="36.5" y="31.5" width="3" height="7.5" rx="1.5" fill="#fff" />
+      <circle cx="38" cy="43.5" r="1.7" fill="#fff" />
+    </svg>
+    <script>
+      // Suit la machine d'états via les événements `navi-state` (mêmes que la fenêtre principale).
+      const VALID = new Set(['generating', 'playing', 'paused', 'error']);
+      function appliquer(to) {
+        const cible = to === 'capturing' || to === 'generating' ? 'generating' : to;
+        if (VALID.has(cible)) {
+          document.body.dataset.state = cible;
+        }
+      }
+      const api = window.__TAURI__;
+      if (api && api.event && api.event.listen) {
+        api.event.listen('navi-state', (event) => {
+          const p = event && event.payload;
+          if (!p) return;
+          if (p.type === 'phase-changed' && p.to) appliquer(p.to);
+          else if (p.type === 'error') appliquer('error');
+        });
+      }
+    </script>
+  </body>
+</html>
