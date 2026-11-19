@@ -4,7 +4,7 @@
 //! - config: gestion de configuration persistante
 //! - capture: capture presse-papiers et texte sélectionné
 //! - hotkey: raccourcis globaux système
-//! - tts: moteurs TTS (Qwen3-TTS-12Hz-0.6B-CustomVoice via sidecar Python par défaut ; repli Kokoro/ONNX)
+//! - tts: moteur TTS (Kokoro via ONNX Runtime)
 //! - audio: lecture audio (rodio)
 //! - state: machine d'états de lecture
 //! - text: nettoyage, langue, segmentation en production
@@ -69,7 +69,7 @@ use windows::Win32::Foundation::HWND;
 #[derive(Clone)]
 pub struct NaviRef {
     pub machine: crate::state::PlaybackStateMachine,
-    pub engine: Arc<Mutex<Option<crate::tts::ResilientEngine>>>,
+    pub engine: Arc<Mutex<Option<crate::tts::KokoroEngine>>>,
     pub audio: Arc<Mutex<Option<crate::audio::AudioHandle>>>,
     /// Garde anti double-chargement (ort n'autorise qu'un seul `Environment` par processus).
     pub loading: Arc<std::sync::atomic::AtomicBool>,
@@ -78,10 +78,10 @@ pub struct NaviRef {
 }
 
 
-/// État partagé de Navi (machines à états + moteur TTS (Qwen par défaut, repli Kokoro) + audio).
+/// État partagé de Navi (machines à états + moteur Kokoro + audio).
 pub struct NaviState {
     machine: crate::state::PlaybackStateMachine,
-    engine: Arc<Mutex<Option<crate::tts::ResilientEngine>>>,
+    engine: Arc<Mutex<Option<crate::tts::KokoroEngine>>>,
     audio: Arc<Mutex<Option<crate::audio::AudioHandle>>>,
     loading: Arc<std::sync::atomic::AtomicBool>,
     hotkey_report: Arc<Mutex<crate::hotkey::RegistrationReport>>,
@@ -140,7 +140,7 @@ fn get_status(state: tauri::State<NaviState>) -> StatusDto {
     }
 }
 
-/// Charge le moteur TTS (Qwen3-TTS par défaut — repli Kokoro) en tâche de fond (idempotent).
+/// Charge le modèle Kokoro en tâche de fond (idempotent ; ~11 s au premier appel).
 /// Un seul chargement simultané autorisé — ort refuse plusieurs `Environment`.
 #[tauri::command]
 fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
@@ -153,17 +153,19 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
     }
     let machine = view.machine.clone();
     std::thread::spawn(move || {
-        let result = (|| -> Result<crate::tts::ResilientEngine, String> {
-            let mut engine = crate::tts::ResilientEngine::from_env()
-                .map_err(|e| format!("initialisation moteur TTS impossible : {e}"))?;
-            crate::tts::TtsEngine::load(&mut engine)
-                .map_err(|e| format!("moteur TTS non chargeable (Qwen et Kokoro) : {e}"))?;
-            Ok(engine)
+        let result = (|| -> Result<crate::tts::KokoroEngine, String> {
+            let dir = crate::utils::resolve_models_dir();
+            let config = crate::tts::TtsConfig::with_dir(&dir);
+            let mut kokoro = crate::tts::KokoroEngine::new(config)
+                .map_err(|e| format!("chargement moteur impossible ({e}). Modèles attendus dans {}", dir.display()))?;
+            crate::tts::TtsEngine::load(&mut kokoro)
+                .map_err(|e| format!("modèle Kokoro non chargeable : {e}"))?;
+            Ok(kokoro)
         })();
         match result {
-            Ok(engine) => {
+            Ok(kokoro) => {
                 if let Ok(mut guard) = view.engine.lock() {
-                    *guard = Some(engine);
+                    *guard = Some(kokoro);
                 }
             }
             Err(message) => {
@@ -239,7 +241,7 @@ fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     if state.engine.lock().map_err(|_| "verrou moteur".to_string())?.is_none() {
         let view = state.clone();
         load_model_bg(view.engine.clone(), view.machine.clone(), view.loading.clone());
-        let message = "Moteur TTS en cours de chargement… relancez la lecture dans quelques secondes".to_string();
+        let message = "Modèle Kokoro en cours de chargement… relancez la lecture dans quelques secondes".to_string();
         state.machine.set_error(message.clone());
         return Err(message);
     }
@@ -256,7 +258,7 @@ fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
         eprintln!("[navi] thread de synthèse démarré ({} segments)", segments.len());
         let outcome = (|| -> Result<usize, String> {
             let engine_guard = engine.lock().map_err(|_| "verrou moteur".to_string())?;
-            let engine = engine_guard.as_ref().ok_or_else(|| "Moteur TTS non chargé".to_string())?;
+            let kokoro = engine_guard.as_ref().ok_or_else(|| "Modèle Kokoro non chargé".to_string())?;
             let sink = audio
                 .lock()
                 .map_err(|_| "verrou audio".to_string())?
@@ -264,7 +266,7 @@ fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
                 .cloned()
                 .ok_or_else(|| "Périphérique audio disparu".to_string())?;
             crate::pipeline::synthesize_segments(
-                engine as &dyn crate::tts::engine::TtsEngine,
+                kokoro as &dyn crate::tts::engine::TtsEngine,
                 &segments,
                 &sink,
                 &|| machine.is_generation_cancelled(token),
@@ -287,9 +289,9 @@ fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
 }
 
 /// Variante sans accès à `State` — utilisée par `read_selection_impl` pour démarrer un chargement.
-/// Refuse de spawner si un chargement est déjà en cours (chargement idempotent).
+/// Refuse de spawner si un chargement est déjà en cours (ort : un seul Environment).
 fn load_model_bg(
-    engine: Arc<Mutex<Option<crate::tts::ResilientEngine>>>,
+    engine: Arc<Mutex<Option<crate::tts::KokoroEngine>>>,
     machine: crate::state::PlaybackStateMachine,
     loading: Arc<std::sync::atomic::AtomicBool>,
 ) {
@@ -300,17 +302,18 @@ fn load_model_bg(
         return; // déjà en cours
     }
     std::thread::spawn(move || {
-        let result = (|| -> Result<crate::tts::ResilientEngine, String> {
-            let mut engine = crate::tts::ResilientEngine::from_env()
-                .map_err(|e| format!("initialisation moteur TTS impossible : {e}"))?;
-            crate::tts::TtsEngine::load(&mut engine)
-                .map_err(|e| format!("moteur TTS non chargeable (Qwen et Kokoro) : {e}"))?;
-            Ok(engine)
+        let dir = crate::utils::resolve_models_dir();
+        let result = (|| -> Result<crate::tts::KokoroEngine, String> {
+            let config = crate::tts::TtsConfig::with_dir(&dir);
+            let mut kokoro = crate::tts::KokoroEngine::new(config)
+                .map_err(|e| format!("chargement moteur impossible ({e}). Modèles attendus dans {}", dir.display()))?;
+            crate::tts::TtsEngine::load(&mut kokoro).map_err(|e| format!("modèle Kokoro non chargeable : {e}"))?;
+            Ok(kokoro)
         })();
         match result {
-            Ok(loaded) => {
+            Ok(kokoro) => {
                 if let Ok(mut guard) = engine.lock() {
-                    *guard = Some(loaded);
+                    *guard = Some(kokoro);
                 }
             }
             Err(message) => machine.set_error(message),

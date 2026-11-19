@@ -1,5 +1,7 @@
 # TW-071 — Migration Kokoro → Qwen3-TTS-0.6B-CustomVoice (Ryan voix officielle)
 
+> ⚠️ **Supersédée (2026-11-19)** — la migration Qwen3-TTS est **retirée du code** ; Navi reste sur **Kokoro uniquement**. Voir la décision « Retrait de Qwen3-TTS » dans `docs/decisions.md` (carte N-074). Ce document est conservé pour historique.
+
 Date : 2026-11-19. Carte : N-071 (P1, L, tache). Dépend de : décision Ryan (N-070, `docs/decisions.md`), PR #59 (base code + capture/hotkey).
 
 ## Ce qui est livré (branche `feat/TW-071-qwen3-tts`)
