@@ -492,9 +492,9 @@
     {
       "id": "N-062",
       "title": "Mettre en place les tests (capture, file audio, machine d'états) et la CI",
-      "description": "Build, tests, lint.",
-      "state": "doing",
-      "updated_at": "2026-11-19T16:49:44Z",
+      "description": "Build, tests, lint.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] PR #81 fusionnee (fb6851a), CI verte. cargo fmt --check et clippy --all-targets -D warnings passent ; 88 tests verts (70 unit + 3 lecture_cycle + 15 text_pipeline) ; prettier/eslint front en place ; workflow ci.yml (windows-latest) : npm format:check/lint/build puis cargo fmt/clippy/test. Correctif CI : .gitattributes eol=lf (checkout CRLF du runner faisait echouer prettier --check). Limites tracees dans docs/s1-62-tests-ci.md : docs ATLAS exclues de prettier, 3 fichiers CRLF exclus, pas de couverture nouvelle (existante faire-tenue-par-CI), pas d audio reel en CI.",
+      "state": "done",
+      "updated_at": "2026-11-19T17:35:08Z",
       "assignee": ""
     },
     {
