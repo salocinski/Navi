@@ -124,9 +124,9 @@
     {
       "id": "N-016",
       "title": "Tester un panel d'applications et rédiger le rapport de compatibilité",
-      "description": "Navigateurs, Word, éditeur de code, lecteur PDF, terminal, app Electron, app élevée.\n\nCritères :\n- [ ] Rapport avec applications et contrôles non pris en charge",
-      "state": "doing",
-      "updated_at": "2026-11-19T16:14:50Z",
+      "description": "Navigateurs, Word, éditeur de code, lecteur PDF, terminal, app Electron, app élevée.\n\nCritères :\n- [ ] Rapport avec applications et contrôles non pris en charge\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Cloture demandee par l'humain avec limitation tracee : rapport partiel docs/s1-16-compat.md (branche feat/TW-016-compat, PR #79 en attente de fusion humaine). Verdicts adossés aux recettes humaines jouees 2026-11-18 (N-043 : Word texte riche multi-formats capture+restauration OK, Chromium/Electron OK ; N-015 : sondes Notepad). Apps elevees (UIPI), canvas/jeux, Edge PDF, conhost, Notepad XAML, Outlook MSIX : non joués, non pris en charge a ce stade. Mention erronee 'Word non installe' corrigee. Le panel complet reste a jouer si la carte est rouverte.",
+      "state": "done",
+      "updated_at": "2026-11-19T16:46:12Z",
       "assignee": ""
     },
     {
