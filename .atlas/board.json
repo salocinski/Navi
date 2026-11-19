@@ -356,7 +356,7 @@
     {
       "id": "N-045",
       "title": "Brancher les raccourcis globaux lire / pause-reprise / arrêt",
-      "description": "Échec d'enregistrement signalé à l'utilisateur.",
+      "description": "Échec d'enregistrement signalé à l'utilisateur.\n\n[NOTE 2026-11-19 20:51] PR https://github.com/salocinski/Navi/pull/56 - Ctrl+Maj+Espace lire / P pause-reprise toggle / S arret branches au pipeline, echec d'enregistrement signale via get_status.hotkey_error. Refactor NaviRef partage commandes+listener, no duplication. 88 verts.",
       "state": "doing",
       "updated_at": "2026-11-19T01:47:22Z",
       "assignee": ""
