@@ -7,9 +7,11 @@ Critère de la carte : « Échec d'enregistrement signalé à l'utilisateur ».
 
 | Raccourci | Action | Portée |
 |---|---|---|
-| **Ctrl+Maj+Espace** | Lire la sélection | capture → voix haute (le raccourci déclenche la même chaîne que le bouton « Lire la sélection ») |
+| **Ctrl+Maj+Espace** | lire la sélection | capture → voix haute (le raccourci déclenche la même chaîne que le bouton « Lire la sélection ») |
 | **Ctrl+Maj+P** | Pause ↔ Reprise | bascule Lecture ↔ Pause selon l'état de la machine d'états |
 | **Ctrl+Maj+S** | Arrêt | arrêt complet (file vidée, génération annulée) |
+
+**Amendement (2026-11-19)** : `Ctrl+Maj+Espace` en cours de lecture est un **no-op silencieux** (informationnel côté console) — une erreur rouge empêchait l'humain de re-press sans se fatiguer. Aucune régression : le bouton « Lire » côté UI reste désactivé pendant la lecture.
 
 Cadeau du TW-018 : Ctrl+Maj+Espace est libre, contrairement à Ctrl+Alt+Espace.
 
