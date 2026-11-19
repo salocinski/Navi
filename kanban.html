@@ -830,7 +830,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 33,
       "title": "Garantir l'instance unique et le démarrage résident",
-      "status": "doing",
+      "status": "done",
       "prio": "P1",
       "kind": "tache",
       "milestone": "M1",
@@ -839,7 +839,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-031"
       ],
-      "note": "Pas de fenêtre principale au démarrage."
+      "note": "Pas de fenêtre principale au démarrage.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Instance unique via tauri-plugin-single-instance (2.2) : au second lancement, la seconde occurrence se termine (code 0) et la première instance affiche + focalise la fenêtre principale (effet clic gauche sur médaillon). Démarrage résident confirmé (visible:false + skipTaskbar, PR #75). Vérifié : build, tests, test manuel (PID A conservé, B exit 0). PR #77 (squash c791e2d)."
     },
     {
       "num": 34,
