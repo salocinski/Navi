@@ -436,25 +436,25 @@
     {
       "id": "N-055",
       "title": "Décider de la forme finale de la signature sonore",
-      "description": "Voix aiguë, claire, enjouée, 0,8 à 1,5 s, volume modéré.\n\nRisque : ne reproduire aucun élément protégé d'une franchise existante.",
-      "state": "doing",
-      "updated_at": "2026-11-19T15:45:36Z",
+      "description": "Voix aiguë, claire, enjouée, 0,8 à 1,5 s, volume modéré.\n\nRisque : ne reproduire aucun élément protégé d'une franchise existante.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Forme retenue : signature « Hey listen » en Kokoro voix af_heart, dose d'organisme aigüe originale, pas de pitch shift (trop robotique). Enregistrement original commité dans src-tauri/resources/hey_listen.wav. PR #75 (squash 9e35476). Le fichier pourra être remplacé plus tard si une meilleure prise est enregistrée.",
+      "state": "done",
+      "updated_at": "2026-11-19T15:57:38Z",
       "assignee": ""
     },
     {
       "id": "N-056",
       "title": "Créer l'enregistrement original de démarrage",
-      "description": "Enregistrement original, aucun extrait ni imitation d'un personnage existant.",
-      "state": "doing",
-      "updated_at": "2026-11-19T15:45:36Z",
+      "description": "Enregistrement original, aucun extrait ni imitation d'un personnage existant.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Enregistrement original Kokoro af_heart « Hey listen » (~0,94 s, 24 kHz mono), généré via kokoro-v1.0.int8.onnx + voices-v1.0.bin, déposé dans src-tauri/resources/hey_listen.wav (45 100 octets) et déclaré comme resource Tauri dans le bundle. PR #75 (squash 9e35476).",
+      "state": "done",
+      "updated_at": "2026-11-19T15:57:41Z",
       "assignee": ""
     },
     {
       "id": "N-057",
       "title": "Jouer la signature une seule fois quand raccourcis et capture sont prêts",
-      "description": "Ne pas laisser croire que le TTS est prêt si le modèle charge encore.",
-      "state": "doing",
-      "updated_at": "2026-11-19T15:45:36Z",
+      "description": "Ne pas laisser croire que le TTS est prêt si le modèle charge encore.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] play_signature_once() (audio/mod.rs) : lecture unique dans un thread dédié (rodio Decoder + Sink), non-bloquante, appelée dans .setup() après raccourcis et tray prêts ; tolère l'absence de fichier et de périphérique audio (eprintln, pas de panique). Résolution WAV : NAVI_SIGNATURE_WAV → <repo>/resources/hey_listen.wav → current_exe/resources. PR #75 (squash 9e35476).",
+      "state": "done",
+      "updated_at": "2026-11-19T15:57:44Z",
       "assignee": ""
     },
     {
@@ -604,9 +604,9 @@
     {
       "id": "N-076",
       "title": "Masquer la fenetre principale de la barre des taches (skip_taskbar) - processus 100% notification",
-      "description": "",
-      "state": "doing",
-      "updated_at": "2026-11-19T15:39:10Z",
+      "description": "[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] skipTaskbar: true + visible: false dans tauri.conf.json : fenêtre principale absente de la barre des tâches et non visible au lancement ; Navi démarre silencieusement en zone de notification (médaillon sphère néon), clic gauche bascule la fenêtre. Vérifié manuellement par l'humain (barre de tâches vide, médaillon présent, fenêtre basculable). PR #75 (squash 9e35476).",
+      "state": "done",
+      "updated_at": "2026-11-19T15:57:51Z",
       "assignee": ""
     }
   ]
