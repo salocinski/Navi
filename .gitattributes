@@ -1,0 +1,24 @@
+# Normalisation des fins de ligne : LF partout pour le code et la config.
+# Évite le flip-flop LF/CRLF sous core.autocrlf (prettier --check en CI).
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Cargo.toml text eol=lf
+Cargo.lock text eol=lf
+
+# Binaires
+*.jfif binary
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.wav binary
+*.pdf binary
+*.onnx binary
+*.bin binary

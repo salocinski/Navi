@@ -12,8 +12,8 @@
 //! - ui: zone de notification, panneau, menu
 //! - utils: utilitaires communs
 
-pub mod config;
 pub mod capture;
+pub mod config;
 
 static LAST_FOREGROUND: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
@@ -21,8 +21,10 @@ static LAST_FOREGROUND: std::sync::atomic::AtomicUsize = std::sync::atomic::Atom
 /// de viser la bonne cible (au lieu de Navi lui-même quand la Steam/Chromium a le focus).
 fn track_last_foreground() {
     std::thread::spawn(move || {
-        use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetForegroundWindow, GetWindowThreadProcessId};
         use windows::Win32::System::Threading::GetCurrentProcessId;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            GetClassNameW, GetForegroundWindow, GetWindowThreadProcessId,
+        };
         let own = unsafe { GetCurrentProcessId() };
         let mut cls = [0u16; 256];
         loop {
@@ -56,7 +58,11 @@ fn track_last_foreground() {
 /// Dernière fenêtre non-Navi mémorisée (0 si aucune).
 pub(crate) fn last_foreground() -> Option<*mut core::ffi::c_void> {
     let v = LAST_FOREGROUND.load(std::sync::atomic::Ordering::SeqCst);
-    if v == 0 { None } else { Some(v as *mut core::ffi::c_void) }
+    if v == 0 {
+        None
+    } else {
+        Some(v as *mut core::ffi::c_void)
+    }
 }
 
 /// Oublie la fenêtre mémorisée (appelée quand elle est détruite ou invalide,
@@ -86,12 +92,12 @@ pub(crate) fn idle_secs() -> Option<u64> {
     let last = LAST_USER_ACTIVITY_SECS.load(std::sync::atomic::Ordering::SeqCst);
     (last != 0).then(|| now_secs().saturating_sub(last))
 }
-pub mod hotkey;
-pub mod tts;
 pub mod audio;
+pub mod hotkey;
+pub mod pipeline;
 pub mod state;
 pub mod text;
-pub mod pipeline;
+pub mod tts;
 pub mod ui;
 pub mod utils;
 
@@ -113,7 +119,6 @@ pub struct NaviRef {
     /// Rapport d'enregistrement des raccourcis (pour l'UI).
     pub hotkey_report: Arc<Mutex<crate::hotkey::RegistrationReport>>,
 }
-
 
 /// État partagé de Navi (machines à états + moteur Kokoro + audio).
 pub struct NaviState {
@@ -166,7 +171,11 @@ struct StatusDto {
 #[tauri::command]
 fn get_status(state: tauri::State<NaviState>) -> StatusDto {
     let (current_chunk, total_chunks) = state.machine.progress();
-    let hotkey_error = state.hotkey_report.lock().ok().and_then(|r| r.failure_message());
+    let hotkey_error = state
+        .hotkey_report
+        .lock()
+        .ok()
+        .and_then(|r| r.failure_message());
     StatusDto {
         phase: state.machine.state(),
         current_chunk,
@@ -182,7 +191,12 @@ fn get_status(state: tauri::State<NaviState>) -> StatusDto {
 #[tauri::command]
 fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
     let view = state.view();
-    if view.engine.lock().map_err(|_| "verrou moteur".to_string())?.is_some() {
+    if view
+        .engine
+        .lock()
+        .map_err(|_| "verrou moteur".to_string())?
+        .is_some()
+    {
         return Ok(());
     }
     if view.loading.swap(true, std::sync::atomic::Ordering::SeqCst) {
@@ -193,8 +207,12 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
         let result = (|| -> Result<crate::tts::KokoroEngine, String> {
             let dir = crate::utils::resolve_models_dir();
             let config = crate::tts::TtsConfig::with_dir(&dir);
-            let mut kokoro = crate::tts::KokoroEngine::new(config)
-                .map_err(|e| format!("chargement moteur impossible ({e}). Modèles attendus dans {}", dir.display()))?;
+            let mut kokoro = crate::tts::KokoroEngine::new(config).map_err(|e| {
+                format!(
+                    "chargement moteur impossible ({e}). Modèles attendus dans {}",
+                    dir.display()
+                )
+            })?;
             crate::tts::TtsEngine::load(&mut kokoro)
                 .map_err(|e| format!("modèle Kokoro non chargeable : {e}"))?;
             Ok(kokoro)
@@ -210,7 +228,8 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
                 machine.set_error(message);
             }
         }
-        view.loading.store(false, std::sync::atomic::Ordering::SeqCst);
+        view.loading
+            .store(false, std::sync::atomic::Ordering::SeqCst);
     });
     Ok(())
 }
@@ -223,7 +242,7 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
 
 pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     touch_user_activity();
-    state.machine.begin_capture().map_err(|e| e)?;
+    state.machine.begin_capture()?;
 
     // 0. Chargement du modèle en parallèle de la capture (carte N-075) :
     //    ~11 s à froid ; la capture (~1 s) se déroule pendant ce temps.
@@ -243,8 +262,13 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
                 // Le chargement est idempotent (ensure_session) ; un préchargement
                 // concurrent au démarrage est réutilisé, pas doublonné.
                 (|| -> Result<(), String> {
-                    let mut guard = view.engine.lock().map_err(|_| "verrou moteur".to_string())?;
-                    let engine = guard.as_mut().ok_or_else(|| "Moteur TTS non chargé".to_string())?;
+                    let mut guard = view
+                        .engine
+                        .lock()
+                        .map_err(|_| "verrou moteur".to_string())?;
+                    let engine = guard
+                        .as_mut()
+                        .ok_or_else(|| "Moteur TTS non chargé".to_string())?;
                     crate::tts::TtsEngine::load(engine)
                         .map_err(|e| format!("moteur TTS non chargeable : {e}"))
                 })()
@@ -256,7 +280,10 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     //    — en parallèle du chargement éventuel.
     let cap = crate::capture::capture_selection();
     if !cap.success {
-        let message = cap.error.clone().unwrap_or_else(|| "Capture échouée".to_string());
+        let message = cap
+            .error
+            .clone()
+            .unwrap_or_else(|| "Capture échouée".to_string());
         state.machine.set_error(message.clone());
         return Err(message);
     }
@@ -279,7 +306,12 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     }
 
     // 2bis. Le modèle est là — vrai depuis le boot ou depuis l'étape 2.
-    if state.engine.lock().map_err(|_| "verrou moteur".to_string())?.is_none() {
+    if state
+        .engine
+        .lock()
+        .map_err(|_| "verrou moteur".to_string())?
+        .is_none()
+    {
         let message = "Modèle Kokoro non chargé — réessayez la lecture".to_string();
         state.machine.set_error(message.clone());
         return Err(message);
@@ -311,7 +343,7 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     }
 
     let segment_count = segments.len();
-    state.machine.begin_generation_phase().map_err(|e| e)?;
+    state.machine.begin_generation_phase()?;
     state.machine.set_text(cleaned, segment_count);
 
     // 6. Audio : reset (nouvelle session) ou création (thread audio) si absent
@@ -329,17 +361,21 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
 
     // 7. Jeton de génération + thread de synthèse
     let token = state.machine.begin_generation();
-    state.machine.play().map_err(|e| e)?;
+    state.machine.play()?;
 
     let machine = state.machine.clone();
     let engine = state.engine.clone();
-    let segments = segments;
     let audio = state.audio.clone();
     std::thread::spawn(move || {
-        eprintln!("[navi] thread de synthèse démarré ({} segments)", segments.len());
+        eprintln!(
+            "[navi] thread de synthèse démarré ({} segments)",
+            segments.len()
+        );
         let outcome = (|| -> Result<usize, String> {
             let engine_guard = engine.lock().map_err(|_| "verrou moteur".to_string())?;
-            let kokoro = engine_guard.as_ref().ok_or_else(|| "Modèle Kokoro non chargé".to_string())?;
+            let kokoro = engine_guard
+                .as_ref()
+                .ok_or_else(|| "Modèle Kokoro non chargé".to_string())?;
             let sink = audio
                 .lock()
                 .map_err(|_| "verrou audio".to_string())?
@@ -358,7 +394,9 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
             )
         })();
         match outcome {
-            Ok(done) => eprintln!("[navi] synthèse terminée — {done} segments envoyés dans la file audio"),
+            Ok(done) => {
+                eprintln!("[navi] synthèse terminée — {done} segments envoyés dans la file audio")
+            }
             Err(message) => {
                 eprintln!("[navi] synthèse échouée : {message}");
                 machine.set_error(message);
@@ -369,8 +407,6 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     Ok(format!("Lecture en cours — {segment_count} segments"))
 }
 
-
-
 #[tauri::command]
 fn pause_reading(state: tauri::State<NaviState>) -> Result<(), String> {
     pause_reading_impl(&state.view())
@@ -378,7 +414,7 @@ fn pause_reading(state: tauri::State<NaviState>) -> Result<(), String> {
 
 pub(crate) fn pause_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
-    state.machine.pause().map_err(|e| e)?;
+    state.machine.pause()?;
     state
         .audio
         .lock()
@@ -395,7 +431,7 @@ fn resume_reading(state: tauri::State<NaviState>) -> Result<(), String> {
 
 pub(crate) fn resume_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
-    state.machine.resume().map_err(|e| e)?;
+    state.machine.resume()?;
     state
         .audio
         .lock()
@@ -413,10 +449,10 @@ fn stop_reading(state: tauri::State<NaviState>) -> Result<(), String> {
 pub(crate) fn stop_reading_impl(state: &NaviRef) -> Result<(), String> {
     touch_user_activity();
     state.machine.stop();
-    if let Ok(audio) = state.audio.lock() {
-        if let Some(handle) = audio.as_ref() {
-            let _ = handle.stop();
-        }
+    if let Ok(audio) = state.audio.lock()
+        && let Some(handle) = audio.as_ref()
+    {
+        let _ = handle.stop();
     }
     Ok(())
 }
@@ -588,13 +624,11 @@ pub fn run() {
                         if !loaded {
                             continue;
                         }
-                        if let Ok(mut guard) = view.engine.lock() {
-                            if let Some(engine) = guard.as_mut() {
-                                if engine.unload_session() {
+                        if let Ok(mut guard) = view.engine.lock()
+                            && let Some(engine) = guard.as_mut()
+                                && engine.unload_session() {
                                     eprintln!("[navi] modèle déchargé après {idle_limit} s sans utilisation (carte N-075)");
                                 }
-                            }
-                        }
                     }
                 });
             }

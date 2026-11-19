@@ -21,25 +21,25 @@
 use std::fmt;
 use std::thread;
 use std::time::{Duration, Instant};
-use windows::Win32::Foundation::{HWND, HGLOBAL, HANDLE, BOOL};
-use windows::Win32::UI::Input::KeyboardAndMouse::{
-    SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYEVENTF_KEYUP, KEYBDINPUT, KEYBD_EVENT_FLAGS,
-    VK_C, VK_CONTROL, VK_MENU, VK_LCONTROL, VK_RCONTROL, VK_LMENU, VK_RMENU, VK_SHIFT,
-    VK_LSHIFT, VK_RSHIFT, VK_LWIN, VK_RWIN, GetAsyncKeyState, keybd_event,
-};
-use windows::Win32::UI::WindowsAndMessaging::{
-    BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, IsIconic, IsWindow,
-    SetForegroundWindow, ShowWindow, SW_RESTORE,
-};
-use windows::Win32::System::Threading::{
-    AttachThreadInput, GetCurrentProcessId, GetCurrentThreadId,
-};
+use windows::Win32::Foundation::{BOOL, HANDLE, HGLOBAL, HWND};
 use windows::Win32::System::DataExchange::{
     CloseClipboard, EmptyClipboard, EnumClipboardFormats, GetClipboardData,
     GetClipboardSequenceNumber, IsClipboardFormatAvailable, OpenClipboard,
 };
 use windows::Win32::System::Memory::{
-    GlobalAlloc, GlobalLock, GlobalSize, GlobalUnlock, GMEM_MOVEABLE,
+    GMEM_MOVEABLE, GlobalAlloc, GlobalLock, GlobalSize, GlobalUnlock,
+};
+use windows::Win32::System::Threading::{
+    AttachThreadInput, GetCurrentProcessId, GetCurrentThreadId,
+};
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    GetAsyncKeyState, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBD_EVENT_FLAGS, KEYBDINPUT,
+    KEYEVENTF_KEYUP, SendInput, VK_C, VK_CONTROL, VK_LCONTROL, VK_LMENU, VK_LSHIFT, VK_LWIN,
+    VK_MENU, VK_RCONTROL, VK_RMENU, VK_RSHIFT, VK_RWIN, VK_SHIFT, keybd_event,
+};
+use windows::Win32::UI::WindowsAndMessaging::{
+    BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, IsIconic, IsWindow,
+    SW_RESTORE, SetForegroundWindow, ShowWindow,
 };
 
 const CF_UNICODETEXT: u32 = 13;
@@ -82,7 +82,10 @@ impl fmt::Display for CaptureError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CaptureError::NoForegroundWindow => {
-                write!(f, "Aucune fenêtre au premier plan — impossible de cibler la sélection")
+                write!(
+                    f,
+                    "Aucune fenêtre au premier plan — impossible de cibler la sélection"
+                )
             }
             CaptureError::InjectionFailed { sent } => write!(
                 f,
@@ -131,7 +134,13 @@ pub struct CaptureResult {
 
 impl CaptureResult {
     pub fn success(text: String, format: String) -> Self {
-        Self { text, format_used: format, success: true, error: None, restore: None }
+        Self {
+            text,
+            format_used: format,
+            success: true,
+            error: None,
+            restore: None,
+        }
     }
 
     pub fn failure(err: CaptureError) -> Self {
@@ -331,7 +340,9 @@ fn restore_clipboard(snapshot: &ClipboardSnapshot) -> RestoreReport {
         let _ = unsafe { GlobalUnlock(hglobal) };
 
         // En cas de succès, le système devient propriétaire du handle.
-        match unsafe { windows::Win32::System::DataExchange::SetClipboardData(item.format, HANDLE(hglobal.0)) } {
+        match unsafe {
+            windows::Win32::System::DataExchange::SetClipboardData(item.format, HANDLE(hglobal.0))
+        } {
             Ok(_) => report.restored += 1,
             Err(_) => report.failed.push(item.format),
         }
@@ -402,10 +413,54 @@ fn send_copy_keystroke() -> Result<(), CaptureError> {
     let up = KEYEVENTF_KEYUP;
 
     let inputs = [
-        INPUT { r#type: INPUT_KEYBOARD, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_CONTROL, wScan: 0, dwFlags: down, time: 0, dwExtraInfo: 0 } } },
-        INPUT { r#type: INPUT_KEYBOARD, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_C, wScan: 0, dwFlags: down, time: 0, dwExtraInfo: 0 } } },
-        INPUT { r#type: INPUT_KEYBOARD, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_C, wScan: 0, dwFlags: up, time: 0, dwExtraInfo: 0 } } },
-        INPUT { r#type: INPUT_KEYBOARD, Anonymous: INPUT_0 { ki: KEYBDINPUT { wVk: VK_CONTROL, wScan: 0, dwFlags: up, time: 0, dwExtraInfo: 0 } } },
+        INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VK_CONTROL,
+                    wScan: 0,
+                    dwFlags: down,
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
+        },
+        INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VK_C,
+                    wScan: 0,
+                    dwFlags: down,
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
+        },
+        INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VK_C,
+                    wScan: 0,
+                    dwFlags: up,
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
+        },
+        INPUT {
+            r#type: INPUT_KEYBOARD,
+            Anonymous: INPUT_0 {
+                ki: KEYBDINPUT {
+                    wVk: VK_CONTROL,
+                    wScan: 0,
+                    dwFlags: up,
+                    time: 0,
+                    dwExtraInfo: 0,
+                },
+            },
+        },
     ];
 
     let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
@@ -424,22 +479,32 @@ fn send_copy_keystroke() -> Result<(), CaptureError> {
 /// (borné ; best effort au-delà, la copie échouera avec un message clair comme avant).
 fn wait_for_modifiers_released(timeout: Duration) {
     const MODIFIERS: [windows::Win32::UI::Input::KeyboardAndMouse::VIRTUAL_KEY; 11] = [
-        VK_CONTROL, VK_LCONTROL, VK_RCONTROL,
-        VK_MENU, VK_LMENU, VK_RMENU,
-        VK_SHIFT, VK_LSHIFT, VK_RSHIFT,
-        VK_LWIN, VK_RWIN,
+        VK_CONTROL,
+        VK_LCONTROL,
+        VK_RCONTROL,
+        VK_MENU,
+        VK_LMENU,
+        VK_RMENU,
+        VK_SHIFT,
+        VK_LSHIFT,
+        VK_RSHIFT,
+        VK_LWIN,
+        VK_RWIN,
     ];
     let start = Instant::now();
     while start.elapsed() < timeout {
-        let any_down = MODIFIERS.iter().any(|vk| {
-            (unsafe { GetAsyncKeyState(vk.0 as i32) } as u16) & 0x8000 != 0
-        });
+        let any_down = MODIFIERS
+            .iter()
+            .any(|vk| (unsafe { GetAsyncKeyState(vk.0 as i32) } as u16) & 0x8000 != 0);
         if !any_down {
             return;
         }
         thread::sleep(Duration::from_millis(10));
     }
-    eprintln!("[navi] modificateurs encore enfoncés après {} ms — copie tentée quand même", timeout.as_millis());
+    eprintln!(
+        "[navi] modificateurs encore enfoncés après {} ms — copie tentée quand même",
+        timeout.as_millis()
+    );
 }
 
 /// PID du processus propriétaire d'une fenêtre (0 si la fenêtre est null ou invalide).
@@ -469,8 +534,8 @@ fn force_foreground(target: HWND) {
         };
         let target_thread = GetWindowThreadProcessId(target, None);
 
-        let _ = keybd_event(VK_MENU.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
-        let _ = keybd_event(VK_MENU.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+        keybd_event(VK_MENU.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
+        keybd_event(VK_MENU.0 as u8, 0, KEYEVENTF_KEYUP, 0);
 
         if fg_thread != 0 {
             let _ = AttachThreadInput(current, fg_thread, BOOL(1));
@@ -563,7 +628,9 @@ fn capture_steps() -> Result<CaptureResult, CaptureError> {
 
     // 7. Ouvrir le presse-papiers (retries : peut être verrouillé par une autre app)
     if !open_clipboard() {
-        return Err(CaptureError::ClipboardBusy { attempts: OPEN_CLIPBOARD_ATTEMPTS });
+        return Err(CaptureError::ClipboardBusy {
+            attempts: OPEN_CLIPBOARD_ATTEMPTS,
+        });
     }
 
     // 8. Lire le contenu (priorité : Unicode > HTML > RTF > ANSI)
@@ -625,13 +692,17 @@ fn read_format_raw(format: u32) -> Result<String, String> {
 
     let result = if format == CF_UNICODETEXT {
         let utf16: Vec<u16> = slice
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|c| u16::from_le_bytes([c[0], c[1]]))
             .take_while(|&c| c != 0)
             .collect();
         String::from_utf16(&utf16).map_err(|e| e.to_string())
     } else {
-        Ok(String::from_utf8_lossy(slice).trim_end_matches('\0').to_string())
+        Ok(String::from_utf8_lossy(slice)
+            .trim_end_matches('\0')
+            .to_string())
     };
 
     let _ = unsafe { GlobalUnlock(handle) };
@@ -696,12 +767,24 @@ mod tests {
 
     #[test]
     fn rapport_restauration_partielle_formate() {
-        let report = RestoreReport { snapshot_items: 4, skipped: 1, restored: 2, failed: vec![0xC013, 0x000D] };
-        let msg = report.summary().expect("restauration partielle doit produire un message");
+        let report = RestoreReport {
+            snapshot_items: 4,
+            skipped: 1,
+            restored: 2,
+            failed: vec![0xC013, 0x000D],
+        };
+        let msg = report
+            .summary()
+            .expect("restauration partielle doit produire un message");
         assert!(msg.contains("2/4"));
         assert!(msg.contains("0xC013"));
 
-        let complet = RestoreReport { snapshot_items: 2, skipped: 0, restored: 2, failed: vec![] };
+        let complet = RestoreReport {
+            snapshot_items: 2,
+            skipped: 0,
+            restored: 2,
+            failed: vec![],
+        };
         assert!(complet.summary().is_none());
     }
 

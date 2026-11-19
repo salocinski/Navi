@@ -112,7 +112,10 @@ fn extract_fragment(html: &str) -> String {
         Some(i) => i + START.len(),
         None => return html.to_string(),
     };
-    let end = lower[start..].find(&END.to_lowercase()).map(|i| start + i).unwrap_or(html.len());
+    let end = lower[start..]
+        .find(&END.to_lowercase())
+        .map(|i| start + i)
+        .unwrap_or(html.len());
     html[start..end].to_string()
 }
 
@@ -128,7 +131,10 @@ fn strip_delimited(input: &str, open: &str, close: &str) -> String {
                     None => break, // commentaire jamais fermé → ignorer la fin
                 }
             }
-            None => { out.push_str(rest); break; }
+            None => {
+                out.push_str(rest);
+                break;
+            }
         }
     }
     out
@@ -138,7 +144,8 @@ fn strip_delimited(input: &str, open: &str, close: &str) -> String {
 /// balance simple — on cherche le `</name>` correspondant ; si absent, tout le reste est ignoré.
 fn strip_blocked_elements(input: &str) -> String {
     const BLOCKED: &[&str] = &[
-        "script", "style", "svg", "noscript", "iframe", "object", "embed", "video", "audio", "canvas", "applet",
+        "script", "style", "svg", "noscript", "iframe", "object", "embed", "video", "audio",
+        "canvas", "applet",
     ];
     let mut out = String::with_capacity(input.len());
     let mut rest = input;
@@ -188,8 +195,33 @@ fn strip_blocked_elements(input: &str) -> String {
 /// Supprime toutes les balises ; les balises de bloc deviennent des sauts de ligne.
 fn strip_tags(input: &str) -> String {
     const BLOCK_TAGS: &[&str] = &[
-        "p", "div", "br", "hr", "li", "ul", "ol", "tr", "td", "th", "table", "h1", "h2", "h3", "h4", "h5", "h6",
-        "section", "article", "header", "footer", "blockquote", "pre", "figure", "figcaption", "dd", "dt",
+        "p",
+        "div",
+        "br",
+        "hr",
+        "li",
+        "ul",
+        "ol",
+        "tr",
+        "td",
+        "th",
+        "table",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "section",
+        "article",
+        "header",
+        "footer",
+        "blockquote",
+        "pre",
+        "figure",
+        "figcaption",
+        "dd",
+        "dt",
     ];
     let mut out = String::with_capacity(input.len());
     let mut rest = input;
@@ -287,7 +319,12 @@ pub fn strip_urls(text: &str) -> String {
     }
 
     text.lines()
-        .map(|line| line.split_whitespace().filter(|t| !is_url_token(t)).collect::<Vec<_>>().join(" "))
+        .map(|line| {
+            line.split_whitespace()
+                .filter(|t| !is_url_token(t))
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -309,7 +346,10 @@ pub fn rtf_to_text(rtf: &str) -> String {
                             b'{' => depth += 1,
                             b'}' => {
                                 depth -= 1;
-                                if depth == 0 { end = i + 1; break; }
+                                if depth == 0 {
+                                    end = i + 1;
+                                    break;
+                                }
                             }
                             _ => {}
                         }
@@ -332,9 +372,17 @@ pub fn rtf_to_text(rtf: &str) -> String {
         let after = &rest[bs + 1..];
         let mut i = 0;
         for ch in after.char_indices() {
-            if ch.1.is_ascii_alphabetic() || ch.1 == '*' { i = ch.0 + 1; continue; }
-            if ch.1.is_ascii_digit() { i = ch.0 + 1; continue; }
-            if ch.1 == ' ' { i = ch.0 + 1; }
+            if ch.1.is_ascii_alphabetic() || ch.1 == '*' {
+                i = ch.0 + 1;
+                continue;
+            }
+            if ch.1.is_ascii_digit() {
+                i = ch.0 + 1;
+                continue;
+            }
+            if ch.1 == ' ' {
+                i = ch.0 + 1;
+            }
             break;
         }
         rest = &after[i..];
@@ -367,9 +415,17 @@ fn replace_word(text: &str, from: &str, to: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(pos) = rest.find(from) {
-        let before = if pos == 0 { ' ' } else { rest[..pos].chars().next_back().unwrap() };
+        let before = if pos == 0 {
+            ' '
+        } else {
+            rest[..pos].chars().next_back().unwrap()
+        };
         let after_idx = pos + from.len();
-        let after = if after_idx >= rest.len() { ' ' } else { rest[after_idx..].chars().next().unwrap() };
+        let after = if after_idx >= rest.len() {
+            ' '
+        } else {
+            rest[after_idx..].chars().next().unwrap()
+        };
         let boundary_before = !before.is_alphanumeric() && before != '_';
         let boundary_after = !after.is_alphanumeric() && after != '_';
         if boundary_before && boundary_after {
@@ -415,27 +471,92 @@ mod language {
         /// pourra forcer la langue via N-053. Documenté dans `docs/s1-36-...`.
         pub fn as_tts_hint(&self) -> &'static str {
             match self {
-                LanguageDetection::French | LanguageDetection::Mixed | LanguageDetection::Unknown => "fr",
+                LanguageDetection::French
+                | LanguageDetection::Mixed
+                | LanguageDetection::Unknown => "fr",
                 LanguageDetection::English => "en",
             }
         }
     }
 
     const FR_STOPWORDS: &[&str] = &[
-        "le", "la", "les", "un", "une", "des", "est", "dans", "que", "qui", "pas", "avec", "pour", "sur",
-        "aux", "du", "ce", "cette", "ou", "mais", "donc", "car", "sous", "sont", "était", "nous", "vous",
-        "je", "tu", "il", "elle", "ils", "elles", "à", "au", "se", "son", "sa", "ses", "leur", "même",
-        "très", "être", "avoir", "sans", "chaque", "entre", "aussi", "peut", "peut-être", "avant", "après",
-        "alors", "encore", "ici", "là", "jamais", "toujours", "beaucoup", "votre", "notre", "son", "autre",
-        "autrement", "fait", "comme", "dès", "quand",
+        "le",
+        "la",
+        "les",
+        "un",
+        "une",
+        "des",
+        "est",
+        "dans",
+        "que",
+        "qui",
+        "pas",
+        "avec",
+        "pour",
+        "sur",
+        "aux",
+        "du",
+        "ce",
+        "cette",
+        "ou",
+        "mais",
+        "donc",
+        "car",
+        "sous",
+        "sont",
+        "était",
+        "nous",
+        "vous",
+        "je",
+        "tu",
+        "il",
+        "elle",
+        "ils",
+        "elles",
+        "à",
+        "au",
+        "se",
+        "son",
+        "sa",
+        "ses",
+        "leur",
+        "même",
+        "très",
+        "être",
+        "avoir",
+        "sans",
+        "chaque",
+        "entre",
+        "aussi",
+        "peut",
+        "peut-être",
+        "avant",
+        "après",
+        "alors",
+        "encore",
+        "ici",
+        "là",
+        "jamais",
+        "toujours",
+        "beaucoup",
+        "votre",
+        "notre",
+        "son",
+        "autre",
+        "autrement",
+        "fait",
+        "comme",
+        "dès",
+        "quand",
     ];
 
     const EN_STOPWORDS: &[&str] = &[
-        "the", "of", "and", "is", "in", "to", "for", "with", "that", "this", "it", "are", "was", "were",
-        "be", "been", "have", "has", "had", "not", "you", "we", "they", "he", "she", "its", "as", "on",
-        "at", "by", "an", "or", "from", "but", "not", "if", "then", "than", "so", "do", "does", "did",
-        "done", "their", "there", "here", "when", "what", "where", "which", "who", "how", "each", "other",
-        "than", "while", "about", "just", "into", "over", "under", "after", "before", "between",
+        "the", "of", "and", "is", "in", "to", "for", "with", "that", "this", "it", "are", "was",
+        "were", "be", "been", "have", "has", "had", "not", "you", "we", "they", "he", "she", "its",
+        "as", "on", "at", "by", "an", "or", "from", "but", "not", "if", "then", "than", "so", "do",
+        "does", "did", "done", "their", "there", "here", "when", "what", "where", "which", "who",
+        "how", "each", "other", "than", "while", "about", "just", "into", "over", "under", "after",
+        "before", "between",
     ];
 
     const FR_ACCENTS: &[char] = &[
@@ -490,7 +611,7 @@ mod language {
 }
 
 pub mod segmentation;
-pub use language::{detect_language, LanguageDetection};
+pub use language::{LanguageDetection, detect_language};
 
 #[cfg(test)]
 mod tests {
@@ -506,7 +627,10 @@ mod tests {
     #[test]
     fn html_fragment_reel() {
         let html = "<html><head><title>ignore</title></head><body><!--StartFragment--><p>Bonjour &amp; bienvenue</p><!--EndFragment--></body></html>";
-        assert_eq!(clean_captured_text(html, "html").unwrap(), "Bonjour & bienvenue");
+        assert_eq!(
+            clean_captured_text(html, "html").unwrap(),
+            "Bonjour & bienvenue"
+        );
     }
 
     #[test]
@@ -522,7 +646,8 @@ mod tests {
     #[test]
     fn html_img_base64_supprimee() {
         let huge: String = "A".repeat(500);
-        let html = format!("<div>texte avant<img src=\"data:image/png;base64,{huge}\"> texte après</div>");
+        let html =
+            format!("<div>texte avant<img src=\"data:image/png;base64,{huge}\"> texte après</div>");
         let cleaned = html_to_text(&html);
         assert!(!cleaned.contains("base64"));
         assert!(!cleaned.contains(&huge));
@@ -563,7 +688,10 @@ mod tests {
 
     #[test]
     fn html_graphemes_html_decodes() {
-        assert_eq!(html_to_text("&lt;cmd&gt; &amp; &quot;quoted&quot; &#39;sq&#39;"), "<cmd> & \"quoted\" 'sq'");
+        assert_eq!(
+            html_to_text("&lt;cmd&gt; &amp; &quot;quoted&quot; &#39;sq&#39;"),
+            "<cmd> & \"quoted\" 'sq'"
+        );
     }
 
     #[test]
@@ -578,7 +706,10 @@ mod tests {
 
     #[test]
     fn urls_nues_supprimees() {
-        assert_eq!(strip_urls("voir https://example.com pour plus infos"), "voir pour plus infos");
+        assert_eq!(
+            strip_urls("voir https://example.com pour plus infos"),
+            "voir pour plus infos"
+        );
         assert_eq!(strip_urls("fichier www.example.fr ok"), "fichier ok");
     }
 
@@ -586,21 +717,36 @@ mod tests {
     fn abreviations_fr() {
         assert_eq!(expand_abbrev_fr("M. Dupont"), "Monsieur Dupont");
         assert_eq!(expand_abbrev_fr("Mme Martin"), "Madame Martin");
-        assert_eq!(expand_abbrev_fr("et M. Dupont a dit"), "et Monsieur Dupont a dit");
+        assert_eq!(
+            expand_abbrev_fr("et M. Dupont a dit"),
+            "et Monsieur Dupont a dit"
+        );
         // pas de faux positif dans un mot composé
         assert_eq!(expand_abbrev_fr("num.ro"), "num.ro");
     }
 
     #[test]
     fn language_francais_pur() {
-        assert_eq!(detect_language("Bonjour le monde, c'est un test très bien écrit"), LanguageDetection::French);
-        assert_eq!(detect_language("Il fait beau aujourd'hui et nous sommes très contents de vous"), LanguageDetection::French);
+        assert_eq!(
+            detect_language("Bonjour le monde, c'est un test très bien écrit"),
+            LanguageDetection::French
+        );
+        assert_eq!(
+            detect_language("Il fait beau aujourd'hui et nous sommes très contents de vous"),
+            LanguageDetection::French
+        );
     }
 
     #[test]
     fn language_anglais_pur() {
-        assert_eq!(detect_language("The quick brown fox jumps over the lazy dog"), LanguageDetection::English);
-        assert_eq!(detect_language("This is a simple test of the language detection system"), LanguageDetection::English);
+        assert_eq!(
+            detect_language("The quick brown fox jumps over the lazy dog"),
+            LanguageDetection::English
+        );
+        assert_eq!(
+            detect_language("This is a simple test of the language detection system"),
+            LanguageDetection::English
+        );
     }
 
     #[test]
@@ -628,11 +774,17 @@ mod tests {
 
     #[test]
     fn language_francais_accents_fortes() {
-        assert_eq!(detect_language("Voilà, c'est à côté de l'hôpital où j'habite régulièrement"), LanguageDetection::French);
+        assert_eq!(
+            detect_language("Voilà, c'est à côté de l'hôpital où j'habite régulièrement"),
+            LanguageDetection::French
+        );
     }
 
     #[test]
     fn clean_text_plain() {
-        assert_eq!(clean_captured_text("  Hello\n\n\nWorld  ", "unicode").unwrap(), "Hello\n\nWorld");
+        assert_eq!(
+            clean_captured_text("  Hello\n\n\nWorld  ", "unicode").unwrap(),
+            "Hello\n\nWorld"
+        );
     }
 }

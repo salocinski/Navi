@@ -1,12 +1,12 @@
-﻿//! Corpus d'intégration pour le pipeline texte → segments prêt-kokoro (carte N-038).
+//! Corpus d'intégration pour le pipeline texte → segments prêt-kokoro (carte N-038).
 //!
 //! Tests de niveau crate : exercés sur l'API publique de `navi_lib`
 //! (aucun périphérique audio, aucune inférence ONNX).
 
-use navi_lib::text::{
-    clean_captured_text, detect_language, html_to_text, rtf_to_text, strip_urls, LanguageDetection,
-};
 use navi_lib::text::segmentation::segment_text;
+use navi_lib::text::{
+    LanguageDetection, clean_captured_text, detect_language, html_to_text, rtf_to_text, strip_urls,
+};
 
 // ---------- Corpus Word/Chromium (fragments réels) ----------
 
@@ -60,7 +60,11 @@ fn corpus_paragraphe_fr_pipeline_complet() {
         assert!(!seg.text.is_empty());
     }
     // reproduction du texte (modulo espaces multiples)
-    let joined: String = segs.iter().map(|s| s.text.as_str()).collect::<Vec<_>>().join(" ");
+    let joined: String = segs
+        .iter()
+        .map(|s| s.text.as_str())
+        .collect::<Vec<_>>()
+        .join(" ");
     assert!(joined.contains("Docteur Martin"));
 }
 
@@ -125,7 +129,9 @@ fn corpus_segments_toujours_bornes() {
     // 100 phrases déterministes — chaque groupe doit respecter 480 tokens
     let mut corpus = String::new();
     for i in 0..100 {
-        corpus.push_str(&format!("Phrase numéro {i} avec du texte de test non négligeable. "));
+        corpus.push_str(&format!(
+            "Phrase numéro {i} avec du texte de test non négligeable. "
+        ));
     }
     let segs = segment_text(&corpus);
     assert!(segs.len() >= 2);

@@ -37,7 +37,6 @@ windows = { version = "0.58", features = [
 
 # Raccourcis globaux
 global-hotkey = "0.3"
-once_cell = "1.19"
 
 # TTS (Kokoro via ONNX Runtime) — features par défaut : la binaire onnxruntime est
 # téléchargée au build et embarquée (validée en Sprint 0). "load-dynamic" exige une

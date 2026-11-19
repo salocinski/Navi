@@ -1,4 +1,4 @@
-﻿//! Pipeline de lecture — texte → segments → Kokoro → file audio (carte N-039).
+//! Pipeline de lecture — texte → segments → Kokoro → file audio (carte N-039).
 //!
 //! L'objectif de cette carte : brancher Kokoro derrière `TtsEngine` avec un
 //! chargement en tâche de fond et alimenter la file audio en segments synthétisés,
@@ -11,12 +11,13 @@
 //!   entre chaque segment ; testable sans périphérique.
 //! - Le câblage Tauri (commandes, états, events) vit dans `lib.rs`.
 
+#[cfg(test)]
 use std::sync::{Arc, Mutex};
 
 use crate::text::segmentation::Segment;
+use crate::tts::SynthesisRequest;
 use crate::tts::engine::TtsEngine;
 use crate::tts::engine::TtsLanguage;
-use crate::tts::SynthesisRequest;
 
 /// Sortie audio injectable.
 pub trait AudioSink: Send + Sync {
@@ -24,8 +25,8 @@ pub trait AudioSink: Send + Sync {
     fn write(&self, samples: &[f32]) -> Result<(), String>;
 }
 
-/// Sortie production : `crate::audio::AudioHandle` implémente ce trait
-/// (envoi `Enqueue` par canal mpsc vers le thread audio) — aucun périphérique requis côté écrivain.
+// Sortie production : `crate::audio::AudioHandle` implémente AudioSink
+// (envoi `Enqueue` par canal mpsc vers le thread audio) — aucun périphérique requis côté écrivain.
 
 /// Sortie mémoire pour les tests (aucun device requis).
 #[cfg(test)]
@@ -34,16 +35,28 @@ pub struct MemorySink {
 }
 
 #[cfg(test)]
+impl Default for MemorySink {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
 impl MemorySink {
     pub fn new() -> Self {
-        Self { chunks: Arc::new(Mutex::new(Vec::new())) }
+        Self {
+            chunks: Arc::new(Mutex::new(Vec::new())),
+        }
     }
 }
 
 #[cfg(test)]
 impl AudioSink for MemorySink {
     fn write(&self, samples: &[f32]) -> Result<(), String> {
-        self.chunks.lock().map_err(|_| "verrou".to_string())?.push(samples.to_vec());
+        self.chunks
+            .lock()
+            .map_err(|_| "verrou".to_string())?
+            .push(samples.to_vec());
         Ok(())
     }
 }
@@ -64,10 +77,18 @@ pub fn synthesize_segments(
     let mut count = 0;
     for seg in segments {
         if is_cancelled() {
-            eprintln!("[navi] synthèse annulée après {count}/{} segments", segments.len());
+            eprintln!(
+                "[navi] synthèse annulée après {count}/{} segments",
+                segments.len()
+            );
             return Ok(count);
         }
-        eprintln!("[navi] synthèse segment {}/{} ({} chars)…", seg.index + 1, segments.len(), seg.text.chars().count());
+        eprintln!(
+            "[navi] synthèse segment {}/{} ({} chars)…",
+            seg.index + 1,
+            segments.len(),
+            seg.text.chars().count()
+        );
         let out = engine
             .synthesize(&SynthesisRequest {
                 text: seg.text.clone(),
@@ -75,11 +96,22 @@ pub fn synthesize_segments(
                 language,
                 speed: 1.0,
             })
-            .map_err(|e| format!("Synthèse du segment {}/{} impossible : {e}", seg.index + 1, segments.len()))?;
+            .map_err(|e| {
+                format!(
+                    "Synthèse du segment {}/{} impossible : {e}",
+                    seg.index + 1,
+                    segments.len()
+                )
+            })?;
         sink.write(&out.samples)?;
         count += 1;
         on_segment_done();
-        eprintln!("[navi] segment {}/{} synthétisé ({} échantillons)", count, segments.len(), out.samples.len());
+        eprintln!(
+            "[navi] segment {}/{} synthétisé ({} échantillons)",
+            count,
+            segments.len(),
+            out.samples.len()
+        );
     }
     Ok(count)
 }
@@ -94,14 +126,25 @@ mod tests {
     }
 
     impl TtsEngine for StubEngine {
-        fn name(&self) -> &'static str { "stub" }
+        fn name(&self) -> &'static str {
+            "stub"
+        }
         fn supported_languages(&self) -> &'static [TtsLanguage] {
             &[TtsLanguage::French, TtsLanguage::English]
         }
-        fn voices(&self) -> Vec<String> { vec!["stub".to_string()] }
-        fn load(&mut self) -> Result<(), crate::tts::TtsError> { Ok(()) }
-        fn is_loaded(&self) -> bool { true }
-        fn synthesize(&self, request: &SynthesisRequest) -> Result<crate::tts::SynthesisOutput, crate::tts::TtsError> {
+        fn voices(&self) -> Vec<String> {
+            vec!["stub".to_string()]
+        }
+        fn load(&mut self) -> Result<(), crate::tts::TtsError> {
+            Ok(())
+        }
+        fn is_loaded(&self) -> bool {
+            true
+        }
+        fn synthesize(
+            &self,
+            request: &SynthesisRequest,
+        ) -> Result<crate::tts::SynthesisOutput, crate::tts::TtsError> {
             if !self.loaded {
                 return Err(crate::tts::TtsError::NotLoaded);
             }
@@ -113,14 +156,28 @@ mod tests {
     }
 
     fn segments(n: usize) -> Vec<Segment> {
-        (0..n).map(|i| Segment { index: i, text: format!("segment {i}"), estimated_tokens: 10 }).collect()
+        (0..n)
+            .map(|i| Segment {
+                index: i,
+                text: format!("segment {i}"),
+                estimated_tokens: 10,
+            })
+            .collect()
     }
 
     #[test]
     fn synthetise_tous_les_segments_dans_l_ordre() {
         let sink = MemorySink::new();
         let engine = StubEngine { loaded: true };
-        let n = synthesize_segments(&engine, &segments(5), &sink, &|| false, Some(TtsLanguage::French), &|| ()).unwrap();
+        let n = synthesize_segments(
+            &engine,
+            &segments(5),
+            &sink,
+            &|| false,
+            Some(TtsLanguage::French),
+            &|| (),
+        )
+        .unwrap();
         assert_eq!(n, 5);
         let chunks = sink.chunks.lock().unwrap();
         assert_eq!(chunks.len(), 5);
@@ -138,7 +195,15 @@ mod tests {
             count.set(count.get() + 1);
             count.get() > 2 // après 2 segments, on annule
         };
-        let n = synthesize_segments(&engine, &segments(5), &sink, &is_cancelled, Some(TtsLanguage::French), &|| ()).unwrap();
+        let n = synthesize_segments(
+            &engine,
+            &segments(5),
+            &sink,
+            &is_cancelled,
+            Some(TtsLanguage::French),
+            &|| (),
+        )
+        .unwrap();
         assert_eq!(n, 2);
         assert_eq!(sink.chunks.lock().unwrap().len(), 2);
     }
@@ -150,20 +215,44 @@ mod tests {
             seen: Arc<Mutex<Option<TtsLanguage>>>,
         }
         impl TtsEngine for LangProbe {
-            fn name(&self) -> &'static str { "probe" }
-            fn supported_languages(&self) -> &'static [TtsLanguage] { &[TtsLanguage::French, TtsLanguage::English] }
-            fn voices(&self) -> Vec<String> { vec![] }
-            fn load(&mut self) -> Result<(), crate::tts::TtsError> { Ok(()) }
-            fn is_loaded(&self) -> bool { true }
-            fn synthesize(&self, request: &SynthesisRequest) -> Result<crate::tts::SynthesisOutput, crate::tts::TtsError> {
+            fn name(&self) -> &'static str {
+                "probe"
+            }
+            fn supported_languages(&self) -> &'static [TtsLanguage] {
+                &[TtsLanguage::French, TtsLanguage::English]
+            }
+            fn voices(&self) -> Vec<String> {
+                vec![]
+            }
+            fn load(&mut self) -> Result<(), crate::tts::TtsError> {
+                Ok(())
+            }
+            fn is_loaded(&self) -> bool {
+                true
+            }
+            fn synthesize(
+                &self,
+                request: &SynthesisRequest,
+            ) -> Result<crate::tts::SynthesisOutput, crate::tts::TtsError> {
                 *self.seen.lock().unwrap() = request.language;
-                Ok(crate::tts::SynthesisOutput { samples: vec![0.0], sample_rate: 24_000 })
+                Ok(crate::tts::SynthesisOutput {
+                    samples: vec![0.0],
+                    sample_rate: 24_000,
+                })
             }
         }
         let seen = Arc::new(Mutex::new(None));
         let probe = LangProbe { seen: seen.clone() };
         let segs = segments(1);
-        synthesize_segments(&probe, &segs, &sink, &|| false, Some(TtsLanguage::English), &|| ()).unwrap();
+        synthesize_segments(
+            &probe,
+            &segs,
+            &sink,
+            &|| false,
+            Some(TtsLanguage::English),
+            &|| (),
+        )
+        .unwrap();
         assert_eq!(*seen.lock().unwrap(), Some(TtsLanguage::English));
     }
 }

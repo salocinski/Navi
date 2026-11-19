@@ -3,8 +3,8 @@
 //! Exerce la chaîne start → pause → resume → stop → restart sans device ni Kokoro.
 //! La vérification audible reste côté humain (Tais, Navi, fenêtre).
 
-use navi_lib::state::{PlaybackState, PlaybackStateMachine};
 use navi_lib::audio::SegmentQueue;
+use navi_lib::state::{PlaybackState, PlaybackStateMachine};
 
 fn simulate_cycle(machine: &PlaybackStateMachine, segments: usize) {
     machine.set_text("texte de test".to_string(), segments);

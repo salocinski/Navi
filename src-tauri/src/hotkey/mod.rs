@@ -1,16 +1,12 @@
 //! Gestion des raccourcis globaux
 
 use global_hotkey::{
-    GlobalHotKeyEvent, GlobalHotKeyManager, hotkey::{HotKey, Code, Modifiers},
+    GlobalHotKeyEvent, GlobalHotKeyManager,
+    hotkey::{Code, HotKey, Modifiers},
 };
-use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::thread;
-
-static HOTKEY_MANAGER: Lazy<GlobalHotKeyManager> = Lazy::new(|| {
-    GlobalHotKeyManager::new().expect("Failed to create GlobalHotKeyManager")
-});
 
 /// Actions possibles via raccourcis
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -106,16 +102,21 @@ impl HotkeyManager {
             last_action: Arc::new(Mutex::new(None)),
         })
     }
-    
+
     /// Enregistre un raccourci
-    pub fn register(&mut self, modifiers: Modifiers, key: Code, action: HotkeyAction) -> Result<u32, Box<dyn std::error::Error>> {
+    pub fn register(
+        &mut self,
+        modifiers: Modifiers,
+        key: Code,
+        action: HotkeyAction,
+    ) -> Result<u32, Box<dyn std::error::Error>> {
         let hotkey = HotKey::new(Some(modifiers), key);
         let id = hotkey.id();
         self.manager.register(hotkey)?;
         self.hotkeys.insert(id, action);
         Ok(id)
     }
-    
+
     /// Map id → action pour le thread d'écoute.
     pub(crate) fn hotkeys(&self) -> HashMap<u32, HotkeyAction> {
         self.hotkeys.clone()
@@ -131,10 +132,22 @@ impl HotkeyManager {
     pub fn register_defaults(&mut self) -> Result<RegistrationReport, Box<dyn std::error::Error>> {
         let defaults: &[(Modifiers, Code, HotkeyAction)] = &[
             // Win+Alt+S : lire la sélection — 1 seule main, « S » pour Speak, libre sur la machine (carte TW-072)
-            (Modifiers::SUPER | Modifiers::ALT, Code::KeyS, HotkeyAction::ReadSelection),
+            (
+                Modifiers::SUPER | Modifiers::ALT,
+                Code::KeyS,
+                HotkeyAction::ReadSelection,
+            ),
             // Ctrl+Maj+P / Ctrl+Maj+S : pause/reprise et arrêt
-            (Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyP, HotkeyAction::PauseResume),
-            (Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyS, HotkeyAction::Stop),
+            (
+                Modifiers::CONTROL | Modifiers::SHIFT,
+                Code::KeyP,
+                HotkeyAction::PauseResume,
+            ),
+            (
+                Modifiers::CONTROL | Modifiers::SHIFT,
+                Code::KeyS,
+                HotkeyAction::Stop,
+            ),
         ];
 
         let mut report = RegistrationReport::default();
@@ -147,13 +160,13 @@ impl HotkeyManager {
         }
         Ok(report)
     }
-    
+
     /// Démarre l'écoute des événements (bloquant)
     pub fn listen(&self) -> Result<(), Box<dyn std::error::Error>> {
         let receiver = GlobalHotKeyEvent::receiver();
         let hotkeys = self.hotkeys.clone();
         let last_action = self.last_action.clone();
-        
+
         thread::spawn(move || {
             for event in receiver {
                 if let Some(action) = hotkeys.get(&event.id) {
@@ -161,15 +174,15 @@ impl HotkeyManager {
                 }
             }
         });
-        
+
         Ok(())
     }
-    
+
     /// Récupère la dernière action détectée
     pub fn last_action(&self) -> Option<HotkeyAction> {
         *self.last_action.lock().unwrap()
     }
-    
+
     /// Prend la dernière action (la consomme)
     pub fn take_last_action(&self) -> Option<HotkeyAction> {
         let mut lock = self.last_action.lock().unwrap();
@@ -189,8 +202,14 @@ mod tests {
 
     #[test]
     fn combo_label_formatte_lisiblement() {
-        assert_eq!(combo_label(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyR), "Ctrl+Maj+R");
-        assert_eq!(combo_label(Modifiers::CONTROL | Modifiers::ALT, Code::Space), "Ctrl+Alt+Espace");
+        assert_eq!(
+            combo_label(Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyR),
+            "Ctrl+Maj+R"
+        );
+        assert_eq!(
+            combo_label(Modifiers::CONTROL | Modifiers::ALT, Code::Space),
+            "Ctrl+Alt+Espace"
+        );
         assert_eq!(combo_label(Modifiers::ALT, Code::Escape), "Alt+Échap");
     }
 
@@ -204,14 +223,18 @@ mod tests {
     #[test]
     fn rapport_partiel_produit_un_message_clair() {
         let mut report = RegistrationReport::default();
-        report.registered.push((HotkeyAction::ReadSelection, "Ctrl+Maj+R".to_string()));
+        report
+            .registered
+            .push((HotkeyAction::ReadSelection, "Ctrl+Maj+R".to_string()));
         report.failed.push((
             HotkeyAction::Stop,
             "Ctrl+Alt+Espace".to_string(),
             "HotKey already registered".to_string(),
         ));
         assert!(!report.is_complete_success());
-        let msg = report.failure_message().expect("un message clair est attendu");
+        let msg = report
+            .failure_message()
+            .expect("un message clair est attendu");
         assert!(msg.contains("Ctrl+Alt+Espace"));
         assert!(msg.contains("Arrêt"));
         assert!(msg.contains("déjà réservés"));

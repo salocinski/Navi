@@ -1,4 +1,4 @@
-﻿//! Interface du moteur TTS — isolation pour permettre le remplacement du moteur.
+//! Interface du moteur TTS — isolation pour permettre le remplacement du moteur.
 //!
 //! Objectif (carte N-009) :
 //! - définir un contrat stable `TtsEngine` (chargement paresseux, synthèse, voix, langues) ;
@@ -63,7 +63,12 @@ pub struct SynthesisRequest {
 
 impl Default for SynthesisRequest {
     fn default() -> Self {
-        Self { text: String::new(), voice: None, language: None, speed: 1.0 }
+        Self {
+            text: String::new(),
+            voice: None,
+            language: None,
+            speed: 1.0,
+        }
     }
 }
 
@@ -98,10 +103,18 @@ pub enum TtsError {
 impl fmt::Display for TtsError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TtsError::NotLoaded => write!(f, "Moteur non chargé — le chargement est en cours en tâche de fond"),
-            TtsError::UnsupportedLanguage(lang) => write!(f, "Langue non supportée par ce moteur : {lang}"),
+            TtsError::NotLoaded => write!(
+                f,
+                "Moteur non chargé — le chargement est en cours en tâche de fond"
+            ),
+            TtsError::UnsupportedLanguage(lang) => {
+                write!(f, "Langue non supportée par ce moteur : {lang}")
+            }
             TtsError::UnknownVoice(voice) => write!(f, "Voix inconnue de ce moteur : {voice}"),
-            TtsError::ModelMissing(path) => write!(f, "Modèle introuvable au chemin {path} — vérifiez l'installation des modèles"),
+            TtsError::ModelMissing(path) => write!(
+                f,
+                "Modèle introuvable au chemin {path} — vérifiez l'installation des modèles"
+            ),
             TtsError::Phonemization(detail) => write!(f, "Phonémisation impossible : {detail}"),
             TtsError::Inference(detail) => write!(f, "Inférence ONNX échouée : {detail}"),
             TtsError::Io(detail) => write!(f, "Erreur d'accès aux fichiers du moteur : {detail}"),
@@ -162,17 +175,20 @@ impl TtsEngine for super::KokoroEngine {
     }
 
     fn synthesize(&self, request: &SynthesisRequest) -> Result<SynthesisOutput, TtsError> {
-        let language = request.language.map(|l| l.as_str().to_string()).or_else(|| {
-            let default = self.config.default_language.as_str();
-            // « auto » = détection non encore branchée (carte N-036) → laisse le moteur choisir.
-            (!default.eq_ignore_ascii_case("auto")).then(|| default.to_string())
-        });
+        let language = request
+            .language
+            .map(|l| l.as_str().to_string())
+            .or_else(|| {
+                let default = self.config.default_language.as_str();
+                // « auto » = détection non encore branchée (carte N-036) → laisse le moteur choisir.
+                (!default.eq_ignore_ascii_case("auto")).then(|| default.to_string())
+            });
 
         // Langue non supportée → erreur claire (pas d'anglais silencieux pour du français).
-        if let Some(lang) = &language {
-            if TtsLanguage::from_str_lenient(lang).is_none() {
-                return Err(TtsError::UnsupportedLanguage(lang.clone()));
-            }
+        if let Some(lang) = &language
+            && TtsLanguage::from_str_lenient(lang).is_none()
+        {
+            return Err(TtsError::UnsupportedLanguage(lang.clone()));
         }
 
         let samples = self
@@ -184,7 +200,10 @@ impl TtsEngine for super::KokoroEngine {
             )
             .map_err(|e| TtsError::Inference(e.to_string()))?;
 
-        Ok(SynthesisOutput { samples, sample_rate: TTS_SAMPLE_RATE })
+        Ok(SynthesisOutput {
+            samples,
+            sample_rate: TTS_SAMPLE_RATE,
+        })
     }
 }
 
@@ -199,7 +218,9 @@ mod tests {
 
     impl StubEngine {
         fn new() -> Self {
-            Self { loaded: std::sync::Arc::new(std::sync::Mutex::new(false)) }
+            Self {
+                loaded: std::sync::Arc::new(std::sync::Mutex::new(false)),
+            }
         }
     }
 
@@ -232,7 +253,10 @@ mod tests {
             if request.text.trim().is_empty() {
                 return Err(TtsError::Phonemization("texte vide".to_string()));
             }
-            Ok(SynthesisOutput { samples: vec![0.0; 1024], sample_rate: TTS_SAMPLE_RATE })
+            Ok(SynthesisOutput {
+                samples: vec![0.0; 1024],
+                sample_rate: TTS_SAMPLE_RATE,
+            })
         }
     }
 
@@ -260,8 +284,14 @@ mod tests {
     #[test]
     fn langue_inconnue_est_refusee() {
         assert!(TtsLanguage::from_str_lenient("auto").is_none());
-        assert_eq!(TtsLanguage::from_str_lenient("fr-FR"), Some(TtsLanguage::French));
-        assert_eq!(TtsLanguage::from_str_lenient("en-US"), Some(TtsLanguage::English));
+        assert_eq!(
+            TtsLanguage::from_str_lenient("fr-FR"),
+            Some(TtsLanguage::French)
+        );
+        assert_eq!(
+            TtsLanguage::from_str_lenient("en-US"),
+            Some(TtsLanguage::English)
+        );
         assert!(TtsLanguage::from_str_lenient("de").is_none());
     }
 

@@ -1,0 +1,19 @@
+node_modules
+dist
+src-tauri
+scratch
+worktrees
+.atlas
+package-lock.json
+kanban.html
+kanban.html.bak
+*.jfif
+*.pdf
+# Docs ATLAS : maintenus à la main, exclus du formatage automatique
+docs/
+BACKLOG.md
+README.md
+# Fichiers CRLF hérités du dépôt (autocrlf) : non normalisés pour éviter le flip-flop
+index.html
+tsconfig.json
+tsconfig.node.json

@@ -12,7 +12,7 @@
 //! Répéter l'étape pour : texte riche, image (CF_DIB), fichier (CF_HDROP),
 //! app gelée (WM_COPY traité en > 1200 ms), presse-papiers verrouillé.
 
-use navi_lib::capture::{capture_selection, CaptureResult};
+use navi_lib::capture::{CaptureResult, capture_selection};
 use std::time::Duration;
 
 fn main() {
@@ -26,11 +26,21 @@ fn main() {
     }
     println!("  capture !\n");
 
-    let CaptureResult { text, format_used, success, error, restore } = capture_selection();
+    let CaptureResult {
+        text,
+        format_used,
+        success,
+        error,
+        restore,
+    } = capture_selection();
 
     if success {
         let preview: String = text.chars().take(200).collect();
-        let ellipsis = if text.chars().count() > 200 { "…" } else { "" };
+        let ellipsis = if text.chars().count() > 200 {
+            "…"
+        } else {
+            ""
+        };
         println!("Réussite ({format_used}) :");
         println!("--- début texte (200 premiers caractères) ---");
         println!("{preview}{ellipsis}");
@@ -45,7 +55,9 @@ fn main() {
         Some(msg) => println!("Restauration du presse-papiers : PARTIELLE — {msg}"),
     }
 
-    println!("\nVérification : collez maintenant (Ctrl+V) dans un éditeur — vous devez retrouver le CONTENU TÉMOIN (étape 1).");
+    println!(
+        "\nVérification : collez maintenant (Ctrl+V) dans un éditeur — vous devez retrouver le CONTENU TÉMOIN (étape 1)."
+    );
 
     if !success {
         std::process::exit(1);

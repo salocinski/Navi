@@ -2637,7 +2637,6 @@ dependencies = [
  "libc",
  "libloading 0.9.1",
  "npyz",
- "once_cell",
  "ort",
  "rodio",
  "serde",

@@ -1,4 +1,4 @@
-﻿//! Segmentation en production (carte N-037) — texte nettoyé → file de segments.
+//! Segmentation en production (carte N-037) — texte nettoyé → file de segments.
 //!
 //! Stratégie héritée du prototype S0-10, durcie pour la production :
 //! - découpage sur ponctuation forte `. ! ?` **et sauts de ligne** (frontière sûre) ;
@@ -12,7 +12,7 @@
 /// Surchargeable via `NAVI_MAX_SEGMENT_TOKENS` (benchmarks, carte TW-040).
 pub(crate) fn parse_max_tokens(raw: Option<&str>) -> usize {
     raw.and_then(|v| v.parse::<usize>().ok())
-        .filter(|&n| n >= 16 && n <= 510)
+        .filter(|&n| (16..=510).contains(&n))
         .unwrap_or(480)
 }
 
@@ -41,7 +41,11 @@ pub fn segment_text(text: &str) -> Vec<Segment> {
     chunks
         .into_iter()
         .enumerate()
-        .map(|(index, text)| Segment { index, estimated_tokens: estimate_tokens(&text), text })
+        .map(|(index, text)| Segment {
+            index,
+            estimated_tokens: estimate_tokens(&text),
+            text,
+        })
         .collect()
 }
 
@@ -67,8 +71,8 @@ pub fn split_sentences(text: &str) -> Vec<String> {
             continue;
         }
 
-        let is_sentence_end = matches!(g, '.' | '!' | '?')
-            && (i + 1 == chars.len() || chars[i + 1].is_whitespace());
+        let is_sentence_end =
+            matches!(g, '.' | '!' | '?') && (i + 1 == chars.len() || chars[i + 1].is_whitespace());
 
         if is_sentence_end && !is_abbreviation(&current) {
             let trimmed = current.trim().to_string();
@@ -90,7 +94,8 @@ pub fn split_sentences(text: &str) -> Vec<String> {
 /// ou faisant partie d'une liste FR/EN (`M.`, `Dr.`, `Mme`, `etc.`, `p.ex.`…).
 fn is_abbreviation(current: &str) -> bool {
     const ABBR_FR: &[&str] = &[
-        "M.", "Mme", "Mme.", "Mlle.", "Mlle", "Dr.", "St.", "etc.", "p.ex.", "c.-à-d.", "ndlr.", "Mgr.",
+        "M.", "Mme", "Mme.", "Mlle.", "Mlle", "Dr.", "St.", "etc.", "p.ex.", "c.-à-d.", "ndlr.",
+        "Mgr.",
     ];
     const ABBR_EN: &[&str] = &[
         "Mr.", "Mrs.", "Ms.", "Dr.", "St.", "Mt.", "etc.", "e.g.", "i.e.", "vs.", "Inc.", "Ltd.",
@@ -119,7 +124,11 @@ pub fn chunk_by_token_limit(sentences: &[String], max_tokens: usize) -> Vec<Stri
     let mut current = String::new();
 
     for s in sentences {
-        let candidate = if current.is_empty() { s.clone() } else { format!("{current} {s}") };
+        let candidate = if current.is_empty() {
+            s.clone()
+        } else {
+            format!("{current} {s}")
+        };
 
         if candidate.chars().count() <= max_chars {
             current = candidate;
@@ -149,7 +158,11 @@ pub fn chunk_plain_text(text: &str, max_chars: usize) -> Vec<String> {
     let mut current = String::new();
 
     for word in text.split_whitespace() {
-        let candidate = if current.is_empty() { word.to_string() } else { format!("{current} {word}") };
+        let candidate = if current.is_empty() {
+            word.to_string()
+        } else {
+            format!("{current} {word}")
+        };
         if candidate.chars().count() <= max_chars {
             current = candidate;
             continue;
@@ -216,7 +229,7 @@ mod tests {
     fn max_tokens_env_override() {
         assert_eq!(parse_max_tokens(None), 480);
         assert_eq!(parse_max_tokens(Some("64")), 64);
-        assert_eq!(parse_max_tokens(Some("3")), 480);   // sous le plancher : refusé
+        assert_eq!(parse_max_tokens(Some("3")), 480); // sous le plancher : refusé
         assert_eq!(parse_max_tokens(Some("511")), 480); // au-dessus de 510 : refusé
         assert_eq!(parse_max_tokens(Some("abc")), 480);
         assert_eq!(parse_max_tokens(Some("")), 480);
@@ -228,7 +241,11 @@ mod tests {
         let chunks = segment_text(&s);
         assert!(chunks.len() >= 2);
         for seg in &chunks {
-            assert!(seg.estimated_tokens <= max_tokens_per_chunk() + 1, "segment trop gros : {} tokens", seg.estimated_tokens);
+            assert!(
+                seg.estimated_tokens <= max_tokens_per_chunk() + 1,
+                "segment trop gros : {} tokens",
+                seg.estimated_tokens
+            );
         }
     }
 
