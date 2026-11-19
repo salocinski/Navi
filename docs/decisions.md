@@ -151,6 +151,22 @@ Stack : Rust + Tauri 2 + React/TypeScript, Windows 11
 
 ---
 
+## Mise en œuvre : Qwen3-TTS via sidecar Python + repli Kokoro (TW-071, 2026-11-19)
+
+**Date** : 2026-11-19
+**Contexte** : exécution de la décision ci-dessus (carte N-071). Détails techniques : `docs/s2-71-migration-qwen3-tts.md`.
+**Mise en œuvre** :
+- **Sidecar Python persistant** (`src-tauri/resources/qwen_sidecar.py`) : charge le modèle une fois (CUDA bf16 auto, sinon CPU float32 ; `sdpa`, repli `eager`) et sert le contrat TtsEngine via JSONL sur stdio (PCM f32 mono 24 kHz, base64). stdout réservé au protocole ; bannières des libs sur stderr.
+- **`QwenTtsEngine`** (`src-tauri/src/tts/qwen.rs`) implémente `TtsEngine` ; voix officielle Ryan par défaut (FR/EN) ; chargement borné (NAVI_QWEN_STARTUP_TIMEOUT_MS, défaut 10 min).
+- **`ResilientEngine`** (`src-tauri/src/tts/fallback.rs`) : **Qwen → Kokoro, repli automatique** (panne au chargement ou première synthèse → Kokoro avec message clair). `NAVI_TTS_ENGINE` = `auto` (défaut) | `qwen` | `kokoro`. Kokoro paresseux.
+- Sortie 24 kHz mono f32 : la segmentation, la machine d'états et la file audio sont inchangées.
+- **RTF mesuré** (RTX 3060 Ti, bf16, sdpa) : FR ≈ 3,0–3,8 ; EN ≈ 3,0–3,5 — la lecture progressive temps réel est **non viable** avec Qwen sur cette machine à ce stade. Kokoro reste donc **le moteur effectif** ; Qwen reste disponible via `NAVI_TTS_ENGINE=qwen` / `auto` pour recette et démo.
+**Décision** (2026-11-19, owner) : le défaut `NAVI_TTS_ENGINE=auto` est **Qwen d'abord, repli Kokoro** (chargement ou première synthèse). RTF mesuré ≈ 3 sur RTX 3060 Ti — assumé en l'état pour la recette/démo ; la distribution exigera un RTF ≲ 1 (GPU/flash-attn) ou une validation UX explicite. Recette humaine restante : écoute Ryan, latence perçue, repli Kokoro vérifié.
+**Tests** : 78 unitaires Rust (dont 8 sur le protocole sidecar) ; `cargo run --example qwen_check` pour la recette.
+**Raison** : exécution de la décision Ryan ; le RTF produit refroidit le calendrier produit mais sécurise l'existant (Kokoro) sans renoncer au moteur cible.
+
+---
+
 ## Prochaine entrée de décision à consigner
 
 **Date à venir** : Suivre toute décision dans un sprint ultérieur.

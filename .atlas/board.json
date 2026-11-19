@@ -564,9 +564,9 @@
     {
       "id": "N-071",
       "title": "Migrer le pipeline TTS de Kokoro vers Qwen3-TTS 0.6B CustomVoice (Ryan voix officielle)",
-      "description": "",
-      "state": "todo",
-      "updated_at": "2026-11-19T01:30:32Z",
+      "description": "[NOTE 2026-11-19 00:03] [NOTE 2026-11-19] Implementation completee sur feat/TW-071-qwen3-tts (PR #64 ouverte). RTF mesure RTX 3060 Ti bf16 sdpa : FR 3.0-3.8, EN 3.0-3.5. Defaut auto = Qwen d'abord, repli Kokoro (decision owner). Recette humaine en attente ; distribution conditionnee a RTF <= 1 ou validation UX. Kokoro reste le secours effectif.",
+      "state": "doing",
+      "updated_at": "2026-11-19T04:44:34Z",
       "assignee": ""
     },
     {

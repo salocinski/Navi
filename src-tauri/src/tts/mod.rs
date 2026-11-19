@@ -1,8 +1,12 @@
-﻿//! Moteur TTS (Kokoro via ONNX Runtime)
+﻿//! Moteurs TTS : Kokoro (ONNX, actuel) et Qwen3-TTS-0.6B-CustomVoice (sidecar Python, carte N-071) — avec repli automatique.
 
 pub mod engine;
+pub mod fallback;
+pub mod qwen;
 pub use engine::{SynthesisOutput, SynthesisRequest, TtsError, TtsLanguage, TTS_SAMPLE_RATE};
 pub use engine::{TtsEngine};
+pub use fallback::ResilientEngine;
+pub use qwen::{QwenConfig, QwenTtsEngine};
 
 use ort::{environment::Environment, session::Session, session::builder::GraphOptimizationLevel, value::Tensor};
 use std::collections::HashMap;
