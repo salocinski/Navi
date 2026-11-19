@@ -381,7 +381,10 @@ pub fn run() {
                                 let Some(action) = hotkeys.get(&event.id) else { continue };
                                 match *action {
                                     crate::hotkey::HotkeyAction::ReadSelection => {
-                                        if let Err(err) = read_selection_impl(&exec) {
+                                        let phase = exec.machine.state();
+                                        if matches!(phase, crate::state::PlaybackState::Capturing | crate::state::PlaybackState::Generating | crate::state::PlaybackState::Playing | crate::state::PlaybackState::Paused) {
+                                            eprintln!("[navi] raccourci lecture ignoré — une lecture est déjà en cours (Ctrl+Maj+P pause/reprise, Ctrl+Maj+S arrêt)");
+                                        } else if let Err(err) = read_selection_impl(&exec) {
                                             exec.machine.set_error(err.clone());
                                             eprintln!("[navi] raccourci lecture échoué : {err}");
                                         }
