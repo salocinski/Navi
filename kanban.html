@@ -1419,14 +1419,14 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 75,
       "title": "Chargement a la demande du modele Kokoro au raccourci + dechargement apres 5 min sans utilisation + verification pre-lecture",
-      "note": "[NOTE 2026-11-19 08:02] [NOTE 2026-11-19] Implementation sur feat/TW-075-chargement-on-demand : chargement en parallele de la capture (thread dedie, engine ensure_session idempotent), lecture ne demarre moteur pret ; dechargement session ONNX apres 300 s sans utilisation (defaut, NAVI_MODEL_IDLE_UNLOAD_SECS pour la recette) ; environnement ONNX conserve (process-global) donc rechargement OK ; touch_user_activity sur lecture/pause/reprise/arret ; preload boot conserve. 70 tests verts ; recette humaine en attente.",
+      "note": "[NOTE 2026-11-19 08:02] [NOTE 2026-11-19] Implementation sur feat/TW-075-chargement-on-demand : chargement en parallele de la capture (thread dedie, engine ensure_session idempotent), lecture ne demarre moteur pret ; dechargement session ONNX apres 300 s sans utilisation (defaut, NAVI_MODEL_IDLE_UNLOAD_SECS pour la recette) ; environnement ONNX conserve (process-global) donc rechargement OK ; touch_user_activity sur lecture/pause/reprise/arret ; preload boot conserve. 70 tests verts ; recette humaine en attente.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Verification terrain par l'humain 2026-11-19 : apres inactivite, le modele se charge automatiquement a la lecture, validé fonctionnel. PR #68 en revue (merge a l'humain) : chargement a la demande en parallele de la capture (thread dedie, ensure_session idempotent), dechargement de la session ONNX apres 300 s sans utilisation (NAVI_MODEL_IDLE_UNLOAD_SECS pour la recette), environnement ONNX conserve, preload boot conserve, touch_user_activity sur lecture/pause/reprise/arret. 70 tests verts.",
       "deps": [],
       "epic": "realisation",
       "kind": "tache",
       "milestone": "M2",
       "prio": "P2",
       "size": "M",
-      "status": "doing",
+      "status": "done",
       "assigned_to": ""
     }
   ]
