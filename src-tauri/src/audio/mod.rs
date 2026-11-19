@@ -1,6 +1,6 @@
 //! Lecture audio (rodio)
 
-use rodio::{buffer::SamplesBuffer, OutputStream, OutputStreamHandle, Sink, Decoder};
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, buffer::SamplesBuffer};
 use std::collections::VecDeque;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
@@ -114,7 +114,9 @@ impl AudioHandle {
     }
 
     fn send(&self, message: AudioMessage) -> Result<(), String> {
-        self.tx.send(message).map_err(|_| "Périphérique audio : thread terminé".to_string())
+        self.tx
+            .send(message)
+            .map_err(|_| "Périphérique audio : thread terminé".to_string())
     }
 
     /// Enfile des échantillons — non bloquant, ordre garanti par le canal.
@@ -149,7 +151,8 @@ impl AudioHandle {
         if self.tx.send(AudioMessage::IsPlaying(tx)).is_err() {
             return false;
         }
-        rx.recv_timeout(std::time::Duration::from_millis(200)).unwrap_or(false)
+        rx.recv_timeout(std::time::Duration::from_millis(200))
+            .unwrap_or(false)
     }
 }
 
@@ -198,10 +201,14 @@ impl AudioPlayer {
     ///
     /// Ne fait rien si un consommateur est déjà en vie (évite la multiplication des threads).
     fn spawn_consumer(&self) {
-        if self.consumer_alive.load(std::sync::atomic::Ordering::SeqCst) {
+        if self
+            .consumer_alive
+            .load(std::sync::atomic::Ordering::SeqCst)
+        {
             return;
         }
-        self.consumer_alive.store(true, std::sync::atomic::Ordering::SeqCst);
+        self.consumer_alive
+            .store(true, std::sync::atomic::Ordering::SeqCst);
         let sink = self.sink.clone();
         let pending = self.pending.clone();
         let condvar = self.condvar.clone();
@@ -217,9 +224,7 @@ impl AudioPlayer {
 
         thread::spawn(move || {
             loop {
-                let is_current = {
-                    *generation.lock().unwrap() == my_gen
-                };
+                let is_current = { *generation.lock().unwrap() == my_gen };
                 if !is_current {
                     break;
                 }
@@ -242,7 +247,10 @@ impl AudioPlayer {
                     eprintln!("[audio] consommateur gen {my_gen} sorti");
                     break;
                 };
-                eprintln!("[audio] consommateur gen {my_gen} : pop {} échantillons, append au sink", samples.len());
+                eprintln!(
+                    "[audio] consommateur gen {my_gen} : pop {} échantillons, append au sink",
+                    samples.len()
+                );
 
                 // Ne pas jouer si ce consommateur n'est plus le courant
                 if *generation.lock().unwrap() != my_gen {
@@ -267,7 +275,9 @@ impl AudioPlayer {
                     sink.append(source);
                     eprintln!("[audio] sink appendé — {} échantillons en vol", n);
                 } else {
-                    eprintln!("[audio] SINK ABSENT — échantillons perdus (sink consommé ou absent)");
+                    eprintln!(
+                        "[audio] SINK ABSENT — échantillons perdus (sink consommé ou absent)"
+                    );
                 }
             }
             alive.store(false, std::sync::atomic::Ordering::SeqCst);
@@ -426,14 +436,21 @@ pub fn play_signature_once() {
         let file = match std::fs::File::open(&path) {
             Ok(f) => f,
             Err(err) => {
-                eprintln!("[navi] signature introuvable ({}) : {}", path.display(), err);
+                eprintln!(
+                    "[navi] signature introuvable ({}) : {}",
+                    path.display(),
+                    err
+                );
                 return;
             }
         };
         let stream = match OutputStream::try_default() {
             Ok(s) => s,
             Err(err) => {
-                eprintln!("[navi] périphérique audio indisponible pour la signature : {}", err);
+                eprintln!(
+                    "[navi] périphérique audio indisponible pour la signature : {}",
+                    err
+                );
                 return;
             }
         };

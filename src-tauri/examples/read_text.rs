@@ -21,8 +21,15 @@ fn main() {
     let segs = segment_text(text);
     eprintln!("segments : {}", segs.len());
 
-    let n = synthesize_segments(&engine, &segs, &audio, &|| false, Some(navi_lib::tts::engine::TtsLanguage::French), &|| ())
-        .expect("synthèse");
+    let n = synthesize_segments(
+        &engine,
+        &segs,
+        &audio,
+        &|| false,
+        Some(navi_lib::tts::engine::TtsLanguage::French),
+        &|| (),
+    )
+    .expect("synthèse");
     eprintln!("synthétisés {n} segments, lecture…");
     std::thread::sleep(std::time::Duration::from_secs(12));
     eprintln!("terminé");

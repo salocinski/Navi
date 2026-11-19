@@ -24,11 +24,17 @@ pub fn resolve_signature_wav() -> PathBuf {
         manifest.join("resources").join("hey_listen.wav"),
         std::env::current_exe()
             .ok()
-            .and_then(|p| p.parent().map(|d| d.join("resources").join("hey_listen.wav")))
+            .and_then(|p| {
+                p.parent()
+                    .map(|d| d.join("resources").join("hey_listen.wav"))
+            })
             .unwrap_or_else(|| PathBuf::from("resources/hey_listen.wav")),
         std::env::current_exe()
             .ok()
-            .and_then(|p| p.parent().map(|d| d.join("..").join("resources").join("hey_listen.wav")))
+            .and_then(|p| {
+                p.parent()
+                    .map(|d| d.join("..").join("resources").join("hey_listen.wav"))
+            })
             .unwrap_or_else(|| PathBuf::from("../resources/hey_listen.wav")),
     ];
     for candidate in candidates {
@@ -81,7 +87,9 @@ pub fn resolve_models_dir() -> PathBuf {
         }
     }
 
-    app_data_dir().map(|d| d.join("models")).unwrap_or_else(|| PathBuf::from("./models"))
+    app_data_dir()
+        .map(|d| d.join("models"))
+        .unwrap_or_else(|| PathBuf::from("./models"))
 }
 
 /// Retourne le chemin du répertoire de données de l'application
@@ -102,13 +110,13 @@ pub fn detect_language(text: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_clean_text() {
         assert_eq!(clean_text("  Hello\x00World\n  "), "HelloWorld");
         assert_eq!(clean_text("\t\tTest\n\n"), "Test");
     }
-    
+
     #[test]
     fn test_detect_language() {
         assert_eq!(detect_language("Hello world this is a test"), "en");

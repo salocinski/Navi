@@ -7,31 +7,31 @@ use std::path::PathBuf;
 pub struct AppConfig {
     /// Langue par défaut pour le TTS
     pub default_language: String,
-    
+
     /// Voix féminine (ID Kokoro)
     pub voice_female: String,
-    
+
     /// Voix masculine (ID Kokoro)
     pub voice_male: String,
-    
+
     /// Vitesse de lecture (0.5 - 2.0)
     pub speech_rate: f32,
-    
+
     /// Volume global (0.0 - 1.0)
     pub volume: f32,
-    
+
     /// Raccourci lecture (ex: "Ctrl+Shift+R")
     pub hotkey_read: String,
-    
+
     /// Raccourci pause/reprise
     pub hotkey_pause: String,
-    
+
     /// Raccourci arrêt
     pub hotkey_stop: String,
-    
+
     /// Lancer au démarrage Windows
     pub autostart: bool,
-    
+
     /// Répertoire des modèles (optionnel, défaut: ~/AppData/Navi/models)
     pub models_dir: Option<std::path::PathBuf>,
 }
@@ -64,7 +64,7 @@ impl AppConfig {
             Ok(Self::default())
         }
     }
-    
+
     /// Sauvegarde la configuration
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         let config_path = Self::config_path()?;
@@ -75,7 +75,7 @@ impl AppConfig {
         std::fs::write(config_path, content)?;
         Ok(())
     }
-    
+
     fn config_path() -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
         Ok(dirs::data_dir()
             .ok_or("Impossible de déterminer le répertoire de données")?
@@ -87,7 +87,7 @@ impl AppConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_config() {
         let config = AppConfig::default();

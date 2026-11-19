@@ -10,12 +10,15 @@
 //!   les libellés du mockup (Ctrl Alt Espace) sont obsolètes (TW-072).
 //! - « Démarrer avec Windows » n'est pas encore câblé (N-054) — pas de faux item.
 
-use tauri::{AppHandle, Manager};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
-use tauri::tray::{TrayIconBuilder, TrayIconEvent, MouseButton};
+use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
+use tauri::{AppHandle, Manager};
 
 /// Crée le menu et l'icône de la zone de notification (appeler depuis `setup`).
-pub fn create_system_tray(app: &AppHandle, view: crate::NaviRef) -> Result<(), Box<dyn std::error::Error>> {
+pub fn create_system_tray(
+    app: &AppHandle,
+    view: crate::NaviRef,
+) -> Result<(), Box<dyn std::error::Error>> {
     let read_item = MenuItemBuilder::new("Lire la sélection")
         .id("read")
         .enabled(true)
@@ -40,56 +43,69 @@ pub fn create_system_tray(app: &AppHandle, view: crate::NaviRef) -> Result<(), B
         .build(app)?;
 
     let menu = MenuBuilder::new(app)
-        .items(&[&read_item, &pause_item, &stop_item, &separator, &settings_item, &separator, &quit_item])
+        .items(&[
+            &read_item,
+            &pause_item,
+            &stop_item,
+            &separator,
+            &settings_item,
+            &separator,
+            &quit_item,
+        ])
         .build()?;
 
-    let icon = app.default_window_icon().ok_or("icône par défaut introuvable")?.clone();
+    let icon = app
+        .default_window_icon()
+        .ok_or("icône par défaut introuvable")?
+        .clone();
 
     TrayIconBuilder::new()
         .icon(icon)
         .menu(&menu)
         .show_menu_on_left_click(false)
         .tooltip("Navi — Lecteur de texte à voix haute (local)")
-        .on_menu_event(move |_app, event| {
-            match event.id.as_ref() {
-                "read" => {
-                    let phase = view.machine.state();
-                    let busy = matches!(
-                        phase,
-                        crate::state::PlaybackState::Capturing
-                            | crate::state::PlaybackState::Generating
-                            | crate::state::PlaybackState::Playing
-                            | crate::state::PlaybackState::Paused
-                    );
-                    if busy {
-                        eprintln!("[navi] tray — lecture déjà en cours, ignoré");
-                        return;
-                    }
-                    if let Err(err) = crate::read_selection_impl(&view) {
-                        view.machine.set_error(err.clone());
-                        eprintln!("[navi] tray — lecture échouée : {err}");
-                    }
+        .on_menu_event(move |_app, event| match event.id.as_ref() {
+            "read" => {
+                let phase = view.machine.state();
+                let busy = matches!(
+                    phase,
+                    crate::state::PlaybackState::Capturing
+                        | crate::state::PlaybackState::Generating
+                        | crate::state::PlaybackState::Playing
+                        | crate::state::PlaybackState::Paused
+                );
+                if busy {
+                    eprintln!("[navi] tray — lecture déjà en cours, ignoré");
+                    return;
                 }
-                "pause" => {
-                    let outcome = match view.machine.state() {
-                        crate::state::PlaybackState::Paused => crate::resume_reading_impl(&view),
-                        _ => crate::pause_reading_impl(&view),
-                    };
-                    if let Err(err) = outcome {
-                        view.machine.set_error(err.clone());
-                        eprintln!("[navi] tray — pause/reprise échouée : {err}");
-                    }
+                if let Err(err) = crate::read_selection_impl(&view) {
+                    view.machine.set_error(err.clone());
+                    eprintln!("[navi] tray — lecture échouée : {err}");
                 }
-                "stop" => {
-                    let _ = crate::stop_reading_impl(&view);
-                }
-                "quit" => std::process::exit(0),
-                _ => {}
             }
+            "pause" => {
+                let outcome = match view.machine.state() {
+                    crate::state::PlaybackState::Paused => crate::resume_reading_impl(&view),
+                    _ => crate::pause_reading_impl(&view),
+                };
+                if let Err(err) = outcome {
+                    view.machine.set_error(err.clone());
+                    eprintln!("[navi] tray — pause/reprise échouée : {err}");
+                }
+            }
+            "stop" => {
+                let _ = crate::stop_reading_impl(&view);
+            }
+            "quit" => std::process::exit(0),
+            _ => {}
         })
         .on_tray_icon_event(|tray, event| {
             // Clic gauche : bascule l'affichage de la fenêtre principale (panneau A = N-048).
-            if let TrayIconEvent::Click { button: MouseButton::Left, .. } = event {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                ..
+            } = event
+            {
                 if let Some(window) = tray.app_handle().get_webview_window("main") {
                     if window.is_visible().unwrap_or(false) {
                         let _ = window.hide();

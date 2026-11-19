@@ -56,7 +56,10 @@ impl fmt::Display for PlaybackState {
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum StateEvent {
     /// Transition de phase.
-    PhaseChanged { from: PlaybackState, to: PlaybackState },
+    PhaseChanged {
+        from: PlaybackState,
+        to: PlaybackState,
+    },
     /// Progression de génération/lecture (segments consommés / total).
     Progress { current: usize, total: usize },
     /// Erreur terminale (message FR pour l'UI).
@@ -135,7 +138,10 @@ impl PlaybackStateMachine {
         *self.current_text.lock().unwrap() = text;
         *self.total_chunks.lock().unwrap() = chunk_count;
         *self.current_chunk.lock().unwrap() = 0;
-        self.emit(StateEvent::Progress { current: 0, total: chunk_count });
+        self.emit(StateEvent::Progress {
+            current: 0,
+            total: chunk_count,
+        });
     }
 
     /// Idle/Stopped/Error → Capturing.
@@ -166,7 +172,10 @@ impl PlaybackStateMachine {
     pub fn play(&self) -> Result<(), String> {
         let current = *self.state.lock().unwrap();
         match current {
-            PlaybackState::Generating | PlaybackState::Idle | PlaybackState::Stopped | PlaybackState::Paused => {
+            PlaybackState::Generating
+            | PlaybackState::Idle
+            | PlaybackState::Stopped
+            | PlaybackState::Paused => {
                 self.set_phase(PlaybackState::Playing);
                 Ok(())
             }
@@ -205,7 +214,10 @@ impl PlaybackStateMachine {
         *self.total_chunks.lock().unwrap() = 0;
         *self.current_text.lock().unwrap() = String::new();
         self.set_phase(PlaybackState::Idle);
-        self.emit(StateEvent::Progress { current: 0, total: 0 });
+        self.emit(StateEvent::Progress {
+            current: 0,
+            total: 0,
+        });
     }
 
     /// Arrêt : Stopped, position remise à zéro, génération annulée.
@@ -231,13 +243,19 @@ impl PlaybackStateMachine {
         };
         if let Some(chunk) = chunk {
             let total = *self.total_chunks.lock().unwrap();
-            self.emit(StateEvent::Progress { current: chunk + 1, total });
+            self.emit(StateEvent::Progress {
+                current: chunk + 1,
+                total,
+            });
         }
         chunk
     }
 
     pub fn progress(&self) -> (usize, usize) {
-        (*self.current_chunk.lock().unwrap(), *self.total_chunks.lock().unwrap())
+        (
+            *self.current_chunk.lock().unwrap(),
+            *self.total_chunks.lock().unwrap(),
+        )
     }
 
     /// Passe en `Error` (message FR pour l'UI) et émet les événements.
@@ -484,17 +502,31 @@ mod tests {
         sm.subscribe(move |evt| events2.lock().unwrap().push(evt));
         sm.set_error("modèle absent".to_string());
         let captured = events.lock().unwrap();
-        assert!(captured.iter().any(|e| matches!(e, StateEvent::Error { message } if message == "modèle absent")));
-        assert!(captured.iter().any(|e| matches!(e, StateEvent::PhaseChanged { to, .. } if *to == PlaybackState::Error)));
+        assert!(
+            captured
+                .iter()
+                .any(|e| matches!(e, StateEvent::Error { message } if message == "modèle absent"))
+        );
+        assert!(captured.iter().any(
+            |e| matches!(e, StateEvent::PhaseChanged { to, .. } if *to == PlaybackState::Error)
+        ));
     }
 
     #[test]
     fn les_evenements_se_serialisent_en_json_stable() {
-        let evt = StateEvent::PhaseChanged { from: PlaybackState::Idle, to: PlaybackState::Playing };
+        let evt = StateEvent::PhaseChanged {
+            from: PlaybackState::Idle,
+            to: PlaybackState::Playing,
+        };
         let json = serde_json::to_string(&evt).unwrap();
-        assert_eq!(json, r#"{"type":"phase-changed","from":"idle","to":"playing"}"#);
+        assert_eq!(
+            json,
+            r#"{"type":"phase-changed","from":"idle","to":"playing"}"#
+        );
 
-        let evt = StateEvent::Error { message: "erreur x".to_string() };
+        let evt = StateEvent::Error {
+            message: "erreur x".to_string(),
+        };
         let json = serde_json::to_string(&evt).unwrap();
         assert_eq!(json, r#"{"type":"error","message":"erreur x"}"#);
     }
