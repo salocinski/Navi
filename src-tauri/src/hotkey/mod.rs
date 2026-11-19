@@ -130,8 +130,8 @@ impl HotkeyManager {
     /// - le rapport `RegistrationReport` porte le détail pour affichage utilisateur.
     pub fn register_defaults(&mut self) -> Result<RegistrationReport, Box<dyn std::error::Error>> {
         let defaults: &[(Modifiers, Code, HotkeyAction)] = &[
-            // Win+Alt+Espace : lire la sélection (ergonomies/ conflits, carte TW-072)
-            (Modifiers::SUPER | Modifiers::ALT, Code::Space, HotkeyAction::ReadSelection),
+            // Win+Alt+S : lire la sélection — 1 seule main, « S » pour Speak, libre sur la machine (carte TW-072)
+            (Modifiers::SUPER | Modifiers::ALT, Code::KeyS, HotkeyAction::ReadSelection),
             // Ctrl+Maj+P / Ctrl+Maj+S : pause/reprise et arrêt
             (Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyP, HotkeyAction::PauseResume),
             (Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyS, HotkeyAction::Stop),

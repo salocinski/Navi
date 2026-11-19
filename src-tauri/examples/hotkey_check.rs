@@ -13,7 +13,7 @@ fn main() {
     let manager = GlobalHotKeyManager::new().expect("GlobalHotKeyManager");
 
     let candidates: &[(&str, Modifiers, Code)] = &[
-        ("Win+Alt+Espace (lire)", Modifiers::SUPER | Modifiers::ALT, Code::Space),
+        ("Win+Alt+S (lire)", Modifiers::SUPER | Modifiers::ALT, Code::KeyS),
         ("Ctrl+Maj+P (pause)", Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyP),
         ("Ctrl+Maj+S (arrêt)", Modifiers::CONTROL | Modifiers::SHIFT, Code::KeyS),
         ("Ctrl+Maj+Espace (ancien défaut)", Modifiers::CONTROL | Modifiers::SHIFT, Code::Space),
