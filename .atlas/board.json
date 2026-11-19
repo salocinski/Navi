@@ -588,9 +588,9 @@
     {
       "id": "N-074",
       "title": "Retirer Qwen3-TTS du code, rester sur Kokoro seul",
-      "description": "",
-      "state": "doing",
-      "updated_at": "2026-11-19T12:44:44Z",
+      "description": "[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] PR #66 fusionnee sur main (squash cb69a9d) : Qwen3-TTS retire du code (engine, sidecar, exemple, base64, fallback), lib.rs restaure a Kokoro TtsEngine. decisions.md consigne le retrait et supersede explicitement la mise en oeuvre TW-071 et le defaut auto=Qwen d'abord. s2-71 marquee supersede, conservee. Branche source supprimee apres fusion.",
+      "state": "done",
+      "updated_at": "2026-11-19T12:52:12Z",
       "assignee": ""
     }
   ]
