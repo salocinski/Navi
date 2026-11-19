@@ -24,7 +24,8 @@ use std::time::{Duration, Instant};
 use windows::Win32::Foundation::{HWND, HGLOBAL, HANDLE, BOOL};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYEVENTF_KEYUP, KEYBDINPUT, KEYBD_EVENT_FLAGS,
-    VK_C, VK_CONTROL, VK_MENU, keybd_event,
+    VK_C, VK_CONTROL, VK_MENU, VK_LCONTROL, VK_RCONTROL, VK_LMENU, VK_RMENU, VK_SHIFT,
+    VK_LSHIFT, VK_RSHIFT, VK_LWIN, VK_RWIN, GetAsyncKeyState, keybd_event,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, GetForegroundWindow, GetWindowThreadProcessId, IsIconic, IsWindow,
@@ -414,6 +415,33 @@ fn send_copy_keystroke() -> Result<(), CaptureError> {
     Ok(())
 }
 
+/// Attend que tous les modificateurs physiques soient relâchés avant d'injecter Ctrl+C.
+///
+/// Quand le raccourci Navi (ex. Win+Alt+S) est pressé, les touches Win/Alt sont encore
+/// enfoncées au moment où la capture s'exécute : injecter Ctrl+C à ce moment-là revient
+/// à envoyer « Win+Alt+Ctrl+C » à la cible, qui n'exécute pas la copie — le presse-papiers
+/// ne change pas et la capture échoue. On attend donc le relâchement complet
+/// (borné ; best effort au-delà, la copie échouera avec un message clair comme avant).
+fn wait_for_modifiers_released(timeout: Duration) {
+    const MODIFIERS: [windows::Win32::UI::Input::KeyboardAndMouse::VIRTUAL_KEY; 11] = [
+        VK_CONTROL, VK_LCONTROL, VK_RCONTROL,
+        VK_MENU, VK_LMENU, VK_RMENU,
+        VK_SHIFT, VK_LSHIFT, VK_RSHIFT,
+        VK_LWIN, VK_RWIN,
+    ];
+    let start = Instant::now();
+    while start.elapsed() < timeout {
+        let any_down = MODIFIERS.iter().any(|vk| {
+            (unsafe { GetAsyncKeyState(vk.0 as i32) } as u16) & 0x8000 != 0
+        });
+        if !any_down {
+            return;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    eprintln!("[navi] modificateurs encore enfoncés après {} ms — copie tentée quand même", timeout.as_millis());
+}
+
 /// PID du processus propriétaire d'une fenêtre (0 si la fenêtre est null ou invalide).
 fn window_pid(hwnd: HWND) -> u32 {
     if hwnd.0.is_null() {
@@ -516,28 +544,32 @@ fn capture_steps() -> Result<CaptureResult, CaptureError> {
         }
     }
 
-    // 3. Mémoriser le numéro de séquence du presse-papiers avant la copie
+    // 3. Attendre que Win/Alt/Maj/Ctrl soient relâchés (le raccourci Navi vient
+    //     d'être pressé — sinon la cible reçoit « Win+Alt+Ctrl+C », pas « Ctrl+C »).
+    wait_for_modifiers_released(Duration::from_millis(1000));
+
+    // 4. Mémoriser le numéro de séquence du presse-papiers avant la copie
     let seq_before = unsafe { GetClipboardSequenceNumber() };
 
-    // 4. Simuler Ctrl+C via SendInput
+    // 5. Simuler Ctrl+C via SendInput
     send_copy_keystroke()?;
 
-    // 5. Copie asynchrone : attendre que le presse-papiers change
+    // 6. Copie asynchrone : attendre que le presse-papiers change
     if !wait_for_clipboard_change(seq_before, CLIPBOARD_CHANGE_TIMEOUT, || unsafe {
         GetClipboardSequenceNumber()
     }) {
         return Err(CaptureError::NoSelection);
     }
 
-    // 6. Ouvrir le presse-papiers (retries : peut être verrouillé par une autre app)
+    // 7. Ouvrir le presse-papiers (retries : peut être verrouillé par une autre app)
     if !open_clipboard() {
         return Err(CaptureError::ClipboardBusy { attempts: OPEN_CLIPBOARD_ATTEMPTS });
     }
 
-    // 7. Lire le contenu (priorité : Unicode > HTML > RTF > ANSI)
+    // 8. Lire le contenu (priorité : Unicode > HTML > RTF > ANSI)
     let result = read_clipboard_content();
 
-    // 8. Fermer le presse-papiers (toujours)
+    // 9. Fermer le presse-papiers (toujours)
     let _ = unsafe { CloseClipboard() };
 
     result
