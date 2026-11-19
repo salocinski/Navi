@@ -572,7 +572,7 @@
     {
       "id": "N-072",
       "title": "Raccourci Afficher lire a la voix a une main moins de conflits apps web",
-      "description": "",
+      "description": "[NOTE 2026-11-19 22:22] PR feat/TW-072-decision : defaut lire = Win+Alt+Espace (Win + Alt + Espace une main gauche, disponible sur la machine de reference, aucun conflit Chrome/Edge/Docs). Ctrl+Maj+Espace reste casse sur Chrome/Docs. 3 nouveaux tests candidats dans hotkey_check.",
       "state": "doing",
       "updated_at": "2026-11-19T03:19:06Z",
       "assignee": ""
