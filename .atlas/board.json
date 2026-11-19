@@ -508,9 +508,9 @@
     {
       "id": "N-064",
       "title": "Documenter les limites connues de compatibilité",
-      "description": "Applications et contrôles non pris en charge.",
-      "state": "doing",
-      "updated_at": "2026-11-19T17:41:57Z",
+      "description": "Applications et contrôles non pris en charge.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] PR #83 fusionnee (limites-compat.md consolide N-016/N-043/N-015, Word corrige a preuve). Limites tracees : apps elevees UIPI, GDI handles non restaures, UIA NO-GO, inconnues explicites.",
+      "state": "done",
+      "updated_at": "2026-11-19T17:52:52Z",
       "assignee": ""
     },
     {
