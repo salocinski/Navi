@@ -1,7 +1,7 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 // @ts-expect-error type error without @types/node package
-import process from "node:process";
+import process from 'node:process';
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
@@ -19,7 +19,7 @@ export default defineConfig(() => ({
     host: host || false,
     hmr: host
       ? {
-          protocol: "ws",
+          protocol: 'ws',
           host,
           port: 1421,
         }
@@ -28,12 +28,12 @@ export default defineConfig(() => ({
       // 3. tell Vite to ignore watching `src-tauri`, `scratch/`, artefacts Rust et modèles
       //     (sinon Vite noie le dev server sous des milliers de « page reload »)
       ignored: [
-        "**/src-tauri/**",
-        "**/scratch/**",
-        "**/target/**",
-        "**/models/**",
-        "**/dist/**",
-        "**/worktrees/**",
+        '**/src-tauri/**',
+        '**/scratch/**',
+        '**/target/**',
+        '**/models/**',
+        '**/dist/**',
+        '**/worktrees/**',
       ],
     },
   },
