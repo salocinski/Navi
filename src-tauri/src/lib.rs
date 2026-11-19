@@ -21,15 +21,30 @@ static LAST_FOREGROUND: std::sync::atomic::AtomicUsize = std::sync::atomic::Atom
 /// de viser la bonne cible (au lieu de Navi lui-même quand la Steam/Chromium a le focus).
 fn track_last_foreground() {
     std::thread::spawn(move || {
-        use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+        use windows::Win32::UI::WindowsAndMessaging::{GetClassNameW, GetForegroundWindow, GetWindowThreadProcessId};
         use windows::Win32::System::Threading::GetCurrentProcessId;
         let own = unsafe { GetCurrentProcessId() };
+        let mut cls = [0u16; 256];
         loop {
             let hwnd = unsafe { GetForegroundWindow() };
             if !hwnd.0.is_null() {
                 let mut pid: u32 = 0;
                 unsafe { GetWindowThreadProcessId(HWND(hwnd.0), Some(&mut pid)) };
-                if pid != 0 && pid != own {
+                // Ignore les fenêtres Shell (taskbar, overflow, menu, bureau) — mémoire réservée aux fenêtres applicatives.
+                let len_class = unsafe { GetClassNameW(hwnd, &mut cls) };
+                let class_name = String::from_utf16_lossy(&cls[..len_class as usize]);
+                let is_shell_ui = matches!(
+                    class_name.as_str(),
+                    "NotifyIconOverflowWindow"
+                        | "Shell_TrayWnd"
+                        | "Shell_SecondaryTrayWnd"
+                        | "SysShadow"
+                        | "#32768"
+                        | "ToolbarWindow32"
+                        | "Progman"
+                        | "WorkerW"
+                );
+                if pid != 0 && pid != own && !is_shell_ui {
                     LAST_FOREGROUND.store(hwnd.0 as usize, std::sync::atomic::Ordering::SeqCst);
                 }
             }
