@@ -1004,7 +1004,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 45,
       "title": "Brancher les raccourcis globaux lire / pause-reprise / arrêt",
-      "status": "doing",
+      "status": "done",
       "prio": "P1",
       "kind": "tache",
       "milestone": "M1",
@@ -1014,7 +1014,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
         "N-018",
         "N-032"
       ],
-      "note": "Échec d'enregistrement signalé à l'utilisateur.\n\n[NOTE 2026-11-19 20:51] PR https://github.com/salocinski/Navi/pull/56 - Ctrl+Maj+Espace lire / P pause-reprise toggle / S arret branches au pipeline, echec d'enregistrement signale via get_status.hotkey_error. Refactor NaviRef partage commandes+listener, no duplication. 88 verts.\n\n[NOTE 2026-11-19 23:11] [NOTE 2026-11-18] Hotkey lire (Win+Alt+S) verifie OK par l'humain : bouton deja OK, le raccourci echouait (la cible recevait Win+Alt+Ctrl+C, modificateurs encore enfonces). Fix : commit d7d07b9 (cible = derniere fenetre non-Navi, activation forcée Alt+AttachThreadInput + attente reelle 800ms) puis commit 116cb09 (attente du relâchement des modificateurs via GetAsyncKeyState avant injection Ctrl+C). Branche chore/TW-072-decision, non poussée."
+      "note": "Échec d'enregistrement signalé à l'utilisateur.\n\n[NOTE 2026-11-19 20:51] PR https://github.com/salocinski/Navi/pull/56 - Ctrl+Maj+Espace lire / P pause-reprise toggle / S arret branches au pipeline, echec d'enregistrement signale via get_status.hotkey_error. Refactor NaviRef partage commandes+listener, no duplication. 88 verts.\n\n[NOTE 2026-11-19 23:11] [NOTE 2026-11-18] Hotkey lire (Win+Alt+S) verifie OK par l'humain : bouton deja OK, le raccourci echouait (la cible recevait Win+Alt+Ctrl+C, modificateurs encore enfonces). Fix : commit d7d07b9 (cible = derniere fenetre non-Navi, activation forcée Alt+AttachThreadInput + attente reelle 800ms) puis commit 116cb09 (attente du relâchement des modificateurs via GetAsyncKeyState avant injection Ctrl+C). Branche chore/TW-072-decision, non poussée.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-18] Raccourcis globaux cables et verifies par l'humain : lire (Win+Alt+S), pause/reprise (Ctrl+Maj+P), arret (Ctrl+Maj+S) fonctionnels comme attendu. Fix hotkey : Win+Alt+S defaut (PR #59) ; capture cible la derniere fenetre non-Navi + activation forcee si Navi a le focus (d7d07b9) ; attente du relachement des modificateurs avant Ctrl+C (116cb09). Verif terrain 2026-11-18/19."
     },
     {
       "num": 46,
