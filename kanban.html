@@ -1014,7 +1014,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
         "N-018",
         "N-032"
       ],
-      "note": "Échec d'enregistrement signalé à l'utilisateur.\n\n[NOTE 2026-11-19 20:51] PR https://github.com/salocinski/Navi/pull/56 - Ctrl+Maj+Espace lire / P pause-reprise toggle / S arret branches au pipeline, echec d'enregistrement signale via get_status.hotkey_error. Refactor NaviRef partage commandes+listener, no duplication. 88 verts."
+      "note": "Échec d'enregistrement signalé à l'utilisateur.\n\n[NOTE 2026-11-19 20:51] PR https://github.com/salocinski/Navi/pull/56 - Ctrl+Maj+Espace lire / P pause-reprise toggle / S arret branches au pipeline, echec d'enregistrement signale via get_status.hotkey_error. Refactor NaviRef partage commandes+listener, no duplication. 88 verts.\n\n[NOTE 2026-11-19 23:11] [NOTE 2026-11-18] Hotkey lire (Win+Alt+S) verifie OK par l'humain : bouton deja OK, le raccourci echouait (la cible recevait Win+Alt+Ctrl+C, modificateurs encore enfonces). Fix : commit d7d07b9 (cible = derniere fenetre non-Navi, activation forcée Alt+AttachThreadInput + attente reelle 800ms) puis commit 116cb09 (attente du relâchement des modificateurs via GetAsyncKeyState avant injection Ctrl+C). Branche chore/TW-072-decision, non poussée."
     },
     {
       "num": 46,
@@ -1375,6 +1375,19 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "prio": "P1",
       "size": "L",
       "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 72,
+      "title": "Raccourci Afficher lire a la voix a une main moins de conflits apps web",
+      "note": "[NOTE 2026-11-19 22:22] PR feat/TW-072-decision : defaut lire = Win+Alt+Espace (Win + Alt + Espace une main gauche, disponible sur la machine de reference, aucun conflit Chrome/Edge/Docs). Ctrl+Maj+Espace reste casse sur Chrome/Docs. 3 nouveaux tests candidats dans hotkey_check.\n\n[NOTE 2026-11-19 23:11] [NOTE 2026-11-18] Verification terrain : Win+Alt+S fonctionne (bouton = raccourci = OK apres fix capture commits d7d07b9 + 116cb09). Defaut confirme viable ; reste en doing : cloture de la carte decision + mise a jour PR #59 si validation humaine.",
+      "deps": [],
+      "epic": "cadrage",
+      "kind": "decision",
+      "milestone": "M2",
+      "prio": "P1",
+      "size": "S",
+      "status": "doing",
       "assigned_to": ""
     }
   ]
