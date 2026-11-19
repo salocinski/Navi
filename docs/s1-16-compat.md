@@ -76,6 +76,7 @@ Outlook, et les tests individuels Chrome/Edge/VS Code/Discord.
 
 ## Traçabilité
 
+- Consolidé dans `docs/limites-compat.md` (carte N-064) — la version de référence des limites.
 - Carte : N-016. Sources : `src-tauri/examples/capture_recipe.rs`, `docs/s1-43-capture-restauration.md`,
   `docs/s1-15-ui-automation.md`, sondes et recettes humaines du 2026-11-18.
 - **Limitation tracée (2026-11-19)** : clôture demandée par l'humain avec rapport partiel.
