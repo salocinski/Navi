@@ -75,6 +75,9 @@ impl Default for TtsConfig {
 /// Moteur TTS Kokoro
 pub struct KokoroEngine {
     config: TtsConfig,
+    /// Environnement ONNX process-global (une seule instance possible par processus —
+    /// `OnceLock` côté ort). Créé une fois et conservé ; seule la Session est déchargée.
+    env: Mutex<Option<Environment>>,
     session: Arc<Mutex<Option<Session>>>,
     vocab: Arc<HashMap<String, i64>>,
     voice_styles: Arc<Mutex<HashMap<String, Vec<f32>>>>,
@@ -102,24 +105,41 @@ impl KokoroEngine {
         
         Ok(Self {
             config,
+            env: Mutex::new(None),
             session: Arc::new(Mutex::new(None)),
             vocab: Arc::new(vocab),
             voice_styles: Arc::new(Mutex::new(voice_styles)),
             phonemizer: Arc::new(phonemizer),
         })
     }
-    
-    /// Initialise la session ONNX (lazy)
+
+    /// Initialise la session ONNX (lazy). L'environnement est créé une seule fois
+    /// par processus ; un déchargement de la session préserve ce droit de rechargement.
     fn ensure_session(&self) -> Result<(), Box<dyn std::error::Error>> {
         let mut session_lock = self.session.lock().unwrap();
         if session_lock.is_none() {
-            let env = ort::environment::init().build()?;
-            let session = Session::builder(&env)?
+            let mut env_lock = self.env.lock().unwrap();
+            if env_lock.is_none() {
+                *env_lock = Some(ort::environment::init().build()?);
+            }
+            let session = Session::builder(env_lock.as_ref().unwrap())?
                 .with_optimization_level(GraphOptimizationLevel::Level3)?
                 .commit_from_file(&self.config.model_path)?;
             *session_lock = Some(session);
         }
         Ok(())
+    }
+
+    /// Décharge la session ONNX et libère la RAM du modèle. L'environnement ONNX
+    /// (global au processus) est conservé : le moteur reste utilisable après.
+    /// Retourne vrai si une session était chargée.
+    pub fn unload_session(&self) -> bool {
+        self.session.lock().map(|mut s| s.take().is_some()).unwrap_or(false)
+    }
+
+    /// Vrai si la session ONNX est chargée (moteur prêt à synthétiser).
+    pub fn session_loaded(&self) -> bool {
+        self.session.lock().map(|s| s.is_some()).unwrap_or(false)
     }
     
     /// Génère l'audio pour un texte

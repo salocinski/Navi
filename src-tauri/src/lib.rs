@@ -1,4 +1,4 @@
-//! Navi - Lecteur de texte à voix haute 100% local
+﻿//! Navi - Lecteur de texte à voix haute 100% local
 //!
 //! Architecture modulaire :
 //! - config: gestion de configuration persistante
@@ -48,6 +48,28 @@ pub(crate) fn last_foreground() -> Option<*mut core::ffi::c_void> {
 /// pour ne pas viser un HWND recyclé).
 pub(crate) fn clear_last_foreground() {
     LAST_FOREGROUND.store(0, std::sync::atomic::Ordering::SeqCst);
+}
+
+/// Secondes depuis l'epoch de la dernière activité utilisateur (lecture, pause, reprise,
+/// arrêt). Initialisé au démarrage ; décrémente à chaque interaction (carte N-075).
+static LAST_USER_ACTIVITY_SECS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// Marque une interaction utilisateur (lecture, pause, reprise, arrêt).
+pub(crate) fn touch_user_activity() {
+    LAST_USER_ACTIVITY_SECS.store(now_secs(), std::sync::atomic::Ordering::SeqCst);
+}
+
+/// Secondes écoulées depuis la dernière interaction (∞ si aucune).
+pub(crate) fn idle_secs() -> Option<u64> {
+    let last = LAST_USER_ACTIVITY_SECS.load(std::sync::atomic::Ordering::SeqCst);
+    (last != 0).then(|| now_secs().saturating_sub(last))
 }
 pub mod hotkey;
 pub mod tts;
@@ -185,9 +207,38 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
 }
 
 fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
+    touch_user_activity();
     state.machine.begin_capture().map_err(|e| e)?;
 
+    // 0. Chargement du modèle en parallèle de la capture (carte N-075) :
+    //    ~11 s à froid ; la capture (~1 s) se déroule pendant ce temps.
+    let loader = {
+        let loaded = state
+            .engine
+            .lock()
+            .map_err(|_| "verrou moteur".to_string())?
+            .as_ref()
+            .map(|e| e.session_loaded())
+            .unwrap_or(false);
+        if loaded {
+            None
+        } else {
+            let view = state.clone();
+            Some(std::thread::spawn(move || {
+                // Le chargement est idempotent (ensure_session) ; un préchargement
+                // concurrent au démarrage est réutilisé, pas doublonné.
+                (|| -> Result<(), String> {
+                    let mut guard = view.engine.lock().map_err(|_| "verrou moteur".to_string())?;
+                    let engine = guard.as_mut().ok_or_else(|| "Moteur TTS non chargé".to_string())?;
+                    crate::tts::TtsEngine::load(engine)
+                        .map_err(|e| format!("moteur TTS non chargeable : {e}"))
+                })()
+            }))
+        }
+    };
+
     // 1. Capture (snapshot presse-papiers + SendInput Ctrl+C + restauration)
+    //    — en parallèle du chargement éventuel.
     let cap = crate::capture::capture_selection();
     if !cap.success {
         let message = cap.error.clone().unwrap_or_else(|| "Capture échouée".to_string());
@@ -195,7 +246,31 @@ fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
         return Err(message);
     }
 
-    // 2. Nettoyage (HTML/RTF/ANSI/Unicode — médias/markup retirés, erreur claire sinon)
+    // 2. Attendre la fin du chargement éventuel du moteur (la lecture ne démarre
+    //    que moteur prêt — carte N-075).
+    if let Some(loader) = loader {
+        match loader.join() {
+            Ok(Ok(())) => {}
+            Ok(Err(message)) => {
+                state.machine.set_error(message.clone());
+                return Err(message);
+            }
+            Err(_) => {
+                let message = "Chargement du modèle interrompu".to_string();
+                state.machine.set_error(message.clone());
+                return Err(message);
+            }
+        }
+    }
+
+    // 2bis. Le modèle est là — vrai depuis le boot ou depuis l'étape 2.
+    if state.engine.lock().map_err(|_| "verrou moteur".to_string())?.is_none() {
+        let message = "Modèle Kokoro non chargé — réessayez la lecture".to_string();
+        state.machine.set_error(message.clone());
+        return Err(message);
+    }
+
+    // 3. Nettoyage (HTML/RTF/ANSI/Unicode — médias/markup retirés, erreur claire sinon)
     let format_hint = cap.format_used.to_lowercase();
     let cleaned = match crate::text::clean_captured_text(&cap.text, &format_hint) {
         Ok(text) => text,
@@ -206,13 +281,13 @@ fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
         }
     };
 
-    // 3. Langue (détection hors moteur ; hint fr en cas de doute)
+    // 4. Langue (détection hors moteur ; hint fr en cas de doute)
     let language = Some(match crate::text::detect_language(&cleaned) {
         crate::text::LanguageDetection::English => crate::tts::engine::TtsLanguage::English,
         _ => crate::tts::engine::TtsLanguage::French,
     });
 
-    // 4. Segments
+    // 5. Segments
     let segments = crate::text::segmentation::segment_text(&cleaned);
     if segments.is_empty() {
         let message = "Aucun segment à lire".to_string();
@@ -224,7 +299,7 @@ fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     state.machine.begin_generation_phase().map_err(|e| e)?;
     state.machine.set_text(cleaned, segment_count);
 
-    // 5. Audio : reset (nouvelle session) ou création (thread audio) si absent
+    // 6. Audio : reset (nouvelle session) ou création (thread audio) si absent
     {
         let mut audio = state.audio.lock().map_err(|_| "verrou audio".to_string())?;
         match audio.as_ref() {
@@ -235,15 +310,6 @@ fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
                 *audio = Some(handle);
             }
         }
-    }
-
-    // 6. Modèle requis — sinon déclencher un chargement en tâche de fond et demander un retry
-    if state.engine.lock().map_err(|_| "verrou moteur".to_string())?.is_none() {
-        let view = state.clone();
-        load_model_bg(view.engine.clone(), view.machine.clone(), view.loading.clone());
-        let message = "Modèle Kokoro en cours de chargement… relancez la lecture dans quelques secondes".to_string();
-        state.machine.set_error(message.clone());
-        return Err(message);
     }
 
     // 7. Jeton de génération + thread de synthèse
@@ -288,39 +354,7 @@ fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     Ok(format!("Lecture en cours — {segment_count} segments"))
 }
 
-/// Variante sans accès à `State` — utilisée par `read_selection_impl` pour démarrer un chargement.
-/// Refuse de spawner si un chargement est déjà en cours (ort : un seul Environment).
-fn load_model_bg(
-    engine: Arc<Mutex<Option<crate::tts::KokoroEngine>>>,
-    machine: crate::state::PlaybackStateMachine,
-    loading: Arc<std::sync::atomic::AtomicBool>,
-) {
-    if engine.lock().map(|e| e.is_some()).unwrap_or(true) {
-        return;
-    }
-    if loading.swap(true, std::sync::atomic::Ordering::SeqCst) {
-        return; // déjà en cours
-    }
-    std::thread::spawn(move || {
-        let dir = crate::utils::resolve_models_dir();
-        let result = (|| -> Result<crate::tts::KokoroEngine, String> {
-            let config = crate::tts::TtsConfig::with_dir(&dir);
-            let mut kokoro = crate::tts::KokoroEngine::new(config)
-                .map_err(|e| format!("chargement moteur impossible ({e}). Modèles attendus dans {}", dir.display()))?;
-            crate::tts::TtsEngine::load(&mut kokoro).map_err(|e| format!("modèle Kokoro non chargeable : {e}"))?;
-            Ok(kokoro)
-        })();
-        match result {
-            Ok(kokoro) => {
-                if let Ok(mut guard) = engine.lock() {
-                    *guard = Some(kokoro);
-                }
-            }
-            Err(message) => machine.set_error(message),
-        }
-        loading.store(false, std::sync::atomic::Ordering::SeqCst);
-    });
-}
+
 
 #[tauri::command]
 fn pause_reading(state: tauri::State<NaviState>) -> Result<(), String> {
@@ -328,6 +362,7 @@ fn pause_reading(state: tauri::State<NaviState>) -> Result<(), String> {
 }
 
 fn pause_reading_impl(state: &NaviRef) -> Result<(), String> {
+    touch_user_activity();
     state.machine.pause().map_err(|e| e)?;
     state
         .audio
@@ -344,6 +379,7 @@ fn resume_reading(state: tauri::State<NaviState>) -> Result<(), String> {
 }
 
 fn resume_reading_impl(state: &NaviRef) -> Result<(), String> {
+    touch_user_activity();
     state.machine.resume().map_err(|e| e)?;
     state
         .audio
@@ -360,6 +396,7 @@ fn stop_reading(state: tauri::State<NaviState>) -> Result<(), String> {
 }
 
 fn stop_reading_impl(state: &NaviRef) -> Result<(), String> {
+    touch_user_activity();
     state.machine.stop();
     if let Ok(audio) = state.audio.lock() {
         if let Some(handle) = audio.as_ref() {
@@ -385,6 +422,7 @@ pub fn run() {
         .setup(|app| {
             let state = NaviState::new();
             track_last_foreground();
+            touch_user_activity();
             let handle = app.handle().clone();
             state.machine.subscribe(move |event| {
                 // Événements consommés par l'UI via @tauri-apps/api/event (`navi-state`).
@@ -476,6 +514,53 @@ pub fn run() {
                         if !playing {
                             eprintln!("[navi] lecture terminée — retour à l'état Inactif");
                             view.machine.set_idle();
+                        }
+                    }
+                });
+            }
+
+            // Déchargement du modèle après inactivité (carte N-075) — libère la RAM de la
+            // session ONNX après N secondes sans utilisation (défaut 300, `NAVI_MODEL_IDLE_UNLOAD_SECS`).
+            // L'environnement ONNX (global au processus) est conservé : le modèle se recharge
+            // à la prochaine lecture (chargement à la demande, en parallèle de la capture).
+            {
+                let view = state.view();
+                std::thread::spawn(move || {
+                    let idle_limit = std::env::var("NAVI_MODEL_IDLE_UNLOAD_SECS")
+                        .ok()
+                        .and_then(|v| v.parse::<u64>().ok())
+                        .unwrap_or(300);
+                    loop {
+                        std::thread::sleep(std::time::Duration::from_secs(30));
+                        let Some(idle) = crate::idle_secs() else { continue };
+                        if idle < idle_limit {
+                            continue;
+                        }
+                        let phase = view.machine.state();
+                        if matches!(
+                            phase,
+                            crate::state::PlaybackState::Capturing
+                                | crate::state::PlaybackState::Generating
+                                | crate::state::PlaybackState::Playing
+                                | crate::state::PlaybackState::Paused
+                        ) {
+                            continue;
+                        }
+                        let loaded = view
+                            .engine
+                            .lock()
+                            .ok()
+                            .and_then(|e| e.as_ref().map(|x| x.session_loaded()))
+                            .unwrap_or(false);
+                        if !loaded {
+                            continue;
+                        }
+                        if let Ok(mut guard) = view.engine.lock() {
+                            if let Some(engine) = guard.as_mut() {
+                                if engine.unload_session() {
+                                    eprintln!("[navi] modèle déchargé après {idle_limit} s sans utilisation (carte N-075)");
+                                }
+                            }
                         }
                     }
                 });
