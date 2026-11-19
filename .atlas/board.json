@@ -1,5 +1,5 @@
 {
-  "estimated_total": 76,
+  "estimated_total": 77,
   "tickets": [
     {
       "id": "N-001",
@@ -607,6 +607,14 @@
       "description": "[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] skipTaskbar: true + visible: false dans tauri.conf.json : fenêtre principale absente de la barre des tâches et non visible au lancement ; Navi démarre silencieusement en zone de notification (médaillon sphère néon), clic gauche bascule la fenêtre. Vérifié manuellement par l'humain (barre de tâches vide, médaillon présent, fenêtre basculable). PR #75 (squash 9e35476).",
       "state": "done",
       "updated_at": "2026-11-19T15:57:51Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-077",
+      "title": "Pastille flottante du cercle animé pendant la lecture (révision TW-68)",
+      "description": "Demandée par l'humain 2026-11-19 : cercle animé flottant, visible de la combinaison (raccourci) jusqu'à la fin de l'audio, pour démontrer le statut. Révise la décision TW-68 (pastille B écartée). A + C conservés.",
+      "state": "doing",
+      "updated_at": "2026-11-19T17:59:26Z",
       "assignee": ""
     }
   ]
