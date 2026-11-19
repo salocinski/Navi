@@ -14,7 +14,9 @@
       {
         "title": "Navi",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "skipTaskbar": true,
+        "visible": false
       }
     ],
     "security": {
@@ -24,6 +26,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": [
+      "resources/hey_listen.wav"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
