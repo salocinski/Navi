@@ -135,6 +135,22 @@ Stack : Rust + Tauri 2 + React/TypeScript, Windows 11
 
 ---
 
+## Décision : Ryan voix officielle — migration TTS vers Qwen3-TTS 0.6B (TW-070, N-070, N-071)
+
+**Date** : 2026-11-19
+**Contexte** : échantillonnage comparatif de voix (carte N-070), texte Domio identique en FR et EN, Qwen3-TTS-12Hz-0.6B-CustomVoice (Apache-2.0, 0.9 Md params, bf16) testé sur RTX 3060 Ti.
+**Décision** : **Ryan** (voix anglaise native, timbre dynamique, compatible FR/EN) est la **voix officielle de Navi**. Le moteur TTS de Navi **migre de Kokoro vers Qwen3-TTS-12Hz-0.6B-CustomVoice** (carte N-071). Kokoro reste en production jusqu'à ce que la migration soit validée terrain (voix, latence, stabilité, recette) ; le moteur de secours reste envisageable (N-067).
+**Implications** :
+- Qwen3-TTS est un modèle PyTorch/Transformers (pas ONNX) : l'intégration passe par un **sidecar Python** (processus embarqué) ou une **conversion ONNX** non triviale — chantier L, carte N-071 priorité P1.
+- Distribution : oblige à embarquer (ou télécharger) torch + poids (~1,8 Go) → revoir mentions légales (N-061) et installeur (N-060) ; modèles et torch non inclus dans le dépôt (gitignorés).
+- Licensing : modèle Apache-2.0 (conforme usage produit) mais mentions à intégrer (LICENSE_QWEN / NOTICE) ; vérifier aussi les maths des voix officielles.
+- UX : voix préchargée au démarrage de l'app ; latence à mesurer sur lecture réelle (RTF à établir sur machine de référence).
+- Kokoro reste utilisé pour les cartes jusqu'à disponibilité Qwen validée (recette humaine avec la voix Ryan sur texte FR et EN).
+**Raison** : la décision vient de l'écoute humaine ; Ryan couvre à la fois EN (natif) et FR (lisible) avec un timbre cohérent pour une identité produit unique ; Qwen3-TTS offre 9 voix et une qualité perçue supérieure à Kokoro sur le français.
+**Ouvert** : voix par défaut définitive (Ryan), mode fallback si Qwen indisponible (Kokoro), indices de latence/RTF à produire dans N-071, relecture légale lots 2–3 (N-061) avant distribution.
+
+---
+
 ## Prochaine entrée de décision à consigner
 
 **Date à venir** : Suivre toute décision dans un sprint ultérieur.
