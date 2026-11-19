@@ -437,24 +437,24 @@
       "id": "N-055",
       "title": "Décider de la forme finale de la signature sonore",
       "description": "Voix aiguë, claire, enjouée, 0,8 à 1,5 s, volume modéré.\n\nRisque : ne reproduire aucun élément protégé d'une franchise existante.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-19T15:45:36Z",
       "assignee": ""
     },
     {
       "id": "N-056",
       "title": "Créer l'enregistrement original de démarrage",
       "description": "Enregistrement original, aucun extrait ni imitation d'un personnage existant.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-19T15:45:36Z",
       "assignee": ""
     },
     {
       "id": "N-057",
       "title": "Jouer la signature une seule fois quand raccourcis et capture sont prêts",
       "description": "Ne pas laisser croire que le TTS est prêt si le modèle charge encore.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-19T15:45:36Z",
       "assignee": ""
     },
     {
