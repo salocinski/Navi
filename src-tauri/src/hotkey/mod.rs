@@ -116,6 +116,11 @@ impl HotkeyManager {
         Ok(id)
     }
     
+    /// Map id → action pour le thread d'écoute.
+    pub(crate) fn hotkeys(&self) -> HashMap<u32, HotkeyAction> {
+        self.hotkeys.clone()
+    }
+
     /// Enregistre les raccourcis par défaut Navi ; n'abandonne pas au premier échec.
     ///
     /// Comportement en cas de conflit (carte TW-018) :

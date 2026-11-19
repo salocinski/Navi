@@ -18,6 +18,7 @@ interface StatusDto {
   total_chunks: number;
   engine_loaded: boolean;
   audio_ready: boolean;
+  hotkey_error?: string | null;
 }
 
 interface StateEventPayload {
@@ -46,6 +47,7 @@ function App() {
     total_chunks: 0,
     engine_loaded: false,
     audio_ready: false,
+    hotkey_error: null,
   });
   const [lastError, setLastError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -157,6 +159,12 @@ function App() {
       <progress max={Math.max(status.total_chunks, 1)} value={status.current_chunk} />
 
       {lastError && <p className="error-box">{lastError}</p>}
+
+      {status.hotkey_error && (
+        <p className="error-box" title="Un raccourci n'a pas pu être enregistré">
+          ⚠️ {status.hotkey_error}
+        </p>
+      )}
 
       <div className="action-row">
         <button
