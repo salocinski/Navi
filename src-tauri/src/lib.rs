@@ -498,6 +498,12 @@ pub fn run() {
                 }
             }
 
+            // Anneaux d'état de l'icône (carte N-050) — DA maquette C (prêt/génération/lecture/pause/erreur).
+            {
+                let view = state.view();
+                crate::ui::tray_icons::spawn_icon_animator(app.handle().clone(), view);
+            }
+
             // Raccourcis globaux — défauts, écoute via GlobalHotKeyEvent.
             {
                 let view = state.view();
