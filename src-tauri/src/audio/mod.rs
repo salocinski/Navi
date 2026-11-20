@@ -175,7 +175,6 @@ pub struct AudioPlayer {
     condvar: Arc<Condvar>,
     paused: Arc<Mutex<bool>>,
     consumer_generation: Arc<Mutex<u64>>,
-    consumer_alive: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl AudioPlayer {
@@ -190,55 +189,61 @@ impl AudioPlayer {
             condvar: Arc::new(Condvar::new()),
             paused: Arc::new(Mutex::new(false)),
             consumer_generation: Arc::new(Mutex::new(0)),
-            consumer_alive: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         };
         player.spawn_consumer();
         Ok(player)
     }
 
-    /// Spawn (ou remplace) le consommateur audio.
-    /// Chaque spawn incrémente `consumer_generation` ; les anciens consommateurs sortent d'eux-mêmes.
+    /// Invalide le consommateur courant (bump de génération) et réveille son
+    /// thread : il verra un jeton périmé et sortira **sans puiser** dans la file.
     ///
-    /// Ne fait rien si un consommateur est déjà en vie (évite la multiplication des threads).
+    /// Appelé par `stop()` et `reset()` — c'est le seul mécanisme d'arrêt du
+    /// consommateur ; aucun drapeau d'état partagé à observer.
+    fn invalidate_consumers(&self) {
+        *self.consumer_generation.lock().unwrap() += 1;
+        self.condvar.notify_all();
+    }
+
+    /// Spawn un consommateur neuf, seul détenteur du jeton de génération courant.
+    ///
+    /// Toujours appelé (aucun drapeau « déjà vivant ») : après un `stop()`,
+    /// l'ancien thread peut être encore vivant quelques microsecondes ; sa
+    /// génération périmée le fait sortir sans consommer les échantillons de la
+    /// nouvelle session. C'est ce qui garantit qu'une relance n'est jamais muette
+    /// (carte N-078).
     fn spawn_consumer(&self) {
-        if self
-            .consumer_alive
-            .load(std::sync::atomic::Ordering::SeqCst)
-        {
-            return;
-        }
-        self.consumer_alive
-            .store(true, std::sync::atomic::Ordering::SeqCst);
         let sink = self.sink.clone();
         let pending = self.pending.clone();
         let condvar = self.condvar.clone();
         let paused = self.paused.clone();
         let generation = self.consumer_generation.clone();
-        let alive = self.consumer_alive.clone();
 
         let my_gen = {
             let mut counter = generation.lock().unwrap();
             *counter += 1;
             *counter
         };
+        // Les consommateurs précédents (éventuellement encore endormis) sortent.
+        self.condvar.notify_all();
 
         thread::spawn(move || {
             loop {
-                let is_current = { *generation.lock().unwrap() == my_gen };
-                if !is_current {
+                // Jeton périmé : sortir AVANT toute ponction, pour ne jamais
+                // voler un segment destiné à la session suivante.
+                if *generation.lock().unwrap() != my_gen {
                     break;
                 }
 
                 let samples = {
                     let mut pending = pending.lock().unwrap();
                     loop {
+                        if *generation.lock().unwrap() != my_gen {
+                            break None;
+                        }
                         if let Some(samples) = pending.pop() {
                             break Some(samples);
                         }
                         // Sortir proprement si ce consommateur n'est plus le courant
-                        if *generation.lock().unwrap() != my_gen {
-                            break None;
-                        }
                         pending = condvar.wait(pending).unwrap();
                     }
                 };
@@ -269,6 +274,12 @@ impl AudioPlayer {
                 }
 
                 let sink_lock = sink.lock().unwrap();
+                // Re-vérification sous verrou : `reset()` invalide avant de
+                // remplacer le sink — un échantillon de l'ancienne session ne
+                // peut donc pas atterrir dans le nouveau sink.
+                if *generation.lock().unwrap() != my_gen {
+                    break;
+                }
                 if let Some(sink) = sink_lock.as_ref() {
                     let n = samples.len();
                     let source = SamplesBuffer::new(1, SAMPLE_RATE, samples);
@@ -280,7 +291,6 @@ impl AudioPlayer {
                     );
                 }
             }
-            alive.store(false, std::sync::atomic::Ordering::SeqCst);
         });
     }
 
@@ -330,10 +340,9 @@ impl AudioPlayer {
     /// Arrête la lecture : invalide le consommateur courant (génération), vide la file,
     /// coupe le sink — la position est abandonnée volontairement (arrêt ≠ pause).
     pub fn stop(&self) {
-        *self.consumer_generation.lock().unwrap() += 1;
+        self.invalidate_consumers();
         *self.paused.lock().unwrap() = false;
         self.clear_queue();
-        self.condvar.notify_all();
         if let Some(sink) = self.sink.lock().unwrap().take() {
             sink.stop();
         }
@@ -342,9 +351,15 @@ impl AudioPlayer {
     /// Prépare une nouvelle session de lecture : invalide le consommateur courant,
     /// nouveau sink + consommateur spawné, file vidée.
     pub fn reset(&self) -> Result<(), rodio::PlayError> {
+        // Sink créé d'abord : si le périphérique refuse, l'ancien consommateur
+        // reste valide et la session en cours n'est pas cassée.
+        let sink = Some(Sink::try_new(&self.handle)?);
+        // Invalider AVANT de remplacer le sink : un consommateur retardataire ne
+        // peut pas ajouter un segment de l'ancienne session au nouveau sink.
+        self.invalidate_consumers();
         *self.paused.lock().unwrap() = false;
         self.clear_queue();
-        *self.sink.lock().unwrap() = Some(Sink::try_new(&self.handle)?);
+        *self.sink.lock().unwrap() = sink;
         self.spawn_consumer();
         Ok(())
     }
@@ -470,5 +485,40 @@ mod tests {
         q.clear(); // arrêt
         assert_eq!(q.len(), 0);
         assert_eq!(q.pop(), None);
+    }
+
+    /// Attend (max 2 s) que la file soit vidée par un consommateur vivant.
+    fn file_consommee(player: &AudioPlayer) -> bool {
+        for _ in 0..100 {
+            if player.queue_len() == 0 {
+                return true;
+            }
+            thread::sleep(Duration::from_millis(20));
+        }
+        false
+    }
+
+    /// Carte N-078 : après un arrêt, `reset()` doit garantir un consommateur
+    /// vivant même si l'ancien thread n'a pas encore observé son invalidation.
+    ///
+    /// Le test ouvre un vrai périphérique ; sur une machine sans sortie audio
+    /// (CI), il est déclaré non concluant et rend la main.
+    #[test]
+    fn reset_apres_stop_relance_un_consommateur() {
+        let Ok(player) = AudioPlayer::new() else {
+            eprintln!("[audio] test ignoré : aucun périphérique de sortie");
+            return;
+        };
+        let tone = || vec![0.0f32; SAMPLE_RATE as usize / 20]; // 50 ms de silence
+
+        for cycle in 0..5 {
+            player.stop();
+            player.reset().expect("reset doit réussir");
+            player.enqueue(tone());
+            assert!(
+                file_consommee(&player),
+                "cycle {cycle} : session relancée muette (aucun consommateur vivant)"
+            );
+        }
     }
 }
