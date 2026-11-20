@@ -1445,7 +1445,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 77,
       "title": "Pastille flottante du cercle animé pendant la lecture (révision TW-68)",
-      "note": "Demandée par l'humain 2026-11-19 : cercle animé flottant, visible de la combinaison (raccourci) jusqu'à la fin de l'audio, pour démontrer le statut. Révise la décision TW-68 (pastille B écartée). A + C conservés.",
+      "note": "Demandée par l'humain 2026-11-19 : cercle animé flottant, visible de la combinaison (raccourci) jusqu'à la fin de l'audio, pour démontrer le statut. Révise la décision TW-68 (pastille B écartée). A + C conservés.\n\n[NOTE 2026-11-20 01:02] CI rouge (2026-11-19) : prettier --check refusait public/floating.html en CI uniquement. Cause : checkout Windows (core.autocrlf) livrait le fichier en CRLF, aucun attribut eol pour *.html (les .ts/.json étaient couverts). Correction : *.html text eol=lf dans .gitattributes. Vérif locale : repro CRLF -> échec prettier, puis format:check vert ; CI PR #86 verte. PR #87 (empilée) a reçu le correctif par merge.",
       "deps": [],
       "epic": "realisation",
       "kind": "tache",
