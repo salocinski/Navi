@@ -1,5 +1,5 @@
 {
-  "estimated_total": 77,
+  "estimated_total": 82,
   "tickets": [
     {
       "id": "N-001",
@@ -615,6 +615,46 @@
       "description": "Demandée par l'humain 2026-11-19 : cercle animé flottant, visible de la combinaison (raccourci) jusqu'à la fin de l'audio, pour démontrer le statut. Révise la décision TW-68 (pastille B écartée). A + C conservés.",
       "state": "doing",
       "updated_at": "2026-11-19T17:59:26Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-078",
+      "title": "Audio muet après Stop/Reset : consommateur jamais relancé (silence total)",
+      "description": "Rapporte par l'humain 2026-11-19 pendant les tests de la pastille : lecture annoncee (machine en Playing) mais silence. Cause probable : reset() ne relance pas le consommateur si l'ancien n'a pas encore repasse alive=false (course arret/relance) - file jamais consommee.\n\n[NOTE 2026-11-20 00:43] [PRISE 2026-11-20] Reprise sur branche fix/TW-078-audio-silence : diagnostic confirme la course alive-flag (reset() saute le spawn si l'ancien consommateur n'a pas encore store(false) apres stop) ; correction par generation inconditionnelle + invalidation avant remplacement du sink.",
+      "state": "doing",
+      "updated_at": "2026-11-19T18:07:57Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-079",
+      "title": "Alléger le dossier de travail en supprimant les éléments temporaires",
+      "description": "",
+      "state": "doing",
+      "updated_at": "2026-11-19T18:54:16Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-080",
+      "title": "Auditer et nettoyer les fichiers obsolètes du dossier de travail",
+      "description": "[NOTE 2026-11-19 15:11] [NOTE 2026-11-19] Audit non destructif : src-tauri/target (25,59 Go, ignoré Git, artefacts Cargo) et scratch/ (10,04 Go, ignoré Git, essais/venv) représentent 35,63 Go. Aucune compilation Cargo/Rust/Python active. Suppression en attente de validation du propriétaire.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Suppression validée et effectuée de src-tauri/target (25,59 Go, artefacts Cargo) et scratch/ (10,04 Go, essais ignorés). Vérification : les deux chemins sont absents ; taille restante mesurée : 0,27 Go. Aucun fichier suivi modifié par ce nettoyage ; aucune PR requise.",
+      "state": "done",
+      "updated_at": "2026-11-19T20:13:05Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-081",
+      "title": "Auditer les fichiers nettoyables du disque C",
+      "description": "[NOTE 2026-11-19 15:15] [NOTE 2026-11-19] Audit non destructif : caches personnels identifiés — pip 3,75 Go, Temp utilisateur 3,59 Go, npm-cache 3,53 Go, Cargo registry 1,42 Go, rustup toolchains 1,30 Go ; caches navigateur/VS Code/crash dumps ~0,48 Go. Aucun effacement effectué. Les métriques globales du volume et zones système sont inaccessibles sans privilèges.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Nettoyage validé effectué : caches pip (3,75 Go), npm (3,53 Go), Temp utilisateur (3,59 Go), navigateurs/VS Code/crash dumps (~0,48 Go). Vérification finale : pip et npm 0 ; reliquats actifs ~125 Mo. Gain estimé : ~11,23 Go. Cargo registry et rustup conservés. Aucune PR requise : aucune modification de fichier suivi.",
+      "state": "done",
+      "updated_at": "2026-11-19T20:17:58Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-082",
+      "title": "Évaluer le déplacement de Cargo et Rustup vers un autre disque",
+      "description": "[NOTE 2026-11-19 15:19] [NOTE 2026-11-19] Mesure : C:\\Users\\Dua Lipa\\.cargo = 1,59 Go ; .rustup = 1,30 Go ; gain transférable total = 2,89 Go. D: possède ~114,21 Go libres. Toolchain active : stable-x86_64-pc-windows-msvc. Aucun déplacement effectué ; décision du propriétaire attendue sur la méthode (variables CARGO_HOME/RUSTUP_HOME + PATH, ou jonctions).\n\n[NOTE 2026-11-19 15:20] [NOTE 2026-11-19] Préférence exprimée : destination E:\\. Vérification : volume E: présent et ~931,4 Go libres. Le déplacement ne casse pas Rust/Cargo à condition de définir CARGO_HOME, RUSTUP_HOME et le PATH vers la nouvelle destination, puis d'ouvrir un nouveau terminal.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Cargo (1,59 Go) et Rustup (1,30 Go) déplacés de C: vers E:\\Rust. Variables utilisateur CARGO_HOME=E:\\Rust\\cargo et RUSTUP_HOME=E:\\Rust\\rustup définies ; PATH contient E:\\Rust\\cargo\\bin. Preuves : cargo 1.99.1, rustc 1.99.1 et toolchain stable-x86_64-pc-windows-msvc validés. Sources C: absentes ; gain ~2,89 Go. Aucune PR requise : configuration utilisateur uniquement.",
+      "state": "done",
+      "updated_at": "2026-11-19T20:34:43Z",
       "assignee": ""
     }
   ]
