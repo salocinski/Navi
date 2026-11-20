@@ -385,12 +385,15 @@ impl Drop for AudioPlayer {
     }
 }
 
-/// Joue la signature sonore de démarrage (« Hey listen » — voix féminine aiguë, original).
+/// Joue la signature sonore de démarrage (« hey_listen » — enregistrement du
+/// propriétaire, carte N-083).
 ///
-/// Non-bloquant : un thread dédié joue la WAV intégralement.
+/// Non-bloquant : un thread dédié joue le fichier intégralement (MP3 ou WAV,
+/// décodé par rodio/symphonia).
 /// Ne panique jamais : toute erreur de périphérique/fichier/format est journalisée et tolérée.
 pub fn play_signature_once() {
-    let path = crate::utils::resolve_signature_wav();
+    let path = crate::utils::resolve_signature();
+    eprintln!("[navi] signature de démarrage : {}", path.display());
     std::thread::spawn(move || {
         let file = match std::fs::File::open(&path) {
             Ok(f) => f,
@@ -520,5 +523,16 @@ mod tests {
                 "cycle {cycle} : session relancée muette (aucun consommateur vivant)"
             );
         }
+    }
+
+    /// Carte N-083 : la signature fournie doit être présente dans le dépôt et
+    /// décodable par rodio/symphonia (aucun périphérique audio requis).
+    #[test]
+    fn signature_de_demarrage_presente_et_decodable() {
+        let path = crate::utils::resolve_signature();
+        let file = std::fs::File::open(&path)
+            .unwrap_or_else(|e| panic!("signature absente ({}) : {e}", path.display()));
+        let decoder = Decoder::new(std::io::BufReader::new(file)).expect("signature indécodable");
+        assert!(decoder.count() > 0, "signature vide");
     }
 }

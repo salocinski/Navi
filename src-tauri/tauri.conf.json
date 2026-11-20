@@ -28,7 +28,7 @@
     "active": true,
     "targets": "all",
     "resources": [
-      "resources/hey_listen.wav"
+      "resources/hey_listen.mp3"
     ],
     "icon": [
       "icons/32x32.png",
@@ -39,3 +39,4 @@
     ]
   }
 }
+

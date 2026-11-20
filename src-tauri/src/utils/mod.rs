@@ -7,46 +7,48 @@ pub fn app_data_dir() -> Option<PathBuf> {
     dirs::data_dir().map(|d| d.join("Navi"))
 }
 
-/// Chemin de la signature sonore de démarrage (`hey_listen.wav`).
+/// Nom du fichier de signature de démarrage (enregistrement fourni par le
+/// propriétaire, carte N-083). Remplaçait la signature générée `hey_listen.wav`.
+const SIGNATURE_FILE: &str = "hey_listen.mp3";
+
+/// Chemin de la signature sonore de démarrage.
 ///
-/// Ordre : variable `NAVI_SIGNATURE_WAV` → `CARGO_MANIFEST_DIR/../resources/hey_listen.wav`
-/// (dév) → dossier `resources/` à côté de l'exécutable / dans le bundle.
-pub fn resolve_signature_wav() -> PathBuf {
-    if let Ok(path) = std::env::var("NAVI_SIGNATURE_WAV") {
-        let p = PathBuf::from(path);
-        if p.exists() {
-            return p;
-        }
-    }
-    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let candidates = [
-        manifest.join("..").join("resources").join("hey_listen.wav"),
-        manifest.join("resources").join("hey_listen.wav"),
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| {
-                p.parent()
-                    .map(|d| d.join("resources").join("hey_listen.wav"))
-            })
-            .unwrap_or_else(|| PathBuf::from("resources/hey_listen.wav")),
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| {
-                p.parent()
-                    .map(|d| d.join("..").join("resources").join("hey_listen.wav"))
-            })
-            .unwrap_or_else(|| PathBuf::from("../resources/hey_listen.wav")),
-    ];
-    for candidate in candidates {
-        if let Ok(p) = candidate.canonicalize() {
+/// Ordre : `NAVI_SIGNATURE_FILE` → `NAVI_SIGNATURE_WAV` (compatibilité) →
+/// `CARGO_MANIFEST_DIR/../resources/` (dév) → dossier `resources/` à côté de
+/// l'exécutable / dans le bundle.
+pub fn resolve_signature() -> PathBuf {
+    for var in ["NAVI_SIGNATURE_FILE", "NAVI_SIGNATURE_WAV"] {
+        if let Ok(path) = std::env::var(var) {
+            let p = PathBuf::from(path);
             if p.exists() {
                 return p;
             }
-        } else if candidate.exists() {
+        }
+    }
+
+    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let mut bases = vec![
+        manifest.join("..").join("resources"),
+        manifest.join("resources"),
+    ];
+    if let Some(dir) = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+    {
+        bases.push(dir.join("resources"));
+        bases.push(dir.join("..").join("resources"));
+    }
+
+    for base in bases {
+        let candidate = base.join(SIGNATURE_FILE);
+        if let Ok(normalized) = candidate.canonicalize() {
+            return normalized;
+        }
+        if candidate.exists() {
             return candidate;
         }
     }
-    manifest.join("resources").join("hey_listen.wav")
+    manifest.join("resources").join(SIGNATURE_FILE)
 }
 
 /// Retourne le chemin du répertoire des modèles — dev ou utilisateur.
