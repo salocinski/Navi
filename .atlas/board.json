@@ -396,7 +396,7 @@
     {
       "id": "N-050",
       "title": "Implémenter les anneaux d'état de l'icône",
-      "description": "Design retenu (maquette C) : prêt = aucun anneau ; génération = anneau bleu qui tourne ; lecture = anneau cyan qui pulse ; pause = anneau ambre fixe ; erreur = pastille rouge.\n\nCritères :\n- [ ] Les 5 états s'affichent sur l'icône\n- [ ] Animations désactivées si prefers-reduced-motion\n- [ ] Lisible à 16, 20 et 24 px",
+      "description": "Design retenu (maquette C) : prêt = aucun anneau ; génération = anneau bleu qui tourne ; lecture = anneau cyan qui pulse ; pause = anneau ambre fixe ; erreur = pastille rouge.\n\nCritères :\n- [ ] Les 5 états s'affichent sur l'icône\n- [ ] Animations désactivées si prefers-reduced-motion\n- [ ] Lisible à 16, 20 et 24 px\n\n[NOTE 2026-11-20 01:02] CI rouge (2026-11-19) : ESLint refusait tools/gen_tray_icons.js (require/Buffer/__dirname/console/process = globals Node, absent du périmètre navigateur). Correction : bloc d'override ESLint pour tools/**/*.js (sourceType commonjs + globals Node, règle no-require-imports levée). Vérifs locales : lint, format:check, build, clippy -D warnings, cargo test (73+3+15) verts ; CI PR #84 verte (4m24s).",
       "state": "todo",
       "updated_at": "2026-11-17T15:50:02Z",
       "assignee": ""
