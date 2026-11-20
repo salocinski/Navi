@@ -1,5 +1,5 @@
 {
-  "estimated_total": 82,
+  "estimated_total": 83,
   "tickets": [
     {
       "id": "N-001",
@@ -655,6 +655,14 @@
       "description": "[NOTE 2026-11-19 15:19] [NOTE 2026-11-19] Mesure : C:\\Users\\Dua Lipa\\.cargo = 1,59 Go ; .rustup = 1,30 Go ; gain transférable total = 2,89 Go. D: possède ~114,21 Go libres. Toolchain active : stable-x86_64-pc-windows-msvc. Aucun déplacement effectué ; décision du propriétaire attendue sur la méthode (variables CARGO_HOME/RUSTUP_HOME + PATH, ou jonctions).\n\n[NOTE 2026-11-19 15:20] [NOTE 2026-11-19] Préférence exprimée : destination E:\\. Vérification : volume E: présent et ~931,4 Go libres. Le déplacement ne casse pas Rust/Cargo à condition de définir CARGO_HOME, RUSTUP_HOME et le PATH vers la nouvelle destination, puis d'ouvrir un nouveau terminal.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Cargo (1,59 Go) et Rustup (1,30 Go) déplacés de C: vers E:\\Rust. Variables utilisateur CARGO_HOME=E:\\Rust\\cargo et RUSTUP_HOME=E:\\Rust\\rustup définies ; PATH contient E:\\Rust\\cargo\\bin. Preuves : cargo 1.99.1, rustc 1.99.1 et toolchain stable-x86_64-pc-windows-msvc validés. Sources C: absentes ; gain ~2,89 Go. Aucune PR requise : configuration utilisateur uniquement.",
       "state": "done",
       "updated_at": "2026-11-19T20:34:43Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-083",
+      "title": "Utiliser l'enregistrement hey_listen fourni par le proprietaire comme signature de demarrage",
+      "description": "Demande humaine 2026-11-20 : le fichier hey_listen.mp3 depose a la racine remplace la signature generee (resources/hey_listen.wav). A livrer dans la PR #87 (consigne : meme PR).\n\n[NOTE 2026-11-20 01:20] Livré dans la PR #87 (branche fix/TW-078) : hey_listen.mp3 deplace vers src-tauri/resources/, ancien WAV genere supprime, bundle tauri mis a jour, utils::resolve_signature() (NAVI_SIGNATURE_FILE, NAVI_SIGNATURE_WAV en compat), *.mp3 binary. Preuves : test signature_de_demarrage_presente_et_decodable vert (decodage MP3 sans peripherique), cargo test 72+3+15, clippy -D warnings, fmt, prettier ; lancement tauri dev -> trace 'signature de demarrage : ...\\\\resources\\\\hey_listen.mp3' sans erreur de decodage. Doc docs/s1-83-signature.md + decision consignee dans docs/decisions.md.",
+      "state": "doing",
+      "updated_at": "2026-11-20T06:17:06Z",
       "assignee": ""
     }
   ]

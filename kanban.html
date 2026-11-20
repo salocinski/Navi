@@ -1519,6 +1519,19 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "size": "M",
       "status": "done",
       "assigned_to": ""
+    },
+    {
+      "num": 83,
+      "title": "Utiliser l'enregistrement hey_listen fourni par le proprietaire comme signature de demarrage",
+      "note": "Demande humaine 2026-11-20 : le fichier hey_listen.mp3 depose a la racine remplace la signature generee (resources/hey_listen.wav). A livrer dans la PR #87 (consigne : meme PR).\n\n[NOTE 2026-11-20 01:20] Livré dans la PR #87 (branche fix/TW-078) : hey_listen.mp3 deplace vers src-tauri/resources/, ancien WAV genere supprime, bundle tauri mis a jour, utils::resolve_signature() (NAVI_SIGNATURE_FILE, NAVI_SIGNATURE_WAV en compat), *.mp3 binary. Preuves : test signature_de_demarrage_presente_et_decodable vert (decodage MP3 sans peripherique), cargo test 72+3+15, clippy -D warnings, fmt, prettier ; lancement tauri dev -> trace 'signature de demarrage : ...\\\\resources\\\\hey_listen.mp3' sans erreur de decodage. Doc docs/s1-83-signature.md + decision consignee dans docs/decisions.md.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "S",
+      "status": "doing",
+      "assigned_to": ""
     }
   ]
 }
