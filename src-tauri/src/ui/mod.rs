@@ -10,6 +10,8 @@
 //!   les libellés du mockup (Ctrl Alt Espace) sont obsolètes (TW-072).
 //! - « Démarrer avec Windows » n'est pas encore câblé (N-054) — pas de faux item.
 
+pub(crate) mod flotteur;
+
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};

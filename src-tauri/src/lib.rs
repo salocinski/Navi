@@ -489,6 +489,40 @@ pub fn run() {
                 let _ = handle.emit("navi-state", event);
             });
 
+            // Pastille flottante du cercle animé (carte N-077, révision TW-68) —
+            // frameless, toujours-au-dessus, sans focus, non cliquable ; visible de la
+            // combinaison (Capture) jusqu'à la fin de l'audio ; masquée sur Stopped/Idle.
+            {
+                if let Err(err) = crate::ui::flotteur::create_floating_window(app.handle()) {
+                    eprintln!("[navi] pastille flottante indisponible : {err}");
+                }
+            }
+            {
+                let handle = app.handle().clone();
+                state.machine.subscribe(move |event| {
+                    use crate::state::{PlaybackState, StateEvent};
+                    let StateEvent::PhaseChanged { to, .. } = event else {
+                        return;
+                    };
+                    let Some(window) = handle.get_webview_window(crate::ui::flotteur::LABEL) else {
+                        return;
+                    };
+                    let visible = matches!(
+                        to,
+                        PlaybackState::Capturing
+                            | PlaybackState::Generating
+                            | PlaybackState::Playing
+                            | PlaybackState::Paused
+                            | PlaybackState::Error
+                    );
+                    if visible {
+                        let _ = window.show();
+                    } else {
+                        let _ = window.hide();
+                    }
+                });
+            }
+
             // Icône de zone de notification + menu (carte N-047) — feuille DA docs/pistes-interface.html.
             {
                 let view = state.view();

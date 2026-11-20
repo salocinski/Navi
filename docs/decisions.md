@@ -35,6 +35,16 @@ Stack : Rust + Tauri 2 + React/TypeScript, Windows 11
 
 ---
 
+## Décision : Pastille flottante du cercle animé (TW-077, amendement TW-68)
+
+**Date** : 2026-11-19
+**Contexte** : TW-68 écartait la piste B (pastille/mini-lecteur flottant) au profit du panneau A + anneaux C. Le 2026-11-19, l'humain demande explicitement une pastille flottante du cercle animé « lorsqu'on fait la combinaison jusqu'à la fin de l'audio, afin de démontrer le statut » — il s'agit d'une **révision délibérée**, pas d'un contournement de la décision.
+**Décision** : Ré-introduire la pastille sous une forme minimale : fenêtre 72×72 px, frameless, fond transparent, toujours-au-dessus, **sans focus**, **non cliquable** (`set_ignore_cursor_events`), skip_taskbar, masquée par défaut. Visible de la Capture jusqu'à Stopped/Idle ; sur Error elle reste visible en rouge jusqu'à la prochaine action. Animation CSS inline dans la page (`public/floating.html`), respect de `prefers-reduced-motion` natif (media query). Panneau A et anneaux C inchangés.
+**Implication** : Révision explicite de TW-68 ; carte N-077 ; doc décisions amendée. La DA (pistes-interface.html) décrit toujours la variante B ; ce document fait foi pour l'amendement.
+**Raison** : feedback de statut lisible pendant toute la session (génération → lecture → pause/erreur), sans prendre le focus ni risquer un clic perdu par l'app capturée ; cohérent avec les anneaux C.
+
+---
+
 ## Décision : Filtre CPU contre GPU pour ONNX Runtime (TW-??)
 
 **Date** : 2026-11-17
