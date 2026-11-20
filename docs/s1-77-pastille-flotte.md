@@ -29,6 +29,27 @@ Une pastille ronde 72×72 px, toujours au-dessus de tout, sans focus, non cliqua
 - **Non interactif** : `ignore_cursor_events` — zéro frontière cliquable gênante sur les apps plein écran.
 - 72 px est une suggestion de départ ; DPI et position (bas-droite) sont du domaine du goût — à ajuster à la recette humaine.
 
+## Correctif — 2026-11-20 : la pastille ne changeait jamais d'état
+
+**Symptôme** (humain) : aucune différence de style entre la capture et la lecture.
+
+**Cause** : `src-tauri/capabilities/default.json` déclarait `"windows": ["main"]`. En Tauri v2, l'ACL
+est **par fenêtre** : la webview `flotteur` n'avait aucune permission, donc
+`core:event:default` (dont `listen`) était refusé et la page restait figée sur son état
+par défaut (`generating`, arc bleu tournant) — quel que soit l'état réel.
+
+**Correction** : `"windows": ["main", "flotteur"]`.
+
+**Vérification instrumentée** (captures d'écran du coin bas-droit, `tauri dev`) :
+
+| Séquence | Attendu | Observé |
+|---|---|---|
+| Lecture (Win+Alt+S) | anneau cyan | cyan |
+| Ctrl+Maj+P (pause) | anneau ambre | ambre |
+| Ctrl+Maj+P (reprise) | anneau cyan | cyan |
+| Ctrl+Maj+S (arrêt) | masquée | masquée |
+| Segment trop long (erreur Kokoro) | pastille rouge | rouge |
+
 ## Vérification
 
 ```text

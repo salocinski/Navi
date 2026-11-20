@@ -20,6 +20,7 @@ Cargo.lock text eol=lf
 *.jpg binary
 *.jpeg binary
 *.wav binary
+*.mp3 binary
 *.pdf binary
 *.onnx binary
 *.bin binary
