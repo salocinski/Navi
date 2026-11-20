@@ -14,6 +14,8 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};
 
+pub(crate) mod tray_icons;
+
 /// Crée le menu et l'icône de la zone de notification (appeler depuis `setup`).
 pub fn create_system_tray(
     app: &AppHandle,
@@ -54,12 +56,10 @@ pub fn create_system_tray(
         ])
         .build()?;
 
-    let icon = app
-        .default_window_icon()
-        .ok_or("icône par défaut introuvable")?
-        .clone();
+    let icon = tauri::image::Image::from_bytes(tray_icons::READY_PNG)
+        .map_err(|err| format!("frame d'icône embarquée illisible : {err}"))?;
 
-    TrayIconBuilder::new()
+    TrayIconBuilder::with_id(tray_icons::TRAY_ID)
         .icon(icon)
         .menu(&menu)
         .show_menu_on_left_click(false)
