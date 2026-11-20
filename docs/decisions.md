@@ -188,6 +188,16 @@ Stack : Rust + Tauri 2 + React/TypeScript, Windows 11
 
 ---
 
+## Décision : la signature de démarrage devient l'enregistrement du propriétaire (N-083, 2026-11-20)
+
+**Date** : 2026-11-20
+**Contexte** : la signature `hey_listen` avait été produite par TTS (carte N-056) et embarquée en `src-tauri/resources/hey_listen.wav`. Le propriétaire a déposé son propre enregistrement `hey_listen.mp3` à la racine du projet et demande qu'il soit joué à l'ouverture.
+**Décision** (owner) : **remplacer** la signature générée par cet enregistrement. Le fichier rejoint `src-tauri/resources/hey_listen.mp3` (ressource du bundle), l'ancien WAV est supprimé, et la résolution accepte désormais MP3 ou WAV (`NAVI_SIGNATURE_FILE`, ancienne variable `NAVI_SIGNATURE_WAV` conservée en compatibilité).
+**Notes** : décodage assuré par rodio/symphonia (MP3 déjà compilé) — aucun transcodage, aucune dépendance ajoutée. Livraison demandée dans la PR #87.
+**Conséquence** : carte N-083 ; le fichier n'est plus un résidu non suivi à la racine.
+
+---
+
 ## Prochaine entrée de décision à consigner
 
 **Date à venir** : Suivre toute décision dans un sprint ultérieur.

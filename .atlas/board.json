@@ -1,5 +1,5 @@
 {
-  "estimated_total": 77,
+  "estimated_total": 83,
   "tickets": [
     {
       "id": "N-001",
@@ -396,7 +396,7 @@
     {
       "id": "N-050",
       "title": "Implémenter les anneaux d'état de l'icône",
-      "description": "Design retenu (maquette C) : prêt = aucun anneau ; génération = anneau bleu qui tourne ; lecture = anneau cyan qui pulse ; pause = anneau ambre fixe ; erreur = pastille rouge.\n\nCritères :\n- [ ] Les 5 états s'affichent sur l'icône\n- [ ] Animations désactivées si prefers-reduced-motion\n- [ ] Lisible à 16, 20 et 24 px",
+      "description": "Design retenu (maquette C) : prêt = aucun anneau ; génération = anneau bleu qui tourne ; lecture = anneau cyan qui pulse ; pause = anneau ambre fixe ; erreur = pastille rouge.\n\nCritères :\n- [ ] Les 5 états s'affichent sur l'icône\n- [ ] Animations désactivées si prefers-reduced-motion\n- [ ] Lisible à 16, 20 et 24 px\n\n[NOTE 2026-11-20 01:02] CI rouge (2026-11-19) : ESLint refusait tools/gen_tray_icons.js (require/Buffer/__dirname/console/process = globals Node, absent du périmètre navigateur). Correction : bloc d'override ESLint pour tools/**/*.js (sourceType commonjs + globals Node, règle no-require-imports levée). Vérifs locales : lint, format:check, build, clippy -D warnings, cargo test (73+3+15) verts ; CI PR #84 verte (4m24s).",
       "state": "todo",
       "updated_at": "2026-11-17T15:50:02Z",
       "assignee": ""
@@ -612,9 +612,57 @@
     {
       "id": "N-077",
       "title": "Pastille flottante du cercle animé pendant la lecture (révision TW-68)",
-      "description": "Demandée par l'humain 2026-11-19 : cercle animé flottant, visible de la combinaison (raccourci) jusqu'à la fin de l'audio, pour démontrer le statut. Révise la décision TW-68 (pastille B écartée). A + C conservés.",
+      "description": "Demandée par l'humain 2026-11-19 : cercle animé flottant, visible de la combinaison (raccourci) jusqu'à la fin de l'audio, pour démontrer le statut. Révise la décision TW-68 (pastille B écartée). A + C conservés.\n\n[NOTE 2026-11-20 01:02] CI rouge (2026-11-19) : prettier --check refusait public/floating.html en CI uniquement. Cause : checkout Windows (core.autocrlf) livrait le fichier en CRLF, aucun attribut eol pour *.html (les .ts/.json étaient couverts). Correction : *.html text eol=lf dans .gitattributes. Vérif locale : repro CRLF -> échec prettier, puis format:check vert ; CI PR #86 verte. PR #87 (empilée) a reçu le correctif par merge.\n\n[NOTE 2026-11-20 01:11] Bug humain 2026-11-20 (aucun changement de style capture -> lecture) : capability Tauri v2 limitee a windows:[main] -> la webview flotteur n'avait pas core:event:default, listen refuse, page figee sur l'arc 'generating'. Correction : windows:[main, flotteur]. Verifie par captures d'ecran en tauri dev : lecture cyan, pause ambre, reprise cyan, arret masquee, erreur rouge. Doc s1-77 mise a jour. Note : un texte de 607 chars depasse la limite Kokoro (591 tokens > 508) et part en erreur au lieu d'etre decoupe - sujet distinct.",
       "state": "doing",
       "updated_at": "2026-11-19T17:59:26Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-078",
+      "title": "Audio muet après Stop/Reset : consommateur jamais relancé (silence total)",
+      "description": "Rapporte par l'humain 2026-11-19 pendant les tests de la pastille : lecture annoncee (machine en Playing) mais silence. Cause probable : reset() ne relance pas le consommateur si l'ancien n'a pas encore repasse alive=false (course arret/relance) - file jamais consommee.\n\n[NOTE 2026-11-20 00:43] [PRISE 2026-11-20] Reprise sur branche fix/TW-078-audio-silence : diagnostic confirme la course alive-flag (reset() saute le spawn si l'ancien consommateur n'a pas encore store(false) apres stop) ; correction par generation inconditionnelle + invalidation avant remplacement du sink.\n\n[NOTE 2026-11-20 00:50] Correctif proposé (PR #87 sur base feat/TW-077, empilée) : drapeau consumer_alive supprimé, spawn inconditionnel + invalidation avant remplacement du sink + contrôles de génération. Preuves : cargo test 71+3+15 verts (dont test de régression reset_apres_stop_relance_un_consommateur), clippy -D warnings et fmt --check propres ; doc docs/s1-78-audio-stop-reset.md. Reste : écoute humaine (Lire A -> arrêt -> Lire B x5) puis merge.\n\n[NOTE 2026-11-20 00:53] Validation terrain humaine 2026-11-20 : lecture -> arrêt -> nouvelle lecture, audio confirmé (« ça fonctionne »). Preuve traces tauri dev : consommateur gen 1 consomme la 1re session, gen 2 invalidée par stop, gen 3 consomme la 2e ; aucun SINK ABSENT. PR #87 ouverte (merge humain, empilée sur #86) ; clôture après fusion.",
+      "state": "doing",
+      "updated_at": "2026-11-19T18:07:57Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-079",
+      "title": "Alléger le dossier de travail en supprimant les éléments temporaires",
+      "description": "",
+      "state": "doing",
+      "updated_at": "2026-11-19T18:54:16Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-080",
+      "title": "Auditer et nettoyer les fichiers obsolètes du dossier de travail",
+      "description": "[NOTE 2026-11-19 15:11] [NOTE 2026-11-19] Audit non destructif : src-tauri/target (25,59 Go, ignoré Git, artefacts Cargo) et scratch/ (10,04 Go, ignoré Git, essais/venv) représentent 35,63 Go. Aucune compilation Cargo/Rust/Python active. Suppression en attente de validation du propriétaire.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Suppression validée et effectuée de src-tauri/target (25,59 Go, artefacts Cargo) et scratch/ (10,04 Go, essais ignorés). Vérification : les deux chemins sont absents ; taille restante mesurée : 0,27 Go. Aucun fichier suivi modifié par ce nettoyage ; aucune PR requise.",
+      "state": "done",
+      "updated_at": "2026-11-19T20:13:05Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-081",
+      "title": "Auditer les fichiers nettoyables du disque C",
+      "description": "[NOTE 2026-11-19 15:15] [NOTE 2026-11-19] Audit non destructif : caches personnels identifiés — pip 3,75 Go, Temp utilisateur 3,59 Go, npm-cache 3,53 Go, Cargo registry 1,42 Go, rustup toolchains 1,30 Go ; caches navigateur/VS Code/crash dumps ~0,48 Go. Aucun effacement effectué. Les métriques globales du volume et zones système sont inaccessibles sans privilèges.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Nettoyage validé effectué : caches pip (3,75 Go), npm (3,53 Go), Temp utilisateur (3,59 Go), navigateurs/VS Code/crash dumps (~0,48 Go). Vérification finale : pip et npm 0 ; reliquats actifs ~125 Mo. Gain estimé : ~11,23 Go. Cargo registry et rustup conservés. Aucune PR requise : aucune modification de fichier suivi.",
+      "state": "done",
+      "updated_at": "2026-11-19T20:17:58Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-082",
+      "title": "Évaluer le déplacement de Cargo et Rustup vers un autre disque",
+      "description": "[NOTE 2026-11-19 15:19] [NOTE 2026-11-19] Mesure : C:\\Users\\Dua Lipa\\.cargo = 1,59 Go ; .rustup = 1,30 Go ; gain transférable total = 2,89 Go. D: possède ~114,21 Go libres. Toolchain active : stable-x86_64-pc-windows-msvc. Aucun déplacement effectué ; décision du propriétaire attendue sur la méthode (variables CARGO_HOME/RUSTUP_HOME + PATH, ou jonctions).\n\n[NOTE 2026-11-19 15:20] [NOTE 2026-11-19] Préférence exprimée : destination E:\\. Vérification : volume E: présent et ~931,4 Go libres. Le déplacement ne casse pas Rust/Cargo à condition de définir CARGO_HOME, RUSTUP_HOME et le PATH vers la nouvelle destination, puis d'ouvrir un nouveau terminal.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] Cargo (1,59 Go) et Rustup (1,30 Go) déplacés de C: vers E:\\Rust. Variables utilisateur CARGO_HOME=E:\\Rust\\cargo et RUSTUP_HOME=E:\\Rust\\rustup définies ; PATH contient E:\\Rust\\cargo\\bin. Preuves : cargo 1.99.1, rustc 1.99.1 et toolchain stable-x86_64-pc-windows-msvc validés. Sources C: absentes ; gain ~2,89 Go. Aucune PR requise : configuration utilisateur uniquement.",
+      "state": "done",
+      "updated_at": "2026-11-19T20:34:43Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-083",
+      "title": "Utiliser l'enregistrement hey_listen fourni par le proprietaire comme signature de demarrage",
+      "description": "Demande humaine 2026-11-20 : le fichier hey_listen.mp3 depose a la racine remplace la signature generee (resources/hey_listen.wav). A livrer dans la PR #87 (consigne : meme PR).\n\n[NOTE 2026-11-20 01:20] Livré dans la PR #87 (branche fix/TW-078) : hey_listen.mp3 deplace vers src-tauri/resources/, ancien WAV genere supprime, bundle tauri mis a jour, utils::resolve_signature() (NAVI_SIGNATURE_FILE, NAVI_SIGNATURE_WAV en compat), *.mp3 binary. Preuves : test signature_de_demarrage_presente_et_decodable vert (decodage MP3 sans peripherique), cargo test 72+3+15, clippy -D warnings, fmt, prettier ; lancement tauri dev -> trace 'signature de demarrage : ...\\\\resources\\\\hey_listen.mp3' sans erreur de decodage. Doc docs/s1-83-signature.md + decision consignee dans docs/decisions.md.",
+      "state": "doing",
+      "updated_at": "2026-11-20T06:17:06Z",
       "assignee": ""
     }
   ]
