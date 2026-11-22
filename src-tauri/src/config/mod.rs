@@ -27,7 +27,7 @@ pub struct AppConfig {
     /// Volume de la signature sonore (0.0 - 1.0), indépendant du volume de lecture
     pub startup_sound_volume: f32,
 
-    /// Raccourci lecture (ex: "Ctrl+Shift+R")
+    /// Raccourci lecture (ex: "Super+Alt+S", carte N-072)
     pub hotkey_read: String,
 
     /// Raccourci pause/reprise
@@ -50,10 +50,10 @@ impl Default for AppConfig {
             voice_female: "af_heart".to_string(),
             voice_male: "am_adam".to_string(),
             speech_rate: 1.0,
-            volume: 0.8,
+            volume: 1.0,
             startup_sound: true,
             startup_sound_volume: 1.0,
-            hotkey_read: "Ctrl+Shift+R".to_string(),
+            hotkey_read: "Super+Alt+S".to_string(),
             hotkey_pause: "Ctrl+Shift+P".to_string(),
             hotkey_stop: "Ctrl+Shift+S".to_string(),
             autostart: false,
@@ -63,25 +63,69 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
-    /// Charge la configuration depuis le fichier
+    /// Charge la configuration depuis le fichier (défauts si absent).
     pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
-        let config_path = Self::config_path()?;
-        if config_path.exists() {
-            let content = std::fs::read_to_string(config_path)?;
-            Ok(serde_json::from_str(&content)?)
+        Self::load_from(&Self::config_path()?)
+    }
+
+    /// Sauvegarde la configuration.
+    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
+        self.save_to(&Self::config_path()?)
+    }
+
+    pub(crate) fn load_from(path: &std::path::Path) -> Result<Self, Box<dyn std::error::Error>> {
+        if path.exists() {
+            Ok(serde_json::from_str(&std::fs::read_to_string(path)?)?)
         } else {
             Ok(Self::default())
         }
     }
 
-    /// Sauvegarde la configuration
-    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let config_path = Self::config_path()?;
-        if let Some(parent) = config_path.parent() {
+    /// Écriture atomique (fichier temporaire puis renommage) : un arrêt en cours
+    /// d'écriture ne laisse jamais un `config.json` tronqué.
+    pub(crate) fn save_to(&self, path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
+        if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let content = serde_json::to_string_pretty(self)?;
-        std::fs::write(config_path, content)?;
+        let tmp = path.with_extension("json.tmp");
+        std::fs::write(&tmp, serde_json::to_string_pretty(self)?)?;
+        std::fs::rename(&tmp, path)?;
+        Ok(())
+    }
+
+    /// Valide une configuration reçue de l'UI (frontière de confiance).
+    pub fn validate(&self) -> Result<(), String> {
+        if !["auto", "fr", "en"].contains(&self.default_language.as_str()) {
+            return Err(format!("Langue inconnue : « {} »", self.default_language));
+        }
+        if self.voice_female.trim().is_empty() || self.voice_male.trim().is_empty() {
+            return Err("Les identifiants de voix ne peuvent pas être vides".into());
+        }
+        if !(0.5..=2.0).contains(&self.speech_rate) {
+            return Err("La vitesse doit être comprise entre 0,5 et 2,0".into());
+        }
+        for (nom, v) in [
+            ("Le volume", self.volume),
+            ("Le volume de la signature", self.startup_sound_volume),
+        ] {
+            if !(0.0..=1.0).contains(&v) {
+                return Err(format!("{nom} doit être compris entre 0 et 1"));
+            }
+        }
+        for (nom, combo) in [
+            ("lecture", &self.hotkey_read),
+            ("pause/reprise", &self.hotkey_pause),
+            ("arrêt", &self.hotkey_stop),
+        ] {
+            if combo.parse::<global_hotkey::hotkey::HotKey>().is_err() {
+                return Err(format!("Raccourci {nom} invalide : « {combo} »"));
+            }
+        }
+        if let Some(dir) = &self.models_dir
+            && dir.as_os_str().is_empty()
+        {
+            return Err("Le dossier des modèles ne peut pas être vide (laisser non défini)".into());
+        }
         Ok(())
     }
 
@@ -110,7 +154,7 @@ mod tests {
     fn test_default_config() {
         let config = AppConfig::default();
         assert_eq!(config.speech_rate, 1.0);
-        assert_eq!(config.volume, 0.8);
+        assert_eq!(config.volume, 1.0);
         assert_eq!(config.voice_female, "af_heart");
         assert_eq!(config.voice_male, "am_adam");
     }
@@ -141,5 +185,75 @@ mod tests {
         let c: AppConfig = serde_json::from_str(r#"{"volume":0.5}"#).unwrap();
         assert_eq!(c.volume, 0.5);
         assert!(c.startup_sound);
+    }
+
+    #[test]
+    fn config_par_defaut_valide() {
+        AppConfig::default().validate().unwrap();
+    }
+
+    #[test]
+    fn validation_refuse_les_valeurs_hors_bornes() {
+        let ko = |c: AppConfig| assert!(c.validate().is_err());
+        ko(AppConfig {
+            default_language: "de".into(),
+            ..Default::default()
+        });
+        ko(AppConfig {
+            speech_rate: 3.0,
+            ..Default::default()
+        });
+        ko(AppConfig {
+            speech_rate: f32::NAN,
+            ..Default::default()
+        });
+        ko(AppConfig {
+            volume: 1.5,
+            ..Default::default()
+        });
+        ko(AppConfig {
+            startup_sound_volume: -0.1,
+            ..Default::default()
+        });
+        ko(AppConfig {
+            voice_male: "  ".into(),
+            ..Default::default()
+        });
+        ko(AppConfig {
+            hotkey_stop: "n'importe quoi".into(),
+            ..Default::default()
+        });
+        ko(AppConfig {
+            models_dir: Some("".into()),
+            ..Default::default()
+        });
+    }
+
+    #[test]
+    fn sauvegarde_puis_relecture() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("sous").join("config.json");
+        let c = AppConfig {
+            volume: 0.3,
+            startup_sound: false,
+            ..Default::default()
+        };
+        c.save_to(&path).unwrap();
+        let lu = AppConfig::load_from(&path).unwrap();
+        assert_eq!(lu.volume, 0.3);
+        assert!(!lu.startup_sound);
+        assert!(
+            !path.with_extension("json.tmp").exists(),
+            "pas de temporaire résiduel"
+        );
+    }
+
+    #[test]
+    fn fichier_absent_donne_les_defauts_et_corrompu_une_erreur() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        assert_eq!(AppConfig::load_from(&path).unwrap().volume, 1.0);
+        std::fs::write(&path, "{ pas du json").unwrap();
+        assert!(AppConfig::load_from(&path).is_err());
     }
 }

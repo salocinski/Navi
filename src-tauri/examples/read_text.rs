@@ -27,6 +27,7 @@ fn main() {
         &audio,
         &|| false,
         Some(navi_lib::tts::engine::TtsLanguage::French),
+        1.0,
         &|| (),
     )
     .expect("synthèse");

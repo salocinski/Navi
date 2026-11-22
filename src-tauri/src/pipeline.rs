@@ -98,6 +98,7 @@ pub(crate) fn fit_segments(
 ///
 /// S'arrête avant un segment si `is_cancelled()` retourne vrai — l'appelant
 /// (`stop`) vide ensuite la file audio et invalide le jeton (TW-020).
+/// `speed` : vitesse de lecture (réglage `speech_rate`, carte N-051).
 /// Retourne le nombre de segments synthétisés.
 pub fn synthesize_segments(
     engine: &dyn TtsEngine,
@@ -105,6 +106,7 @@ pub fn synthesize_segments(
     sink: &dyn AudioSink,
     is_cancelled: &dyn Fn() -> bool,
     language: Option<TtsLanguage>,
+    speed: f32,
     on_segment_done: &dyn Fn(),
 ) -> Result<usize, String> {
     let mut count = 0;
@@ -129,7 +131,7 @@ pub fn synthesize_segments(
                     text: piece,
                     voice: None,
                     language,
-                    speed: 1.0,
+                    speed,
                 })
                 .map_err(|e| {
                     format!(
@@ -212,6 +214,7 @@ mod tests {
             &sink,
             &|| false,
             Some(TtsLanguage::French),
+            1.0,
             &|| (),
         )
         .unwrap();
@@ -238,6 +241,7 @@ mod tests {
             &sink,
             &is_cancelled,
             Some(TtsLanguage::French),
+            1.0,
             &|| (),
         )
         .unwrap();
@@ -355,9 +359,54 @@ mod tests {
             &sink,
             &|| false,
             Some(TtsLanguage::English),
+            1.0,
             &|| (),
         )
         .unwrap();
         assert_eq!(*seen.lock().unwrap(), Some(TtsLanguage::English));
+    }
+
+    #[test]
+    fn la_vitesse_est_transmise_au_moteur() {
+        struct SpeedProbe(Mutex<Vec<f32>>);
+        impl TtsEngine for SpeedProbe {
+            fn name(&self) -> &'static str {
+                "speed"
+            }
+            fn supported_languages(&self) -> &'static [TtsLanguage] {
+                &[TtsLanguage::French]
+            }
+            fn voices(&self) -> Vec<String> {
+                vec![]
+            }
+            fn load(&mut self) -> Result<(), crate::tts::TtsError> {
+                Ok(())
+            }
+            fn is_loaded(&self) -> bool {
+                true
+            }
+            fn synthesize(
+                &self,
+                request: &SynthesisRequest,
+            ) -> Result<crate::tts::SynthesisOutput, crate::tts::TtsError> {
+                self.0.lock().unwrap().push(request.speed);
+                Ok(crate::tts::SynthesisOutput {
+                    samples: vec![0.0],
+                    sample_rate: 24_000,
+                })
+            }
+        }
+        let probe = SpeedProbe(Mutex::new(vec![]));
+        synthesize_segments(
+            &probe,
+            &segments(2),
+            &MemorySink::new(),
+            &|| false,
+            None,
+            1.5,
+            &|| (),
+        )
+        .unwrap();
+        assert_eq!(*probe.0.lock().unwrap(), vec![1.5, 1.5]);
     }
 }
