@@ -460,9 +460,9 @@
     {
       "id": "N-058",
       "title": "Ajouter les réglages de désactivation et de volume du son",
-      "description": "",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "[RESOLUTION 2026-11-22] [RESOLUTION 2026-11-22] PR #92 fusionnée. AppConfig : startup_sound (défaut vrai) et startup_sound_volume (défaut 1.0, borné) ; config chargée au démarrage. cargo test --lib 81 OK, clippy --all-targets -D warnings propre. Limites : pas d'UI (réglage via config.json, en attendant TW-51) ; écoute réelle à volume réduit non testée.",
+      "state": "done",
+      "updated_at": "2026-11-22T18:30:40Z",
       "assignee": ""
     },
     {
