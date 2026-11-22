@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Navi — Paramètres</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      /* Fenêtre Paramètres (carte N-051). Page statique, sans build : voir ui/parametres.rs. */
+      :root {
+        color-scheme: light dark;
+        font-family: system-ui, 'Segoe UI', sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 16px 20px 24px;
+        font-size: 14px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0 0 12px;
+      }
+      fieldset {
+        border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+        border-radius: 8px;
+        margin: 0 0 14px;
+        padding: 10px 14px 12px;
+      }
+      legend {
+        font-weight: 600;
+        padding: 0 6px;
+      }
+      label {
+        display: block;
+        margin: 8px 0 2px;
+      }
+      input[type='text'],
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 4px 6px;
+      }
+      input[type='range'] {
+        width: calc(100% - 3.5em);
+        vertical-align: middle;
+      }
+      label.inline {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .hint {
+        font-size: 12px;
+        opacity: 0.7;
+        margin: 4px 0 0;
+      }
+      #status {
+        min-height: 1.4em;
+        margin: 8px 0;
+      }
+      #status.error {
+        color: #d33;
+      }
+      button {
+        padding: 6px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Paramètres</h1>
+    <form id="form" autocomplete="off">
+      <fieldset>
+        <legend>Lecture</legend>
+        <label for="default_language">Langue</label>
+        <select id="default_language">
+          <option value="auto">Détection automatique</option>
+          <option value="fr">Français</option>
+          <option value="en">Anglais</option>
+        </select>
+        <label for="voice_female">Voix féminine (identifiant Kokoro)</label>
+        <input type="text" id="voice_female" />
+        <label for="voice_male">Voix masculine (identifiant Kokoro)</label>
+        <input type="text" id="voice_male" />
+        <label for="speech_rate">Vitesse</label>
+        <input type="range" id="speech_rate" min="0.5" max="2" step="0.1" />
+        <output for="speech_rate" id="speech_rate_out"></output>
+        <label for="volume">Volume</label>
+        <input type="range" id="volume" min="0" max="1" step="0.05" />
+        <output for="volume" id="volume_out"></output>
+        <p class="hint">Enregistrés, mais pas encore appliqués à la lecture (carte TW-53).</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Signature sonore</legend>
+        <label class="inline"
+          ><input type="checkbox" id="startup_sound" /> Jouer la signature au démarrage</label
+        >
+        <label for="startup_sound_volume">Volume de la signature</label>
+        <input type="range" id="startup_sound_volume" min="0" max="1" step="0.05" />
+        <output for="startup_sound_volume" id="startup_sound_volume_out"></output>
+        <p class="hint">Appliqué au prochain démarrage de Navi.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Raccourcis globaux</legend>
+        <label for="hotkey_read">Lire la sélection</label>
+        <input type="text" id="hotkey_read" readonly />
+        <label for="hotkey_pause">Pause / reprise</label>
+        <input type="text" id="hotkey_pause" readonly />
+        <label for="hotkey_stop">Arrêt</label>
+        <input type="text" id="hotkey_stop" readonly />
+        <p class="hint">
+          Lecture seule : la configuration des raccourcis arrive avec la carte TW-52 (ceux
+          actuellement actifs sont Win+Alt+S, Ctrl+Maj+P et Ctrl+Maj+S).
+        </p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Système</legend>
+        <label class="inline"
+          ><input type="checkbox" id="autostart" /> Lancer Navi au démarrage de Windows</label
+        >
+        <p class="hint">Pas encore appliqué (carte TW-54).</p>
+        <label for="models_dir">Dossier des modèles (vide = emplacement par défaut)</label>
+        <input type="text" id="models_dir" />
+        <p class="hint">Pas encore appliqué (carte TW-59).</p>
+      </fieldset>
+
+      <div id="status" role="status" aria-live="polite"></div>
+      <button type="submit">Enregistrer</button>
+    </form>
+
+    <script>
+      const invoke = window.__TAURI__.core.invoke;
+      const $ = (id) => document.getElementById(id);
+      const SLIDERS = ['speech_rate', 'volume', 'startup_sound_volume'];
+      const TEXTS = [
+        'default_language',
+        'voice_female',
+        'voice_male',
+        'hotkey_read',
+        'hotkey_pause',
+        'hotkey_stop',
+      ];
+      const CHECKS = ['startup_sound', 'autostart'];
+      const status = $('status');
+
+      function show(message, isError) {
+        status.textContent = message;
+        status.className = isError ? 'error' : '';
+      }
+      function syncOutput(id) {
+        $(id + '_out').textContent = Number($(id).value).toFixed(2);
+      }
+
+      // Valeurs non éditables ici (ex. futurs champs) conservées à l'enregistrement.
+      let loaded = {};
+
+      async function load() {
+        try {
+          loaded = await invoke('get_config');
+          TEXTS.forEach((k) => ($(k).value = loaded[k]));
+          CHECKS.forEach((k) => ($(k).checked = loaded[k]));
+          SLIDERS.forEach((k) => {
+            $(k).value = loaded[k];
+            syncOutput(k);
+          });
+          $('models_dir').value = loaded.models_dir ?? '';
+        } catch (err) {
+          show('Lecture de la configuration impossible : ' + err, true);
+        }
+      }
+
+      SLIDERS.forEach((k) => $(k).addEventListener('input', () => syncOutput(k)));
+
+      $('form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const config = { ...loaded };
+        TEXTS.forEach((k) => (config[k] = $(k).value));
+        CHECKS.forEach((k) => (config[k] = $(k).checked));
+        SLIDERS.forEach((k) => (config[k] = Number($(k).value)));
+        config.models_dir = $('models_dir').value.trim() || null;
+        try {
+          await invoke('set_config', { config });
+          loaded = config;
+          show('Paramètres enregistrés.', false);
+        } catch (err) {
+          show(String(err), true);
+        }
+      });
+
+      load();
+    </script>
+  </body>
+</html>

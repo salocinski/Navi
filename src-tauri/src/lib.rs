@@ -168,6 +168,25 @@ struct StatusDto {
     hotkey_error: Option<String>,
 }
 
+/// Configuration courante pour la fenêtre Paramètres (carte N-051).
+/// Fichier illisible : valeurs par défaut (journalisé) — l'utilisateur peut ainsi le réparer en enregistrant.
+#[tauri::command]
+fn get_config() -> crate::config::AppConfig {
+    crate::config::AppConfig::load().unwrap_or_else(|e| {
+        eprintln!("[navi] config illisible, valeurs par défaut : {e}");
+        Default::default()
+    })
+}
+
+/// Valide puis enregistre la configuration reçue de la fenêtre Paramètres.
+#[tauri::command]
+fn set_config(config: crate::config::AppConfig) -> Result<(), String> {
+    config.validate()?;
+    config
+        .save()
+        .map_err(|e| format!("Enregistrement impossible : {e}"))
+}
+
 #[tauri::command]
 fn get_status(state: tauri::State<NaviState>) -> StatusDto {
     let (current_chunk, total_chunks) = state.machine.progress();
@@ -473,6 +492,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             get_status,
+            get_config,
+            set_config,
             load_model,
             start_reading,
             pause_reading,

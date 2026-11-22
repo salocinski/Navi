@@ -11,6 +11,7 @@
 //! - « Démarrer avec Windows » n'est pas encore câblé (N-054) — pas de faux item.
 
 pub(crate) mod flotteur;
+pub(crate) mod parametres;
 
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
 use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
@@ -36,10 +37,9 @@ pub fn create_system_tray(
         .enabled(true)
         .build(app)?;
     let separator = PredefinedMenuItem::separator(app)?;
-    // Paramètres : désactivé tant que N-051 (fenêtre réglages + persistance) n'est pas livré.
     let settings_item = MenuItemBuilder::new("Paramètres")
         .id("settings")
-        .enabled(false)
+        .enabled(true)
         .build(app)?;
     let quit_item = MenuItemBuilder::new("Quitter Navi")
         .id("quit")
@@ -66,7 +66,7 @@ pub fn create_system_tray(
         .menu(&menu)
         .show_menu_on_left_click(false)
         .tooltip("Navi — Lecteur de texte à voix haute (local)")
-        .on_menu_event(move |_app, event| match event.id.as_ref() {
+        .on_menu_event(move |app, event| match event.id.as_ref() {
             "read" => {
                 let phase = view.machine.state();
                 let busy = matches!(
@@ -97,6 +97,11 @@ pub fn create_system_tray(
             }
             "stop" => {
                 let _ = crate::stop_reading_impl(&view);
+            }
+            "settings" => {
+                if let Err(err) = parametres::open(app) {
+                    eprintln!("[navi] tray — fenêtre Paramètres impossible : {err}");
+                }
             }
             "quit" => std::process::exit(0),
             _ => {}

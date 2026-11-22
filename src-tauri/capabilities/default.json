@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability des fenêtres applicatives (principale + pastille flottante)",
-  "windows": ["main", "flotteur"],
+  "description": "Capability des fenêtres applicatives (principale + pastille flottante + paramètres)",
+  "windows": ["main", "flotteur", "parametres"],
   "permissions": [
     "core:default",
     "opener:default"
