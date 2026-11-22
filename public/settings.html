@@ -53,6 +53,9 @@
         opacity: 0.7;
         margin: 4px 0 0;
       }
+      input.hotkey:focus {
+        outline: 2px solid #2b7de9;
+      }
       #status {
         min-height: 1.4em;
         margin: 8px 0;
@@ -106,15 +109,17 @@
       <fieldset>
         <legend>Raccourcis globaux</legend>
         <label for="hotkey_read">Lire la sélection</label>
-        <input type="text" id="hotkey_read" readonly />
+        <input type="text" id="hotkey_read" class="hotkey" readonly />
         <label for="hotkey_pause">Pause / reprise</label>
-        <input type="text" id="hotkey_pause" readonly />
+        <input type="text" id="hotkey_pause" class="hotkey" readonly />
         <label for="hotkey_stop">Arrêt</label>
-        <input type="text" id="hotkey_stop" readonly />
+        <input type="text" id="hotkey_stop" class="hotkey" readonly />
         <p class="hint">
-          Lecture seule : la configuration des raccourcis arrive avec la carte TW-52 (ceux
-          actuellement actifs sont Win+Alt+S, Ctrl+Maj+P et Ctrl+Maj+S).
+          Cliquez dans un champ puis appuyez sur la combinaison voulue (au moins un modificateur :
+          Ctrl, Alt, Maj ou Win). Retour arrière : annuler la saisie. Appliqués à l'enregistrement ;
+          en cas de conflit avec une autre application, les raccourcis précédents sont conservés.
         </p>
+        <button type="button" id="reset_hotkeys">Rétablir les raccourcis par défaut</button>
       </fieldset>
 
       <fieldset>
@@ -174,6 +179,42 @@
       }
 
       SLIDERS.forEach((k) => $(k).addEventListener('input', () => syncOutput(k)));
+
+      // Saisie d'un raccourci : la combinaison pressée est convertie au format attendu par
+      // le backend (ex. « Ctrl+Alt+S »). Un modificateur est obligatoire.
+      const DEFAULT_HOTKEYS = {
+        hotkey_read: 'Super+Alt+S',
+        hotkey_pause: 'Ctrl+Shift+P',
+        hotkey_stop: 'Ctrl+Shift+S',
+      };
+      const MODIFIER_KEYS = ['Control', 'Shift', 'Alt', 'Meta', 'AltGraph'];
+      document.querySelectorAll('input.hotkey').forEach((input) => {
+        let before = '';
+        input.addEventListener('focus', () => (before = input.value));
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Tab') return; // navigation clavier préservée
+          e.preventDefault();
+          if (MODIFIER_KEYS.includes(e.key)) return;
+          if (e.key === 'Backspace' && !(e.ctrlKey || e.altKey || e.metaKey)) {
+            input.value = before;
+            return;
+          }
+          const mods = [];
+          if (e.ctrlKey) mods.push('Ctrl');
+          if (e.altKey) mods.push('Alt');
+          if (e.shiftKey) mods.push('Shift');
+          if (e.metaKey) mods.push('Super');
+          if (mods.length === 0) {
+            show('Ajoutez au moins un modificateur (Ctrl, Alt, Maj ou Win).', true);
+            return;
+          }
+          show('', false);
+          input.value = [...mods, e.code.replace(/^Key|^Digit/, '')].join('+');
+        });
+      });
+      $('reset_hotkeys').addEventListener('click', () =>
+        Object.entries(DEFAULT_HOTKEYS).forEach(([k, v]) => ($(k).value = v)),
+      );
 
       $('form').addEventListener('submit', async (e) => {
         e.preventDefault();

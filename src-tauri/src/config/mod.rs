@@ -112,14 +112,28 @@ impl AppConfig {
                 return Err(format!("{nom} doit être compris entre 0 et 1"));
             }
         }
+        let mut ids = Vec::new();
         for (nom, combo) in [
             ("lecture", &self.hotkey_read),
             ("pause/reprise", &self.hotkey_pause),
             ("arrêt", &self.hotkey_stop),
         ] {
-            if combo.parse::<global_hotkey::hotkey::HotKey>().is_err() {
-                return Err(format!("Raccourci {nom} invalide : « {combo} »"));
+            let hotkey = combo
+                .parse::<global_hotkey::hotkey::HotKey>()
+                .map_err(|_| format!("Raccourci {nom} invalide : « {combo} »"))?;
+            // Sans modificateur, une simple touche serait capturée dans toutes les applications.
+            // (le parseur n'accepte `A+B` que si A est un modificateur : un `+` suffit à le savoir)
+            if !combo.contains('+') {
+                return Err(format!(
+                    "Raccourci {nom} : au moins un modificateur (Ctrl, Alt, Maj, Win) est requis"
+                ));
             }
+            if ids.contains(&hotkey.id()) {
+                return Err(format!(
+                    "Raccourci {nom} : « {combo} » est déjà utilisé par une autre action"
+                ));
+            }
+            ids.push(hotkey.id());
         }
         if let Some(dir) = &self.models_dir
             && dir.as_os_str().is_empty()
@@ -221,6 +235,14 @@ mod tests {
         });
         ko(AppConfig {
             hotkey_stop: "n'importe quoi".into(),
+            ..Default::default()
+        });
+        ko(AppConfig {
+            hotkey_stop: "S".into(), // sans modificateur
+            ..Default::default()
+        });
+        ko(AppConfig {
+            hotkey_stop: "Ctrl+Shift+P".into(), // doublon avec pause/reprise
             ..Default::default()
         });
         ko(AppConfig {

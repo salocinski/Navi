@@ -89,8 +89,20 @@ impl RegistrationReport {
 /// Gestionnaire de raccourcis globaux
 pub struct HotkeyManager {
     manager: GlobalHotKeyManager,
-    hotkeys: HashMap<u32, HotkeyAction>, // id -> action
+    /// id → action, partagé avec le thread d'écoute (réenregistrement à chaud, carte N-052).
+    hotkeys: Arc<Mutex<HashMap<u32, HotkeyAction>>>,
+    /// Raccourcis actuellement enregistrés auprès de l'OS (pour les désenregistrer).
+    registered: Vec<HotKey>,
     last_action: Arc<Mutex<Option<HotkeyAction>>>,
+}
+
+/// Raccourcis (action, combinaison) tels que configurés.
+pub fn bindings_of(config: &crate::config::AppConfig) -> Vec<(HotkeyAction, String)> {
+    vec![
+        (HotkeyAction::ReadSelection, config.hotkey_read.clone()),
+        (HotkeyAction::PauseResume, config.hotkey_pause.clone()),
+        (HotkeyAction::Stop, config.hotkey_stop.clone()),
+    ]
 }
 
 impl HotkeyManager {
@@ -98,7 +110,8 @@ impl HotkeyManager {
         let manager = GlobalHotKeyManager::new()?;
         Ok(Self {
             manager,
-            hotkeys: HashMap::new(),
+            hotkeys: Arc::new(Mutex::new(HashMap::new())),
+            registered: Vec::new(),
             last_action: Arc::new(Mutex::new(None)),
         })
     }
@@ -113,13 +126,43 @@ impl HotkeyManager {
         let hotkey = HotKey::new(Some(modifiers), key);
         let id = hotkey.id();
         self.manager.register(hotkey)?;
-        self.hotkeys.insert(id, action);
+        self.registered.push(hotkey);
+        self.hotkeys.lock().unwrap().insert(id, action);
         Ok(id)
     }
 
-    /// Map id → action pour le thread d'écoute.
-    pub(crate) fn hotkeys(&self) -> HashMap<u32, HotkeyAction> {
+    /// Map id → action partagée avec le thread d'écoute (suit les réenregistrements).
+    pub(crate) fn hotkeys_shared(&self) -> Arc<Mutex<HashMap<u32, HotkeyAction>>> {
         self.hotkeys.clone()
+    }
+
+    /// Remplace **tous** les raccourcis par `bindings` (carte N-052).
+    ///
+    /// Tolérant comme `register_defaults` : chaque combinaison est tentée seule, un échec
+    /// (syntaxe, conflit avec l'OS ou une autre application) est rapporté sans bloquer les autres.
+    /// À appeler sur le thread qui a créé le gestionnaire (contrainte de `RegisterHotKey`).
+    pub fn apply(&mut self, bindings: &[(HotkeyAction, String)]) -> RegistrationReport {
+        for hotkey in self.registered.drain(..) {
+            let _ = self.manager.unregister(hotkey);
+        }
+        self.hotkeys.lock().unwrap().clear();
+        let mut report = RegistrationReport::default();
+        for (action, combo) in bindings {
+            let outcome = combo
+                .parse::<HotKey>()
+                .map_err(|e| e.to_string())
+                .and_then(|hotkey| {
+                    self.manager.register(hotkey).map_err(|e| e.to_string())?;
+                    self.registered.push(hotkey);
+                    self.hotkeys.lock().unwrap().insert(hotkey.id(), *action);
+                    Ok(())
+                });
+            match outcome {
+                Ok(()) => report.registered.push((*action, combo.clone())),
+                Err(err) => report.failed.push((*action, combo.clone(), err)),
+            }
+        }
+        report
     }
 
     /// Enregistre les raccourcis par défaut Navi ; n'abandonne pas au premier échec.
@@ -169,8 +212,9 @@ impl HotkeyManager {
 
         thread::spawn(move || {
             for event in receiver {
-                if let Some(action) = hotkeys.get(&event.id) {
-                    *last_action.lock().unwrap() = Some(*action);
+                let action = hotkeys.lock().unwrap().get(&event.id).copied();
+                if let Some(action) = action {
+                    *last_action.lock().unwrap() = Some(action);
                 }
             }
         });
@@ -246,5 +290,40 @@ mod tests {
         assert_eq!(HotkeyAction::ReadSelection.label(), "Lire la sélection");
         assert_eq!(HotkeyAction::PauseResume.label(), "Pause / Reprise");
         assert_eq!(HotkeyAction::Stop.label(), "Arrêt");
+    }
+
+    /// Combinaisons volontairement exotiques : aucune chance de heurter les vrais raccourcis de Navi.
+    #[test]
+    fn apply_isole_les_echecs_et_remplace_les_raccourcis() {
+        let Ok(mut manager) = HotkeyManager::new() else {
+            return; // pas de fenêtre cachée possible (session sans bureau) : rien à vérifier
+        };
+        let report = manager.apply(&[
+            (HotkeyAction::ReadSelection, "Ctrl+Alt+Shift+F9".into()),
+            (HotkeyAction::PauseResume, "pas un raccourci".into()),
+            (HotkeyAction::Stop, "Ctrl+Alt+Shift+F10".into()),
+        ]);
+        assert_eq!(report.registered.len(), 2);
+        assert_eq!(report.failed.len(), 1);
+        assert_eq!(report.failed[0].0, HotkeyAction::PauseResume);
+        assert_eq!(manager.hotkeys_shared().lock().unwrap().len(), 2);
+
+        // Remplacement : les anciens sont désenregistrés (F9 redevient libre) et la table est mise à jour.
+        let report = manager.apply(&[(HotkeyAction::Stop, "Ctrl+Alt+Shift+F9".into())]);
+        assert!(report.is_complete_success(), "{:?}", report.failed);
+        let map = manager.hotkeys_shared();
+        let map = map.lock().unwrap();
+        assert_eq!(map.len(), 1);
+        assert!(map.values().all(|a| *a == HotkeyAction::Stop));
+    }
+
+    #[test]
+    fn bindings_suivent_la_config() {
+        let b = bindings_of(&crate::config::AppConfig::default());
+        assert_eq!(b.len(), 3);
+        assert_eq!(
+            b[0],
+            (HotkeyAction::ReadSelection, "Super+Alt+S".to_string())
+        );
     }
 }

@@ -178,13 +178,55 @@ fn get_config() -> crate::config::AppConfig {
     })
 }
 
+/// Gestionnaire de raccourcis partagé : réenregistrement à chaud depuis `set_config`.
+pub struct SharedHotkeys(pub Mutex<crate::hotkey::HotkeyManager>);
+
+/// Applique `config` aux raccourcis et met à jour le rapport affiché (`hotkey_error`).
+fn apply_hotkeys(
+    hotkeys: &SharedHotkeys,
+    view: &NaviRef,
+    config: &crate::config::AppConfig,
+) -> crate::hotkey::RegistrationReport {
+    let report = hotkeys
+        .0
+        .lock()
+        .map(|mut m| m.apply(&crate::hotkey::bindings_of(config)))
+        .unwrap_or_default();
+    if let Ok(mut guard) = view.hotkey_report.lock() {
+        *guard = crate::hotkey::RegistrationReport {
+            registered: report.registered.clone(),
+            failed: report.failed.clone(),
+        };
+    }
+    report
+}
+
 /// Valide puis enregistre la configuration reçue de la fenêtre Paramètres.
+///
+/// Les raccourcis modifiés sont réenregistrés à chaud ; en cas de conflit (OS ou autre
+/// application) on revient aux raccourcis précédents et la configuration n'est pas écrite.
+/// Commande synchrone : Tauri l'exécute sur le thread principal, celui qui a créé le
+/// gestionnaire de raccourcis (exigence de `RegisterHotKey`).
 #[tauri::command]
-fn set_config(config: crate::config::AppConfig) -> Result<(), String> {
+fn set_config(
+    config: crate::config::AppConfig,
+    state: tauri::State<NaviState>,
+    hotkeys: tauri::State<SharedHotkeys>,
+) -> Result<(), String> {
     config.validate()?;
-    config
-        .save()
-        .map_err(|e| format!("Enregistrement impossible : {e}"))
+    let previous = crate::config::AppConfig::load().unwrap_or_default();
+    let view = state.view();
+    let changed = crate::hotkey::bindings_of(&config) != crate::hotkey::bindings_of(&previous);
+    if changed && let Some(message) = apply_hotkeys(&hotkeys, &view, &config).failure_message() {
+        apply_hotkeys(&hotkeys, &view, &previous);
+        return Err(message);
+    }
+    config.save().map_err(|e| {
+        if changed {
+            apply_hotkeys(&hotkeys, &view, &previous);
+        }
+        format!("Enregistrement impossible : {e}")
+    })
 }
 
 #[tauri::command]
@@ -576,27 +618,23 @@ pub fn run() {
                 let view = state.view();
                 match crate::hotkey::HotkeyManager::new() {
                     Ok(mut manager) => {
-                        let report = manager.register_defaults().unwrap_or_else(|err| crate::hotkey::RegistrationReport {
-                            registered: vec![],
-                            failed: vec![(
-                                crate::hotkey::HotkeyAction::ReadSelection,
-                                "?".to_string(),
-                                err.to_string(),
-                            )],
+                        let config = crate::config::AppConfig::load().unwrap_or_else(|e| {
+                            eprintln!("[navi] config illisible, valeurs par défaut : {e}");
+                            Default::default()
                         });
+                        let report = manager.apply(&crate::hotkey::bindings_of(&config));
                         if let Ok(mut guard) = view.hotkey_report.lock() {
                             *guard = report;
                         }
-                        let hotkeys = manager.hotkeys();
-                        // Le manager Windows doit survivre à la setup — on le forget pour conserver les hotkeys actifs.
-                        // (Le window caché est créé sur le thread de la boucle Tauri qui pompe les messages.)
-                        std::mem::forget(manager);
+                        let hotkeys = manager.hotkeys_shared();
+                        // Le gestionnaire reste vivant dans l'état Tauri (réenregistrement à chaud, N-052).
+                        app.manage(SharedHotkeys(Mutex::new(manager)));
                         let exec = view.clone();
                         std::thread::spawn(move || {
                             use global_hotkey::GlobalHotKeyEvent;
                             for event in GlobalHotKeyEvent::receiver() {
-                                let Some(action) = hotkeys.get(&event.id) else { continue };
-                                match *action {
+                                let Some(action) = hotkeys.lock().unwrap().get(&event.id).copied() else { continue };
+                                match action {
                                     crate::hotkey::HotkeyAction::ReadSelection => {
                                         let phase = exec.machine.state();
                                         if matches!(phase, crate::state::PlaybackState::Capturing | crate::state::PlaybackState::Generating | crate::state::PlaybackState::Playing | crate::state::PlaybackState::Paused) {
