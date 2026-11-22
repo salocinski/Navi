@@ -1,5 +1,5 @@
 {
-  "estimated_total": 83,
+  "estimated_total": 84,
   "tickets": [
     {
       "id": "N-001",
@@ -663,6 +663,14 @@
       "description": "Demande humaine 2026-11-20 : le fichier hey_listen.mp3 depose a la racine remplace la signature generee (resources/hey_listen.wav). A livrer dans la PR #87 (consigne : meme PR).\n\n[NOTE 2026-11-20 01:20] Livré dans la PR #87 (branche fix/TW-078) : hey_listen.mp3 deplace vers src-tauri/resources/, ancien WAV genere supprime, bundle tauri mis a jour, utils::resolve_signature() (NAVI_SIGNATURE_FILE, NAVI_SIGNATURE_WAV en compat), *.mp3 binary. Preuves : test signature_de_demarrage_presente_et_decodable vert (decodage MP3 sans peripherique), cargo test 72+3+15, clippy -D warnings, fmt, prettier ; lancement tauri dev -> trace 'signature de demarrage : ...\\\\resources\\\\hey_listen.mp3' sans erreur de decodage. Doc docs/s1-83-signature.md + decision consignee dans docs/decisions.md.\n\n[RESOLUTION 2026-11-22] Livree dans la PR #87 comme demande (meme PR que la carte N-078), reprise dans #88. hey_listen.mp3 fourni par le proprietaire deplace vers src-tauri/resources/ (ancien WAV genere supprime), bundle tauri.conf.json mis a jour, utils::resolve_signature() avec NAVI_SIGNATURE_FILE et compat NAVI_SIGNATURE_WAV, regle *.mp3 binary dans .gitattributes. Preuves verifiees le 2026-11-22 sur 094c1bf : src-tauri/resources/hey_listen.mp3 present, hey_listen.wav absent, docs/s1-83-signature.md present, CI verte #87 et #88 ; test signature_de_demarrage_presente_et_decodable vert (decodage sans peripherique) et trace de lancement tauri dev sur le MP3, releves dans la note du 2026-11-20 ; decision consignee dans docs/decisions.md.",
       "state": "done",
       "updated_at": "2026-11-22T15:35:12Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-084",
+      "title": "Decouper les segments sur le vrai plafond de tokens Kokoro (508) et non sur une estimation a 4 caracteres",
+      "description": "Diagnostic 2026-11-22 : estimate_tokens (src-tauri/src/text/segmentation.rs) divise les chars par 4 et chunk_by_token_limit plafonne donc a 1920 chars, alors que Kokoro compte des tokens phonemises (1 token = 1 caractere IPA, espace compris). Mesure terrain : 607 chars -> 591 tokens, soit un ratio de 0,97 et non 0,25. Consequence : tout texte nettoye entre ~510 et ~1920 chars part en un seul chunk et echoue sur 'Segment trop long pour Kokoro' (tts/mod.rs:181). Correctif vise : budget honnete en tokens phonemises (480 par defaut, plafond dur 508) + decoupage de securite au niveau du pipeline pour garantir qu'aucun segment ne depasse, y compris quand la phonemisation rallonge le texte (nombres, abreviations).\n\n[RESOLUTION 2026-11-22] [RESOLUTION 2026-11-22] PR #90 fusionnée. cargo test --lib : 78 OK, clippy propre. Cause réelle : chunk_by_token_limit multipliait encore par 4 ; ajout de fit_segments (recoupe sur tokens réels). Reste à valider à la main : test réel Kokoro/espeak-ng sur un long texte.",
+      "state": "done",
+      "updated_at": "2026-11-22T17:28:25Z",
       "assignee": ""
     }
   ]
