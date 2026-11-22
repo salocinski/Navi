@@ -12,6 +12,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
+use engine::MAX_TOKENS_PER_SEGMENT;
+
 /// Configuration du moteur TTS
 #[derive(Debug, Clone)]
 pub struct TtsConfig {
@@ -178,10 +180,11 @@ impl KokoroEngine {
 
         // Tokenisation
         let tokens = self.tokenize(&phonemes)?;
-        if tokens.len() + 2 > 510 {
+        if tokens.len() > MAX_TOKENS_PER_SEGMENT {
             return Err(format!(
-                "Segment trop long pour Kokoro : {} tokens phonémisés (max 508 + 2 padding) — réduisez la taille de segment",
-                tokens.len()
+                "Segment trop long pour Kokoro : {} tokens phonémisés (plafond {} + 2 de padding) — le découpage en amont (fit_segments) aurait dû l'éviter",
+                tokens.len(),
+                MAX_TOKENS_PER_SEGMENT
             )
             .into());
         }
@@ -212,6 +215,18 @@ impl KokoroEngine {
         let (_, audio) = outputs["audio"].try_extract_tensor::<f32>()?;
 
         Ok(audio.to_vec())
+    }
+
+    /// Nombre de tokens produits par `text` : phonémisation puis filtre du vocabulaire,
+    /// sans inférence. C'est l'unité du plafond `MAX_TOKENS_PER_SEGMENT`.
+    pub fn count_tokens_for(
+        &self,
+        text: &str,
+        language: Option<&str>,
+    ) -> Result<usize, Box<dyn std::error::Error>> {
+        let language = language.unwrap_or(&self.config.default_language);
+        let phonemes = self.phonemizer.phonemize(text, language)?;
+        Ok(self.tokenize(&phonemes)?.len())
     }
 
     /// Tokenisation selon vocabulaire Kokoro

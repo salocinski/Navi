@@ -3,16 +3,21 @@
 //! Stratégie héritée du prototype S0-10, durcie pour la production :
 //! - découpage sur ponctuation forte `. ! ?` **et sauts de ligne** (frontière sûre) ;
 //! - protection des abréviations FR/EN (`Dr.`, `M.`, `Mme`, `etc.`, `p.ex.`…) ;
-//! - regroupement en chunks ≤ 480 tokens estimés (marge sous 510 chez Kokoro) ;
+//! - regroupement en chunks ≤ 480 tokens estimés (marge sous le plafond dur 508) ;
 //! - segment isolé > limite → découpage aux frontières de mots ; un **mot** plus long que la
 //!   limite est scindé en dur (le contrat `estimated_tokens ≤ max_tokens_per_chunk()` prime toujours) ;
 //! - aucun `unicode-segmentation` : la ponctuation forte est ASCII, les compteurs en chars.
+//!
+//! **Unité (carte N-084)** : un token Kokoro = un **caractère de phonème** (vocabulaire IPA,
+//! espace compris), pas un caractère de texte. Le budget de cette segmentation est donc une
+//! estimation prudente en caractères ; la garantie exacte est apportée en aval par
+//! `pipeline::fit_segments`, qui recompte les tokens réels et recoupe si nécessaire.
 
-/// Limite d'inférence Kokoro 510 tokens → marge de sécurité.
+/// Budget par défaut d'un chunk, en tokens estimés (= caractères de texte, cf. module).
 /// Surchargeable via `NAVI_MAX_SEGMENT_TOKENS` (benchmarks, carte TW-040).
 pub(crate) fn parse_max_tokens(raw: Option<&str>) -> usize {
     raw.and_then(|v| v.parse::<usize>().ok())
-        .filter(|&n| (16..=510).contains(&n))
+        .filter(|&n| (16..=508).contains(&n))
         .unwrap_or(480)
 }
 
@@ -20,10 +25,20 @@ pub fn max_tokens_per_chunk() -> usize {
     parse_max_tokens(std::env::var("NAVI_MAX_SEGMENT_TOKENS").ok().as_deref())
 }
 
-/// Estimation grossière : 1 token ≈ 4 caractères (FR/EN). Documentée comme approximation ;
-/// le comptage exact se fait à la tokenisation (N-039).
+/// Estimation du nombre de tokens Kokoro pour un texte.
+///
+/// **1 token ≈ 1 caractère** : le vocabulaire Kokoro est un jeu de phonèmes IPA où
+/// chaque caractère (espace compris) vaut un token. La phonémisation espeak-ng donne
+/// une longueur du même ordre que le texte — mesure terrain : 607 caractères →
+/// 591 tokens, soit 0,97 token par caractère. L'ancienne estimation « 1 token ≈
+/// 4 caractères » sous-estimait donc la charge d'un facteur ~4 et laissait passer
+/// des segments à plus de 1900 tokens pour un plafond de 508.
+///
+/// L'estimation n'est pas exacte : les nombres et abréviations s'allongent à la
+/// phonémisation (`2026` → « deux mille vingt-six »), d'où la garantie apportée en
+/// aval par `pipeline::fit_segments` sur les tokens réellement comptés.
 pub fn estimate_tokens(text: &str) -> usize {
-    (text.chars().count() as f64 / 4.0).ceil() as usize
+    text.chars().count()
 }
 
 /// Un segment prêt pour la file : texte + estimation de charge.
@@ -117,9 +132,9 @@ fn is_abbreviation(current: &str) -> bool {
         && last_word.ends_with('.')
 }
 
-/// Regroupe les phrases en chunks tenant dans `max_tokens` (estimation 1 token ≈ 4 chars).
+/// Regroupe les phrases en chunks tenant dans `max_tokens` (estimation 1 token ≈ 1 char).
 pub fn chunk_by_token_limit(sentences: &[String], max_tokens: usize) -> Vec<String> {
-    let max_chars = max_tokens * 4;
+    let max_chars = max_tokens;
     let mut chunks = Vec::new();
     let mut current = String::new();
 
@@ -219,10 +234,10 @@ mod tests {
     }
 
     #[test]
-    fn estimate_tokens_arrondi() {
+    fn estimate_tokens_un_par_caractere() {
         assert_eq!(estimate_tokens(""), 0);
-        assert_eq!(estimate_tokens("abcd"), 1);
-        assert_eq!(estimate_tokens("abcde"), 2);
+        assert_eq!(estimate_tokens("abcd"), 4);
+        assert_eq!(estimate_tokens("é€"), 2); // chars, pas octets
     }
 
     #[test]
@@ -230,14 +245,14 @@ mod tests {
         assert_eq!(parse_max_tokens(None), 480);
         assert_eq!(parse_max_tokens(Some("64")), 64);
         assert_eq!(parse_max_tokens(Some("3")), 480); // sous le plancher : refusé
-        assert_eq!(parse_max_tokens(Some("511")), 480); // au-dessus de 510 : refusé
+        assert_eq!(parse_max_tokens(Some("509")), 480); // au-dessus de 508 : refusé
         assert_eq!(parse_max_tokens(Some("abc")), 480);
         assert_eq!(parse_max_tokens(Some("")), 480);
     }
 
     #[test]
     fn chunk_limit_respectee() {
-        let s = "a".repeat(2500); // ~625 tokens, sans ponctuation
+        let s = "a".repeat(2500); // 2500 tokens, sans ponctuation
         let chunks = segment_text(&s);
         assert!(chunks.len() >= 2);
         for seg in &chunks {
@@ -252,19 +267,19 @@ mod tests {
     #[test]
     fn segment_long_coupe_aux_frontieres_de_mots() {
         let word = "a".repeat(100);
-        let parts = chunk_plain_text(&word, 480 * 4);
+        let parts = chunk_plain_text(&word, 480);
         // Un mot > limite est conservé entier (jamais cassé)
         assert_eq!(parts, vec![word]);
     }
 
     #[test]
-    fn texte_long_en_deux_chunks() {
-        // ~35 phrases → doit tenir en 2 chunks (comme le prototype S0)
+    fn texte_long_en_plusieurs_chunks() {
+        // ~35 phrases (~2550 chars) → 6 chunks de ≤ 480 chars (1 token ≈ 1 char)
         let phrase = "Voici un texte beaucoup plus long pour tester la segmentation en chunks. ";
         let long_text = phrase.repeat(35);
         let segs = segment_text(&long_text);
-        assert_eq!(segs.len(), 2);
-        assert!(segs[0].estimated_tokens + segs[1].estimated_tokens < 800);
+        assert_eq!(segs.len(), 6);
+        assert!(segs[0].estimated_tokens + segs[1].estimated_tokens < 2700);
     }
 
     #[test]
