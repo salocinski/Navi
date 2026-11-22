@@ -83,3 +83,5 @@ Outlook, et les tests individuels Chrome/Edge/VS Code/Discord.
   Les verdicts ✅ sont adossés à des recettes jouées ; tous les autres cas sont explicitement
   marqués « non joué » ou « non installé ». Les résultats ne présument rien au-delà des mesures.
 - `navi-test.pdf` (racine, non commité) : fichier de test généré pour Edge PDF, resté inutilisé.
+  Supprimé le 2026-11-22 avec les autres éléments temporaires du dossier de travail (carte N-079,
+  script `clean-workdir.ps1`) ; à régénérer si le cas Edge PDF est rouvert.
