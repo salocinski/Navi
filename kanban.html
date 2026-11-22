@@ -1532,6 +1532,19 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "size": "S",
       "status": "done",
       "assigned_to": ""
+    },
+    {
+      "num": 84,
+      "title": "Decouper les segments sur le vrai plafond de tokens Kokoro (508) et non sur une estimation a 4 caracteres",
+      "note": "Diagnostic 2026-11-22 : estimate_tokens (src-tauri/src/text/segmentation.rs) divise les chars par 4 et chunk_by_token_limit plafonne donc a 1920 chars, alors que Kokoro compte des tokens phonemises (1 token = 1 caractere IPA, espace compris). Mesure terrain : 607 chars -> 591 tokens, soit un ratio de 0,97 et non 0,25. Consequence : tout texte nettoye entre ~510 et ~1920 chars part en un seul chunk et echoue sur 'Segment trop long pour Kokoro' (tts/mod.rs:181). Correctif vise : budget honnete en tokens phonemises (480 par defaut, plafond dur 508) + decoupage de securite au niveau du pipeline pour garantir qu'aucun segment ne depasse, y compris quand la phonemisation rallonge le texte (nombres, abreviations).\n\n[RESOLUTION 2026-11-22] [RESOLUTION 2026-11-22] PR #90 fusionnée. cargo test --lib : 78 OK, clippy propre. Cause réelle : chunk_by_token_limit multipliait encore par 4 ; ajout de fit_segments (recoupe sur tokens réels). Reste à valider à la main : test réel Kokoro/espeak-ng sur un long texte.",
+      "deps": [],
+      "epic": "bug",
+      "kind": "bug",
+      "milestone": "M2",
+      "prio": "P1",
+      "size": "M",
+      "status": "done",
+      "assigned_to": ""
     }
   ]
 }
