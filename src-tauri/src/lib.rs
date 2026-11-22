@@ -675,7 +675,13 @@ pub fn run() {
 
             // Signature sonore de démarrage : joue « Hey listen » (original, voix aiguë)
             // une seule fois, une fois raccourcis et capture prêts.
-            crate::audio::play_signature_once();
+            let config = crate::config::AppConfig::load().unwrap_or_else(|e| {
+                eprintln!("[navi] config illisible, valeurs par défaut : {e}");
+                Default::default()
+            });
+            if config.startup_sound {
+                crate::audio::play_signature_once(config.startup_sound_gain());
+            }
 
             app.manage(state);
             Ok(())

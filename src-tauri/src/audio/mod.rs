@@ -390,8 +390,9 @@ impl Drop for AudioPlayer {
 ///
 /// Non-bloquant : un thread dédié joue le fichier intégralement (MP3 ou WAV,
 /// décodé par rodio/symphonia).
+/// `volume` : 0.0–1.0 (réglage `startup_sound_volume`, carte N-058).
 /// Ne panique jamais : toute erreur de périphérique/fichier/format est journalisée et tolérée.
-pub fn play_signature_once() {
+pub fn play_signature_once(volume: f32) {
     let path = crate::utils::resolve_signature();
     eprintln!("[navi] signature de démarrage : {}", path.display());
     std::thread::spawn(move || {
@@ -430,6 +431,7 @@ pub fn play_signature_once() {
                 return;
             }
         };
+        sink.set_volume(volume.clamp(0.0, 1.0));
         sink.append(source);
         sink.sleep_until_end();
     });
