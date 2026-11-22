@@ -124,13 +124,16 @@ mod tests {
 
     #[test]
     fn volume_signature_borne() {
-        let mut c = AppConfig::default();
-        c.startup_sound_volume = 7.0;
-        assert_eq!(c.startup_sound_gain(), 1.0);
-        c.startup_sound_volume = -1.0;
-        assert_eq!(c.startup_sound_gain(), 0.0);
-        c.startup_sound_volume = f32::NAN;
-        assert_eq!(c.startup_sound_gain(), 0.0);
+        let gain = |v: f32| {
+            AppConfig {
+                startup_sound_volume: v,
+                ..Default::default()
+            }
+            .startup_sound_gain()
+        };
+        assert_eq!(gain(7.0), 1.0);
+        assert_eq!(gain(-1.0), 0.0);
+        assert_eq!(gain(f32::NAN), 0.0);
     }
 
     #[test]
