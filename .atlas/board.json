@@ -404,9 +404,9 @@
     {
       "id": "N-051",
       "title": "Créer la fenêtre de paramètres et la persistance locale",
-      "description": "Configuration locale uniquement.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Configuration locale uniquement.\n\n[RESOLUTION 2026-11-22] [RESOLUTION 2026-11-22] PR #94 fusionnée. Fenêtre Paramètres (public/settings.html, ouverte depuis le menu de l'icône), commandes get_config/set_config, AppConfig validée + écriture atomique. Vitesse et volume de lecture appliqués (testé à la main), signature sonore appliquée au démarrage. cargo test 86 OK, clippy --all-targets -D warnings propre, CI verte. Limites : raccourcis en lecture seule (TW-52), voix/démarrage Windows/dossier modèles enregistrés mais non appliqués (TW-53 réduite aux voix, TW-54, TW-59).",
+      "state": "done",
+      "updated_at": "2026-11-22T19:06:14Z",
       "assignee": ""
     },
     {
