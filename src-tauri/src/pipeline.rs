@@ -16,6 +16,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::text::segmentation::Segment;
 use crate::tts::SynthesisRequest;
+use crate::tts::engine::MAX_TOKENS_PER_SEGMENT;
 use crate::tts::engine::TtsEngine;
 use crate::tts::engine::TtsLanguage;
 
@@ -61,6 +62,38 @@ impl AudioSink for MemorySink {
     }
 }
 
+/// Recoupe `text` jusqu'à ce que chaque morceau tienne sous `MAX_TOKENS_PER_SEGMENT`
+/// **tokens réels** (carte N-084). La segmentation amont n'est qu'une estimation : les nombres
+/// et abréviations s'allongent à la phonémisation. Coupe à l'espace le plus proche du milieu,
+/// à défaut au milieu du mot ; un texte d'un seul caractère n'est jamais recoupé.
+pub(crate) fn fit_segments(
+    engine: &dyn TtsEngine,
+    text: &str,
+    language: Option<TtsLanguage>,
+) -> Result<Vec<String>, String> {
+    let tokens = engine
+        .count_tokens(text, language)
+        .map_err(|e| format!("Comptage des tokens impossible : {e}"))?;
+    let chars: Vec<char> = text.chars().collect();
+    if tokens <= MAX_TOKENS_PER_SEGMENT || chars.len() < 2 {
+        return Ok(vec![text.to_string()]);
+    }
+    let mid = chars.len() / 2;
+    let cut = (1..chars.len())
+        .filter(|&i| chars[i].is_whitespace())
+        .min_by_key(|&i| i.abs_diff(mid))
+        .unwrap_or(mid);
+    let (left, right): (String, String) =
+        (chars[..cut].iter().collect(), chars[cut..].iter().collect());
+    let mut out = Vec::new();
+    for part in [left, right] {
+        if !part.trim().is_empty() {
+            out.extend(fit_segments(engine, part.trim(), language)?);
+        }
+    }
+    Ok(out)
+}
+
 /// Synthétise chaque segment et pousse l'audio dans `sink`.
 ///
 /// S'arrête avant un segment si `is_cancelled()` retourne vrai — l'appelant
@@ -89,28 +122,32 @@ pub fn synthesize_segments(
             segments.len(),
             seg.text.chars().count()
         );
-        let out = engine
-            .synthesize(&SynthesisRequest {
-                text: seg.text.clone(),
-                voice: None,
-                language,
-                speed: 1.0,
-            })
-            .map_err(|e| {
-                format!(
-                    "Synthèse du segment {}/{} impossible : {e}",
-                    seg.index + 1,
-                    segments.len()
-                )
-            })?;
-        sink.write(&out.samples)?;
+        let mut samples = 0;
+        for piece in fit_segments(engine, &seg.text, language)? {
+            let out = engine
+                .synthesize(&SynthesisRequest {
+                    text: piece,
+                    voice: None,
+                    language,
+                    speed: 1.0,
+                })
+                .map_err(|e| {
+                    format!(
+                        "Synthèse du segment {}/{} impossible : {e}",
+                        seg.index + 1,
+                        segments.len()
+                    )
+                })?;
+            sink.write(&out.samples)?;
+            samples += out.samples.len();
+        }
         count += 1;
         on_segment_done();
         eprintln!(
             "[navi] segment {}/{} synthétisé ({} échantillons)",
             count,
             segments.len(),
-            out.samples.len()
+            samples
         );
     }
     Ok(count)
@@ -206,6 +243,74 @@ mod tests {
         .unwrap();
         assert_eq!(n, 2);
         assert_eq!(sink.chunks.lock().unwrap().len(), 2);
+    }
+
+    /// Moteur dont le comptage réel vaut 2 tokens par caractère (phonémisation qui s'allonge).
+    struct DoubleCount;
+    impl TtsEngine for DoubleCount {
+        fn name(&self) -> &'static str {
+            "double"
+        }
+        fn supported_languages(&self) -> &'static [TtsLanguage] {
+            &[TtsLanguage::French]
+        }
+        fn voices(&self) -> Vec<String> {
+            vec![]
+        }
+        fn load(&mut self) -> Result<(), crate::tts::TtsError> {
+            Ok(())
+        }
+        fn is_loaded(&self) -> bool {
+            true
+        }
+        fn synthesize(
+            &self,
+            request: &SynthesisRequest,
+        ) -> Result<crate::tts::SynthesisOutput, crate::tts::TtsError> {
+            Ok(crate::tts::SynthesisOutput {
+                samples: vec![0.0; request.text.chars().count()],
+                sample_rate: 24_000,
+            })
+        }
+        fn count_tokens(
+            &self,
+            text: &str,
+            _l: Option<TtsLanguage>,
+        ) -> Result<usize, crate::tts::TtsError> {
+            Ok(text.chars().count() * 2)
+        }
+    }
+
+    #[test]
+    fn fit_segments_laisse_un_texte_court_intact() {
+        let v = fit_segments(&DoubleCount, "bonjour le monde", None).unwrap();
+        assert_eq!(v, vec!["bonjour le monde"]);
+    }
+
+    #[test]
+    fn fit_segments_recoupe_sur_les_tokens_reels() {
+        let text = vec!["mot"; 300].join(" "); // 1199 chars → 2398 tokens réels
+        let v = fit_segments(&DoubleCount, &text, None).unwrap();
+        assert!(v.len() >= 5);
+        for p in &v {
+            assert!(
+                p.chars().count() * 2 <= MAX_TOKENS_PER_SEGMENT,
+                "trop long : {}",
+                p.len()
+            );
+        }
+        assert_eq!(v.join(" "), text, "aucun mot perdu ni coupé");
+    }
+
+    #[test]
+    fn fit_segments_scinde_un_mot_sans_espace() {
+        let text = "a".repeat(600);
+        let v = fit_segments(&DoubleCount, &text, None).unwrap();
+        assert!(
+            v.iter()
+                .all(|p| p.chars().count() * 2 <= MAX_TOKENS_PER_SEGMENT)
+        );
+        assert_eq!(v.concat(), text);
     }
 
     #[test]

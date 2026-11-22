@@ -81,6 +81,14 @@ pub struct SynthesisOutput {
     pub sample_rate: u32,
 }
 
+/// Plafond dur de Kokoro : 508 tokens de phonèmes, plus les 2 tokens de padding
+/// (début et fin) que le moteur ajoute lui-même — 510 au total.
+///
+/// Un token vaut **un caractère de phonème** (vocabulaire IPA, espace compris),
+/// pas un caractère de texte : voir `segmentation::estimate_tokens` pour la
+/// correspondance mesurée et `pipeline::fit_segments` pour la garantie.
+pub const MAX_TOKENS_PER_SEGMENT: usize = 508;
+
 /// Erreurs du moteur, stables pour l'UI.
 #[derive(Debug)]
 pub enum TtsError {
@@ -146,6 +154,16 @@ pub trait TtsEngine: Send + Sync {
 
     /// Synthétise `request.text` en échantillons `f32` mono.
     fn synthesize(&self, request: &SynthesisRequest) -> Result<SynthesisOutput, TtsError>;
+
+    /// Nombre de tokens que le moteur produira pour `text`, **sans inférence**.
+    ///
+    /// Sert au découpage de sécurité du pipeline (`fit_segments`) : le plafond
+    /// `MAX_TOKENS_PER_SEGMENT` doit être vérifié sur des tokens réels, jamais
+    /// sur une estimation. L'implémentation par défaut se rabat sur l'estimation
+    /// de segmentation, ce qui suffit aux moteurs de test.
+    fn count_tokens(&self, text: &str, _language: Option<TtsLanguage>) -> Result<usize, TtsError> {
+        Ok(crate::text::segmentation::estimate_tokens(text))
+    }
 }
 
 /// Implémentation Kokoro (déléguée à `super::KokoroEngine`).
@@ -175,14 +193,7 @@ impl TtsEngine for super::KokoroEngine {
     }
 
     fn synthesize(&self, request: &SynthesisRequest) -> Result<SynthesisOutput, TtsError> {
-        let language = request
-            .language
-            .map(|l| l.as_str().to_string())
-            .or_else(|| {
-                let default = self.config.default_language.as_str();
-                // « auto » = détection non encore branchée (carte N-036) → laisse le moteur choisir.
-                (!default.eq_ignore_ascii_case("auto")).then(|| default.to_string())
-            });
+        let language = resolve_language(request.language, &self.config);
 
         // Langue non supportée → erreur claire (pas d'anglais silencieux pour du français).
         if let Some(lang) = &language
@@ -205,6 +216,20 @@ impl TtsEngine for super::KokoroEngine {
             sample_rate: TTS_SAMPLE_RATE,
         })
     }
+
+    fn count_tokens(&self, text: &str, language: Option<TtsLanguage>) -> Result<usize, TtsError> {
+        let language = resolve_language(language, &self.config);
+        self.count_tokens_for(text, language.as_deref())
+            .map_err(|e| TtsError::Phonemization(e.to_string()))
+    }
+}
+
+/// Langue effective : explicite, sinon défaut de config (« auto » = laissé au moteur).
+fn resolve_language(language: Option<TtsLanguage>, config: &super::TtsConfig) -> Option<String> {
+    language.map(|l| l.as_str().to_string()).or_else(|| {
+        let default = config.default_language.as_str();
+        (!default.eq_ignore_ascii_case("auto")).then(|| default.to_string())
+    })
 }
 
 #[cfg(test)]
