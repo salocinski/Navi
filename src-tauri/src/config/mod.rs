@@ -50,7 +50,7 @@ impl Default for AppConfig {
             voice_female: "af_heart".to_string(),
             voice_male: "am_adam".to_string(),
             speech_rate: 1.0,
-            volume: 0.8,
+            volume: 1.0,
             startup_sound: true,
             startup_sound_volume: 1.0,
             hotkey_read: "Super+Alt+S".to_string(),
@@ -154,7 +154,7 @@ mod tests {
     fn test_default_config() {
         let config = AppConfig::default();
         assert_eq!(config.speech_rate, 1.0);
-        assert_eq!(config.volume, 0.8);
+        assert_eq!(config.volume, 1.0);
         assert_eq!(config.voice_female, "af_heart");
         assert_eq!(config.voice_male, "am_adam");
     }
@@ -252,7 +252,7 @@ mod tests {
     fn fichier_absent_donne_les_defauts_et_corrompu_une_erreur() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("config.json");
-        assert_eq!(AppConfig::load_from(&path).unwrap().volume, 0.8);
+        assert_eq!(AppConfig::load_from(&path).unwrap().volume, 1.0);
         std::fs::write(&path, "{ pas du json").unwrap();
         assert!(AppConfig::load_from(&path).is_err());
     }

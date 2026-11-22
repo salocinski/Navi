@@ -365,6 +365,12 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     state.machine.begin_generation_phase()?;
     state.machine.set_text(cleaned, segment_count);
 
+    // Réglages de lecture (fenêtre Paramètres, N-051) : relus à chaque lecture.
+    let config = crate::config::AppConfig::load().unwrap_or_else(|e| {
+        eprintln!("[navi] config illisible, valeurs par défaut : {e}");
+        Default::default()
+    });
+
     // 6. Audio : reset (nouvelle session) ou création (thread audio) si absent
     {
         let mut audio = state.audio.lock().map_err(|_| "verrou audio".to_string())?;
@@ -376,6 +382,10 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
                 *audio = Some(handle);
             }
         }
+        // Après reset : le nouveau sink repart au volume par défaut.
+        if let Some(handle) = audio.as_ref() {
+            handle.set_volume(config.volume)?;
+        }
     }
 
     // 7. Jeton de génération + thread de synthèse
@@ -385,6 +395,7 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     let machine = state.machine.clone();
     let engine = state.engine.clone();
     let audio = state.audio.clone();
+    let speech_rate = config.speech_rate.clamp(0.5, 2.0);
     std::thread::spawn(move || {
         eprintln!(
             "[navi] thread de synthèse démarré ({} segments)",
@@ -407,6 +418,7 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
                 &sink,
                 &|| machine.is_generation_cancelled(token),
                 language,
+                speech_rate,
                 &|| {
                     let _ = machine.next_chunk();
                 },
