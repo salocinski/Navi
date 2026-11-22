@@ -396,9 +396,9 @@
     {
       "id": "N-050",
       "title": "Implémenter les anneaux d'état de l'icône",
-      "description": "Design retenu (maquette C) : prêt = aucun anneau ; génération = anneau bleu qui tourne ; lecture = anneau cyan qui pulse ; pause = anneau ambre fixe ; erreur = pastille rouge.\n\nCritères :\n- [ ] Les 5 états s'affichent sur l'icône\n- [ ] Animations désactivées si prefers-reduced-motion\n- [ ] Lisible à 16, 20 et 24 px\n\n[NOTE 2026-11-20 01:02] CI rouge (2026-11-19) : ESLint refusait tools/gen_tray_icons.js (require/Buffer/__dirname/console/process = globals Node, absent du périmètre navigateur). Correction : bloc d'override ESLint pour tools/**/*.js (sourceType commonjs + globals Node, règle no-require-imports levée). Vérifs locales : lint, format:check, build, clippy -D warnings, cargo test (73+3+15) verts ; CI PR #84 verte (4m24s).",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Design retenu (maquette C) : prêt = aucun anneau ; génération = anneau bleu qui tourne ; lecture = anneau cyan qui pulse ; pause = anneau ambre fixe ; erreur = pastille rouge.\n\nCritères :\n- [ ] Les 5 états s'affichent sur l'icône\n- [ ] Animations désactivées si prefers-reduced-motion\n- [ ] Lisible à 16, 20 et 24 px\n\n[NOTE 2026-11-20 01:02] CI rouge (2026-11-19) : ESLint refusait tools/gen_tray_icons.js (require/Buffer/__dirname/console/process = globals Node, absent du périmètre navigateur). Correction : bloc d'override ESLint pour tools/**/*.js (sourceType commonjs + globals Node, règle no-require-imports levée). Vérifs locales : lint, format:check, build, clippy -D warnings, cargo test (73+3+15) verts ; CI PR #84 verte (4m24s).\n\n[RESOLUTION 2026-11-20] [RESOLUTION 2026-11-20] Livre par la PR #84 (squash e84c0f2 sur main). Anneaux d'etat de l'icone tray : tools/gen_tray_icons.js, src-tauri/src/ui/tray_icons.rs, cablage dans src-tauri/src/lib.rs. CI verte (#84, puis #86/#87/#88). Verification sur main (094c1bf) : fichiers presents, cargo test 75+3+15, clippy -D warnings, fmt et prettier propres.",
+      "state": "done",
+      "updated_at": "2026-11-20T12:44:16Z",
       "assignee": ""
     },
     {
@@ -508,9 +508,9 @@
     {
       "id": "N-064",
       "title": "Documenter les limites connues de compatibilité",
-      "description": "Applications et contrôles non pris en charge.",
-      "state": "doing",
-      "updated_at": "2026-11-19T17:41:57Z",
+      "description": "Applications et contrôles non pris en charge.\n\n[RESOLUTION 2026-11-19] [RESOLUTION 2026-11-19] PR #83 fusionnee (limites-compat.md consolide N-016/N-043/N-015, Word corrige a preuve). Limites tracees : apps elevees UIPI, GDI handles non restaures, UIA NO-GO, inconnues explicites.",
+      "state": "done",
+      "updated_at": "2026-11-20T12:44:16Z",
       "assignee": ""
     },
     {
@@ -612,25 +612,25 @@
     {
       "id": "N-077",
       "title": "Pastille flottante du cercle animé pendant la lecture (révision TW-68)",
-      "description": "Demandée par l'humain 2026-11-19 : cercle animé flottant, visible de la combinaison (raccourci) jusqu'à la fin de l'audio, pour démontrer le statut. Révise la décision TW-68 (pastille B écartée). A + C conservés.\n\n[NOTE 2026-11-20 01:02] CI rouge (2026-11-19) : prettier --check refusait public/floating.html en CI uniquement. Cause : checkout Windows (core.autocrlf) livrait le fichier en CRLF, aucun attribut eol pour *.html (les .ts/.json étaient couverts). Correction : *.html text eol=lf dans .gitattributes. Vérif locale : repro CRLF -> échec prettier, puis format:check vert ; CI PR #86 verte. PR #87 (empilée) a reçu le correctif par merge.\n\n[NOTE 2026-11-20 01:11] Bug humain 2026-11-20 (aucun changement de style capture -> lecture) : capability Tauri v2 limitee a windows:[main] -> la webview flotteur n'avait pas core:event:default, listen refuse, page figee sur l'arc 'generating'. Correction : windows:[main, flotteur]. Verifie par captures d'ecran en tauri dev : lecture cyan, pause ambre, reprise cyan, arret masquee, erreur rouge. Doc s1-77 mise a jour. Note : un texte de 607 chars depasse la limite Kokoro (591 tokens > 508) et part en erreur au lieu d'etre decoupe - sujet distinct.",
-      "state": "doing",
-      "updated_at": "2026-11-19T17:59:26Z",
+      "description": "Demandée par l'humain 2026-11-19 : cercle animé flottant, visible de la combinaison (raccourci) jusqu'à la fin de l'audio, pour démontrer le statut. Révise la décision TW-68 (pastille B écartée). A + C conservés.\n\n[NOTE 2026-11-20 01:02] CI rouge (2026-11-19) : prettier --check refusait public/floating.html en CI uniquement. Cause : checkout Windows (core.autocrlf) livrait le fichier en CRLF, aucun attribut eol pour *.html (les .ts/.json étaient couverts). Correction : *.html text eol=lf dans .gitattributes. Vérif locale : repro CRLF -> échec prettier, puis format:check vert ; CI PR #86 verte. PR #87 (empilée) a reçu le correctif par merge.\n\n[NOTE 2026-11-20 01:11] Bug humain 2026-11-20 (aucun changement de style capture -> lecture) : capability Tauri v2 limitee a windows:[main] -> la webview flotteur n'avait pas core:event:default, listen refuse, page figee sur l'arc 'generating'. Correction : windows:[main, flotteur]. Verifie par captures d'ecran en tauri dev : lecture cyan, pause ambre, reprise cyan, arret masquee, erreur rouge. Doc s1-77 mise a jour. Note : un texte de 607 chars depasse la limite Kokoro (591 tokens > 508) et part en erreur au lieu d'etre decoupe - sujet distinct.\n\n[RESOLUTION 2026-11-22] Livree par la PR #86 (squash b24be06 sur main) pour la pastille, puis correctif de la capability Tauri par la PR #88 (094c1bf) : windows:[main, flotteur] pour que la webview flotteur recoive core:event:default. Fichiers sur main : public/floating.html, src-tauri/capabilities/default.json, docs/s1-77-pastille-flotte.md. Preuves verifiees le 2026-11-22 sur 094c1bf : CI verte sur #86 et #88 (build-test-lint SUCCESS), fichiers presents, captures tauri dev des cinq etats (lecture cyan, pause ambre, reprise cyan, arret masquee, erreur rouge) relevees dans la note du 2026-11-20. Sujet distinct laisse ouvert : un texte au-dela de la limite Kokoro (591 tokens) part en erreur au lieu d'etre decoupe.",
+      "state": "done",
+      "updated_at": "2026-11-22T15:34:58Z",
       "assignee": ""
     },
     {
       "id": "N-078",
       "title": "Audio muet après Stop/Reset : consommateur jamais relancé (silence total)",
-      "description": "Rapporte par l'humain 2026-11-19 pendant les tests de la pastille : lecture annoncee (machine en Playing) mais silence. Cause probable : reset() ne relance pas le consommateur si l'ancien n'a pas encore repasse alive=false (course arret/relance) - file jamais consommee.\n\n[NOTE 2026-11-20 00:43] [PRISE 2026-11-20] Reprise sur branche fix/TW-078-audio-silence : diagnostic confirme la course alive-flag (reset() saute le spawn si l'ancien consommateur n'a pas encore store(false) apres stop) ; correction par generation inconditionnelle + invalidation avant remplacement du sink.\n\n[NOTE 2026-11-20 00:50] Correctif proposé (PR #87 sur base feat/TW-077, empilée) : drapeau consumer_alive supprimé, spawn inconditionnel + invalidation avant remplacement du sink + contrôles de génération. Preuves : cargo test 71+3+15 verts (dont test de régression reset_apres_stop_relance_un_consommateur), clippy -D warnings et fmt --check propres ; doc docs/s1-78-audio-stop-reset.md. Reste : écoute humaine (Lire A -> arrêt -> Lire B x5) puis merge.\n\n[NOTE 2026-11-20 00:53] Validation terrain humaine 2026-11-20 : lecture -> arrêt -> nouvelle lecture, audio confirmé (« ça fonctionne »). Preuve traces tauri dev : consommateur gen 1 consomme la 1re session, gen 2 invalidée par stop, gen 3 consomme la 2e ; aucun SINK ABSENT. PR #87 ouverte (merge humain, empilée sur #86) ; clôture après fusion.",
-      "state": "doing",
-      "updated_at": "2026-11-19T18:07:57Z",
+      "description": "Rapporte par l'humain 2026-11-19 pendant les tests de la pastille : lecture annoncee (machine en Playing) mais silence. Cause probable : reset() ne relance pas le consommateur si l'ancien n'a pas encore repasse alive=false (course arret/relance) - file jamais consommee.\n\n[NOTE 2026-11-20 00:43] [PRISE 2026-11-20] Reprise sur branche fix/TW-078-audio-silence : diagnostic confirme la course alive-flag (reset() saute le spawn si l'ancien consommateur n'a pas encore store(false) apres stop) ; correction par generation inconditionnelle + invalidation avant remplacement du sink.\n\n[NOTE 2026-11-20 00:50] Correctif proposé (PR #87 sur base feat/TW-077, empilée) : drapeau consumer_alive supprimé, spawn inconditionnel + invalidation avant remplacement du sink + contrôles de génération. Preuves : cargo test 71+3+15 verts (dont test de régression reset_apres_stop_relance_un_consommateur), clippy -D warnings et fmt --check propres ; doc docs/s1-78-audio-stop-reset.md. Reste : écoute humaine (Lire A -> arrêt -> Lire B x5) puis merge.\n\n[NOTE 2026-11-20 00:53] Validation terrain humaine 2026-11-20 : lecture -> arrêt -> nouvelle lecture, audio confirmé (« ça fonctionne »). Preuve traces tauri dev : consommateur gen 1 consomme la 1re session, gen 2 invalidée par stop, gen 3 consomme la 2e ; aucun SINK ABSENT. PR #87 ouverte (merge humain, empilée sur #86) ; clôture après fusion.\n\n[RESOLUTION 2026-11-22] Livree par la PR #87 (fusionnee le 2026-11-20), reprise dans le rattrapage #88 (094c1bf). Correctif : drapeau consumer_alive supprime, spawn inconditionnel du consommateur, invalidation avant remplacement du sink et controles de generation (src-tauri/src/audio/mod.rs) ; doc docs/s1-78-audio-stop-reset.md. Preuves : CI verte #87 et #88 ; validation terrain humaine du 2026-11-20 (lecture -> arret -> nouvelle lecture, audio confirme) ; traces gen 1 consommee, gen 2 invalidee par stop, gen 3 consommee, aucun SINK ABSENT ; cargo test, clippy -D warnings, fmt et prettier verts releves dans les notes du 2026-11-20.",
+      "state": "done",
+      "updated_at": "2026-11-22T15:35:06Z",
       "assignee": ""
     },
     {
       "id": "N-079",
       "title": "Alléger le dossier de travail en supprimant les éléments temporaires",
-      "description": "",
-      "state": "doing",
-      "updated_at": "2026-11-19T18:54:16Z",
+      "description": "[RESOLUTION 2026-11-22] Nettoyage execute le 2026-11-22 avec le script conserve a la racine du projet : clean-workdir.ps1 (simulation par defaut, -Apply pour effacer, -IncludeCargo pour le cache de compilation ; il refuse toute cible suivie par git via git ls-files). Perimetre valide par le proprietaire : elements legers + src-tauri/target. Supprimes : src-tauri/target (11,60 Go), navi-test.pdf, dist/ (sortie Vite), worktrees/ (vide) et kanban.html.bak (recree par ATLAS a chaque ecriture du tableau). Dossier de travail mesure : 11,87 Go -> 281,4 Mo, soit 11,60 Go liberes. Aucun fichier suivi modifie par le nettoyage (git status ne montre que les modifications de ce lot de cloture). models/ (132,9 Mo, requis a l'execution) et node_modules/ conserves. docs/s1-16-compat.md mis a jour pour la disparition de navi-test.pdf. Cout assume et valide : la prochaine compilation Cargo repart de zero.",
+      "state": "done",
+      "updated_at": "2026-11-22T15:35:41Z",
       "assignee": ""
     },
     {
@@ -660,9 +660,9 @@
     {
       "id": "N-083",
       "title": "Utiliser l'enregistrement hey_listen fourni par le proprietaire comme signature de demarrage",
-      "description": "Demande humaine 2026-11-20 : le fichier hey_listen.mp3 depose a la racine remplace la signature generee (resources/hey_listen.wav). A livrer dans la PR #87 (consigne : meme PR).\n\n[NOTE 2026-11-20 01:20] Livré dans la PR #87 (branche fix/TW-078) : hey_listen.mp3 deplace vers src-tauri/resources/, ancien WAV genere supprime, bundle tauri mis a jour, utils::resolve_signature() (NAVI_SIGNATURE_FILE, NAVI_SIGNATURE_WAV en compat), *.mp3 binary. Preuves : test signature_de_demarrage_presente_et_decodable vert (decodage MP3 sans peripherique), cargo test 72+3+15, clippy -D warnings, fmt, prettier ; lancement tauri dev -> trace 'signature de demarrage : ...\\\\resources\\\\hey_listen.mp3' sans erreur de decodage. Doc docs/s1-83-signature.md + decision consignee dans docs/decisions.md.",
-      "state": "doing",
-      "updated_at": "2026-11-20T06:17:06Z",
+      "description": "Demande humaine 2026-11-20 : le fichier hey_listen.mp3 depose a la racine remplace la signature generee (resources/hey_listen.wav). A livrer dans la PR #87 (consigne : meme PR).\n\n[NOTE 2026-11-20 01:20] Livré dans la PR #87 (branche fix/TW-078) : hey_listen.mp3 deplace vers src-tauri/resources/, ancien WAV genere supprime, bundle tauri mis a jour, utils::resolve_signature() (NAVI_SIGNATURE_FILE, NAVI_SIGNATURE_WAV en compat), *.mp3 binary. Preuves : test signature_de_demarrage_presente_et_decodable vert (decodage MP3 sans peripherique), cargo test 72+3+15, clippy -D warnings, fmt, prettier ; lancement tauri dev -> trace 'signature de demarrage : ...\\\\resources\\\\hey_listen.mp3' sans erreur de decodage. Doc docs/s1-83-signature.md + decision consignee dans docs/decisions.md.\n\n[RESOLUTION 2026-11-22] Livree dans la PR #87 comme demande (meme PR que la carte N-078), reprise dans #88. hey_listen.mp3 fourni par le proprietaire deplace vers src-tauri/resources/ (ancien WAV genere supprime), bundle tauri.conf.json mis a jour, utils::resolve_signature() avec NAVI_SIGNATURE_FILE et compat NAVI_SIGNATURE_WAV, regle *.mp3 binary dans .gitattributes. Preuves verifiees le 2026-11-22 sur 094c1bf : src-tauri/resources/hey_listen.mp3 present, hey_listen.wav absent, docs/s1-83-signature.md present, CI verte #87 et #88 ; test signature_de_demarrage_presente_et_decodable vert (decodage sans peripherique) et trace de lancement tauri dev sur le MP3, releves dans la note du 2026-11-20 ; decision consignee dans docs/decisions.md.",
+      "state": "done",
+      "updated_at": "2026-11-22T15:35:12Z",
       "assignee": ""
     }
   ]
