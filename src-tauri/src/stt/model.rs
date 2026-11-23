@@ -24,11 +24,11 @@ pub enum ModelState {
 
 /// `NAVI_STT_MODEL` : modèle fourni à la main (développement), ni vérifié ni téléchargé.
 pub fn is_overridden() -> bool {
-    std::env::var_os("NAVI_STT_MODEL").is_some()
+    crate::utils::dev_env("NAVI_STT_MODEL").is_some()
 }
 
 pub fn model_path() -> PathBuf {
-    if let Some(p) = std::env::var_os("NAVI_STT_MODEL") {
+    if let Some(p) = crate::utils::dev_env("NAVI_STT_MODEL") {
         return p.into();
     }
     crate::utils::app_data_dir()

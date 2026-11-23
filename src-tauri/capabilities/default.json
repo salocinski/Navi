@@ -4,7 +4,6 @@
   "description": "Capability des fenêtres applicatives (principale + pastille flottante + paramètres)",
   "windows": ["main", "flotteur", "parametres"],
   "permissions": [
-    "core:default",
-    "opener:default"
+    "core:default"
   ]
 }

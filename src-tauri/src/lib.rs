@@ -867,6 +867,13 @@ pub fn run() {
                 });
             }
 
+            // Migration N-095 : l'ancienne valeur Run (N-054) devient une tâche planifiée élevée.
+            std::thread::spawn(|| {
+                if let Err(e) = crate::autostart::migrate_legacy() {
+                    eprintln!("[navi] migration du démarrage automatique : {e}");
+                }
+            });
+
             // Signature sonore de démarrage : joue « Hey listen » (original, voix aiguë)
             // une seule fois, une fois raccourcis et capture prêts.
             let config = crate::config::AppConfig::load().unwrap_or_else(|e| {

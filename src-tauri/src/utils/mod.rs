@@ -2,6 +2,26 @@
 
 use std::path::PathBuf;
 
+/// Variable d'environnement de développement : ignorée en release. Navi s'exécute élevé (N-095) ;
+/// une variable posée par un processus non élevé ne doit pas rediriger un chemin de l'application.
+pub fn dev_env(name: &str) -> Option<String> {
+    if cfg!(debug_assertions) {
+        std::env::var(name).ok()
+    } else {
+        None
+    }
+}
+
+/// Vrai si une bibliothèque native (DLL) peut être chargée depuis `dir` : en release, uniquement le
+/// dossier de l'application (protégé en écriture), jamais un dossier modifiable par l'utilisateur.
+pub fn may_load_code_from(dir: &std::path::Path) -> bool {
+    cfg!(debug_assertions)
+        || std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(|p| dir.starts_with(p)))
+            .unwrap_or(false)
+}
+
 /// Retourne le chemin du répertoire de données de l'application
 pub fn app_data_dir() -> Option<PathBuf> {
     dirs::data_dir().map(|d| d.join("Navi"))
@@ -18,7 +38,7 @@ const SIGNATURE_FILE: &str = "hey_listen.mp3";
 /// l'exécutable / dans le bundle.
 pub fn resolve_signature() -> PathBuf {
     for var in ["NAVI_SIGNATURE_FILE", "NAVI_SIGNATURE_WAV"] {
-        if let Ok(path) = std::env::var(var) {
+        if let Some(path) = dev_env(var) {
             let p = PathBuf::from(path);
             if p.exists() {
                 return p;
@@ -62,7 +82,7 @@ pub fn resolve_models_dir() -> PathBuf {
 /// Comme `resolve_models_dir`, avec le dossier choisi dans les réglages (`models_dir`),
 /// prioritaire sur les emplacements par défaut mais pas sur `NAVI_MODELS_DIR`.
 pub fn resolve_models_dir_with(configured: Option<&std::path::Path>) -> PathBuf {
-    if let Ok(dir) = std::env::var("NAVI_MODELS_DIR") {
+    if let Some(dir) = dev_env("NAVI_MODELS_DIR") {
         let path = PathBuf::from(&dir);
         if path.join("kokoro-v1.0.int8.onnx").exists() {
             return path;
