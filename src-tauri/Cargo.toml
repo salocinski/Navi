@@ -12,6 +12,13 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
+[features]
+# CUDA actif par défaut (builds de livraison). La CI compile en `--no-default-features` : le runner
+# n'a pas le CUDA Toolkit. shortcut: la voie CUDA n'est pas vérifiée en CI ; ajouter un job dédié
+# (runner avec toolkit) si les régressions de build CUDA deviennent un risque.
+default = ["cuda"]
+cuda = ["whisper-rs/cuda"]
+
 [patch.crates-io]
 global-hotkey = { path = "patches/global-hotkey" }
 
@@ -53,6 +60,9 @@ libloading = "0.9"
 rodio = "0.19"
 # Capture micro (dictée, N-088) ; même version que celle déjà tirée par rodio.
 cpal = "0.15"
+
+# Transcription (dictée, N-090) : whisper.cpp compilé avec CUDA (CMake + CUDA Toolkit requis au build).
+whisper-rs = "0.16"
 
 # Utilitaires
 libc = "0.2"

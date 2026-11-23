@@ -50,10 +50,11 @@ jobs:
 
       - name: clippy (-D warnings)
         working-directory: src-tauri
-        run: cargo clippy --all-targets -- -D warnings
+        # --no-default-features : sans CUDA (le runner n'a pas le toolkit), whisper.cpp compile en CPU (CMake préinstallé).
+        run: cargo clippy --all-targets --no-default-features -- -D warnings
 
       - name: Tests Rust
         working-directory: src-tauri
-        run: cargo test
+        run: cargo test --no-default-features
         # Le test de fumée Kokoro (kokoro_smoke) est ignoré par défaut :
         # il exige les modèles (gitignorés) — machine de développement uniquement.
