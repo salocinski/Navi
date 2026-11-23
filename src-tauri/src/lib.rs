@@ -587,6 +587,9 @@ pub fn run() {
             pause_reading,
             resume_reading,
             stop_reading,
+            ui::open_settings,
+            ui::hide_panel,
+            ui::quit_app,
         ])
         .setup(|app| {
             let state = NaviState::new();
@@ -631,6 +634,8 @@ pub fn run() {
                     }
                 });
             }
+
+            crate::ui::panneau::setup(app.handle());
 
             // Icône de zone de notification + menu (carte N-047) — feuille DA docs/pistes-interface.html.
             {

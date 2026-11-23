@@ -11,11 +11,32 @@
 //! - « Démarrer avec Windows » n'est pas encore câblé (N-054) — pas de faux item.
 
 pub(crate) mod flotteur;
+pub(crate) mod panneau;
 pub(crate) mod parametres;
 
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem};
-use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};
+
+/// Ouvre la fenêtre Paramètres depuis le panneau.
+#[tauri::command]
+pub fn open_settings(app: AppHandle) -> Result<(), String> {
+    parametres::open(&app).map_err(|e| e.to_string())
+}
+
+/// Ferme le panneau (Échap).
+#[tauri::command]
+pub fn hide_panel(app: AppHandle) {
+    if let Some(window) = app.get_webview_window(panneau::LABEL) {
+        let _ = window.hide();
+    }
+}
+
+/// Quitte Navi (même effet que l'item « Quitter Navi » du menu).
+#[tauri::command]
+pub fn quit_app() {
+    std::process::exit(0);
+}
 
 pub(crate) mod tray_icons;
 
@@ -107,19 +128,15 @@ pub fn create_system_tray(
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
-            // Clic gauche : bascule l'affichage de la fenêtre principale (panneau A = N-048).
+            // Clic gauche : ouvre/ferme le panneau ancré à l'icône (maquette A, N-048).
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                rect,
                 ..
             } = event
-                && let Some(window) = tray.app_handle().get_webview_window("main")
             {
-                if window.is_visible().unwrap_or(false) {
-                    let _ = window.hide();
-                } else {
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
+                panneau::toggle(tray.app_handle(), rect);
             }
         })
         .build(app)?;
