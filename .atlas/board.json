@@ -468,9 +468,9 @@
     {
       "id": "N-059",
       "title": "Gérer localement les modèles (emplacement, intégrité, absence)",
-      "description": "Message clair si le modèle est absent.",
-      "state": "doing",
-      "updated_at": "2026-11-23T00:54:36Z",
+      "description": "Message clair si le modèle est absent.\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Livre via PR #100 (e9d6ead) : check_models (presence + SHA-256 des 3 fichiers Kokoro, memorise par dossier), ModelMissing/ModelCorrupt avec chemin, models_dir pris en compte. cargo test 113 OK, clippy OK. Non verifie : affichage UI du message, duree du hachage. Suite : empreintes vers un manifeste avec N-066.",
+      "state": "done",
+      "updated_at": "2026-11-23T01:17:43Z",
       "assignee": ""
     },
     {

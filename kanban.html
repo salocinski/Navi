@@ -1203,7 +1203,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 59,
       "title": "Gérer localement les modèles (emplacement, intégrité, absence)",
-      "status": "doing",
+      "status": "done",
       "prio": "P1",
       "kind": "tache",
       "milestone": "M2",
@@ -1212,7 +1212,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-039"
       ],
-      "note": "Message clair si le modèle est absent."
+      "note": "Message clair si le modèle est absent.\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Livre via PR #100 (e9d6ead) : check_models (presence + SHA-256 des 3 fichiers Kokoro, memorise par dossier), ModelMissing/ModelCorrupt avec chemin, models_dir pris en compte. cargo test 113 OK, clippy OK. Non verifie : affichage UI du message, duree du hachage. Suite : empreintes vers un manifeste avec N-066."
     },
     {
       "num": 60,
