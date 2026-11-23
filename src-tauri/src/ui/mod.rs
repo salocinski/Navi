@@ -19,8 +19,11 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Manager};
 
 /// Ouvre la fenêtre Paramètres depuis le panneau.
+///
+/// `async` : une commande synchrone s'exécute sur le thread principal, et créer une
+/// fenêtre depuis ce thread bloque sous Windows (fenêtre vide, application figée).
 #[tauri::command]
-pub fn open_settings(app: AppHandle) -> Result<(), String> {
+pub async fn open_settings(app: AppHandle) -> Result<(), String> {
     parametres::open(&app).map_err(|e| e.to_string())
 }
 
@@ -32,10 +35,25 @@ pub fn hide_panel(app: AppHandle) {
     }
 }
 
+/// Quitte Navi proprement : libère le moteur et l'audio, puis laisse Tauri fermer ses
+/// fenêtres (un `process::exit` brutal avec onnxruntime chargé fait planter la fermeture).
+pub(crate) fn quit(app: &AppHandle) {
+    if let Some(state) = app.try_state::<crate::NaviState>() {
+        // try_lock : ne jamais rester bloqué derrière une génération en cours.
+        if let Ok(mut engine) = state.engine.try_lock() {
+            *engine = None;
+        }
+        if let Ok(mut audio) = state.audio.try_lock() {
+            *audio = None;
+        }
+    }
+    app.exit(0);
+}
+
 /// Quitte Navi (même effet que l'item « Quitter Navi » du menu).
 #[tauri::command]
-pub fn quit_app() {
-    std::process::exit(0);
+pub fn quit_app(app: AppHandle) {
+    quit(&app);
 }
 
 pub(crate) mod tray_icons;
@@ -124,7 +142,7 @@ pub fn create_system_tray(
                     eprintln!("[navi] tray — fenêtre Paramètres impossible : {err}");
                 }
             }
-            "quit" => std::process::exit(0),
+            "quit" => quit(app),
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
