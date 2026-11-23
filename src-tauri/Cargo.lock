@@ -2661,6 +2661,7 @@ dependencies = [
 name = "navi"
 version = "0.1.0"
 dependencies = [
+ "cpal",
  "dirs 5.0.1",
  "global-hotkey",
  "libc",

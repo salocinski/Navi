@@ -57,6 +57,9 @@ pub struct AppConfig {
     /// Lancer au démarrage Windows
     pub autostart: bool,
 
+    /// Micro de dictée (nom du périphérique ; `None` = micro par défaut, carte N-088)
+    pub microphone: Option<String>,
+
     /// Répertoire des modèles (optionnel, défaut: ~/AppData/Navi/models)
     pub models_dir: Option<std::path::PathBuf>,
 }
@@ -75,6 +78,7 @@ impl Default for AppConfig {
             hotkey_pause: "Ctrl+Shift+P".to_string(),
             hotkey_stop: "Ctrl+Shift+S".to_string(),
             autostart: false,
+            microphone: None,
             models_dir: None,
         }
     }
