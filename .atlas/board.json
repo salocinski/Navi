@@ -380,17 +380,17 @@
     {
       "id": "N-048",
       "title": "Créer le panneau ancré à l'icône de notification",
-      "description": "UI retenue (maquette A) : panneau au-dessus de l'icône, comme Wi-Fi ou Volume. Contenu : état et segment courant, phrase en cours, progression par segments, pause/reprise, arrêt, vitesse, voix auto, rappel des raccourcis, paramètres, quitter.\nPas de mini-lecteur flottant (pastille B écartée).\n\nCritères :\n- [ ] S'ouvre au clic sur l'icône, se ferme au clic extérieur ou Échap\n- [ ] Ne prend pas le focus de l'application active à l'ouverture automatique éventuelle\n- [ ] Pause/reprise/arrêt fonctionnent depuis le panneau",
-      "state": "doing",
-      "updated_at": "2026-11-23T01:31:34Z",
+      "description": "UI retenue (maquette A) : panneau au-dessus de l'icône, comme Wi-Fi ou Volume. Contenu : état et segment courant, phrase en cours, progression par segments, pause/reprise, arrêt, vitesse, voix auto, rappel des raccourcis, paramètres, quitter.\nPas de mini-lecteur flottant (pastille B écartée).\n\nCritères :\n- [ ] S'ouvre au clic sur l'icône, se ferme au clic extérieur ou Échap\n- [ ] Ne prend pas le focus de l'application active à l'ouverture automatique éventuelle\n- [ ] Pause/reprise/arrêt fonctionnent depuis le panneau\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Livre via PR #102 (9f70461), fusionnee par le proprietaire : panneau ancre a l'icone (fenetre main sans bordure, toujours au-dessus), ouverture au clic gauche, fermeture au clic exterieur et Echap, pause/reprise/arret, choix des voix FR/EN, vitesse, raccourcis, Parametres, Quitter. cargo test 120 OK, clippy/tsc/eslint OK. Non verifie par l'agent : lancement reel de l'application.",
+      "state": "done",
+      "updated_at": "2026-11-23T01:50:45Z",
       "assignee": ""
     },
     {
       "id": "N-049",
       "title": "Abouter le panneau (multi-écrans, DPI, barre en haut ou sur le côté)",
-      "description": "Ancrage correct près de l'icône quelle que soit la position de la barre ; thème clair/sombre ; fermeture propre.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Ancrage correct près de l'icône quelle que soit la position de la barre ; thème clair/sombre ; fermeture propre.\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Couvert par la PR #102 (9f70461) avec la carte 48 : placement selon le bord de la barre des taches (haut, bas, gauche, droite, auto-masquee), ecran de l'icone, DPI, coordonnees negatives ; 7 tests unitaires de placement. Non verifie par l'agent : rendu reel multi-ecrans/DPI.",
+      "state": "done",
+      "updated_at": "2026-11-23T01:50:46Z",
       "assignee": ""
     },
     {
