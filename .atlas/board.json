@@ -692,9 +692,9 @@
     {
       "id": "N-087",
       "title": "[Dictée] Spike : mesurer Whisper Large v3 Turbo en local (CPU/GPU, latence, mémoire, taille réelle)",
-      "description": "Décide la durée maximale d'un appui maintenu et le repli sur un modèle plus petit. Choix propriétaire 2026-11-23 : Whisper Large v3 Turbo non quantifié, local.",
-      "state": "todo",
-      "updated_at": "2026-11-23T14:14:27Z",
+      "description": "Décide la durée maximale d'un appui maintenu et le repli sur un modèle plus petit. Choix propriétaire 2026-11-23 : Whisper Large v3 Turbo non quantifié, local.\n\n[NOTE 2026-11-23 10:43] [SPIKE 2026-11-23] GPU RTX 3060 Ti : 0,6 s (5 s) a 3,6 s (60 s) apres relachement, RAM ~0,5 Go, VRAM ~2 Gio. CPU i7-7700K inutilisable (~38 s par fenetre de 30 s). Detail : docs/s3-87-spike-whisper.md. Reste : anglais et modele de repli non mesures.",
+      "state": "doing",
+      "updated_at": "2026-11-23T14:33:16Z",
       "assignee": ""
     },
     {
