@@ -54,7 +54,7 @@ pub fn resolve_signature() -> PathBuf {
 /// Retourne le chemin du répertoire des modèles — dev ou utilisateur.
 ///
 /// Ordre : `NAVI_MODELS_DIR` → `<repo>/models/kokoro/` (si l'ONNX y existe) →
-/// `<repo>/models/` → `%APPDATA%/Navi/models`.
+/// `<repo>/models/` → `<dossier de l'exe>/models/kokoro` (installé) → `%APPDATA%/Navi/models`.
 pub fn resolve_models_dir() -> PathBuf {
     resolve_models_dir_with(None)
 }
@@ -87,6 +87,17 @@ pub fn resolve_models_dir_with(configured: Option<&std::path::Path>) -> PathBuf 
             && normalized.join("kokoro-v1.0.int8.onnx").exists()
         {
             return normalized;
+        }
+    }
+
+    // Application installée (carte N-060) : modèles embarqués à côté de l'exécutable.
+    if let Some(exe_dir) = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+    {
+        let candidate = exe_dir.join("models").join("kokoro");
+        if candidate.join("kokoro-v1.0.int8.onnx").exists() {
+            return candidate;
         }
     }
 

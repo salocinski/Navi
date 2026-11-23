@@ -477,8 +477,8 @@
       "id": "N-060",
       "title": "Créer l'installeur Windows",
       "description": "MSIX ou NSIS ; bundle ou téléchargement selon l'audit de licences.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "state": "doing",
+      "updated_at": "2026-11-23T01:54:23Z",
       "assignee": ""
     },
     {
