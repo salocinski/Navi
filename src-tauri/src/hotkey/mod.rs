@@ -1,5 +1,7 @@
 //! Gestion des raccourcis globaux
 
+pub mod hold;
+
 use global_hotkey::{
     GlobalHotKeyEvent, GlobalHotKeyManager,
     hotkey::{Code, HotKey, Modifiers},
@@ -14,6 +16,8 @@ pub enum HotkeyAction {
     ReadSelection,
     PauseResume,
     Stop,
+    /// Dictée vocale en appui maintenu (carte N-089)
+    Dictation,
 }
 
 impl HotkeyAction {
@@ -22,6 +26,7 @@ impl HotkeyAction {
             HotkeyAction::ReadSelection => "Lire la sélection",
             HotkeyAction::PauseResume => "Pause / Reprise",
             HotkeyAction::Stop => "Arrêt",
+            HotkeyAction::Dictation => "Dictée",
         }
     }
 }
@@ -102,6 +107,7 @@ pub fn bindings_of(config: &crate::config::AppConfig) -> Vec<(HotkeyAction, Stri
         (HotkeyAction::ReadSelection, config.hotkey_read.clone()),
         (HotkeyAction::PauseResume, config.hotkey_pause.clone()),
         (HotkeyAction::Stop, config.hotkey_stop.clone()),
+        (HotkeyAction::Dictation, config.hotkey_dictation.clone()),
     ]
 }
 
@@ -290,6 +296,7 @@ mod tests {
         assert_eq!(HotkeyAction::ReadSelection.label(), "Lire la sélection");
         assert_eq!(HotkeyAction::PauseResume.label(), "Pause / Reprise");
         assert_eq!(HotkeyAction::Stop.label(), "Arrêt");
+        assert_eq!(HotkeyAction::Dictation.label(), "Dictée");
     }
 
     /// Combinaisons volontairement exotiques : aucune chance de heurter les vrais raccourcis de Navi.
@@ -317,10 +324,21 @@ mod tests {
         assert!(map.values().all(|a| *a == HotkeyAction::Stop));
     }
 
+    /// Matériel requis (conflit possible avec PowerToys Run, etc.) :
+    /// `cargo test alt_espace_est_enregistrable -- --ignored`.
+    #[test]
+    #[ignore]
+    fn alt_espace_est_enregistrable() {
+        let mut manager = HotkeyManager::new().expect("gestionnaire");
+        let report = manager.apply(&[(HotkeyAction::Dictation, "Alt+Space".into())]);
+        assert!(report.is_complete_success(), "{:?}", report.failed);
+    }
+
     #[test]
     fn bindings_suivent_la_config() {
         let b = bindings_of(&crate::config::AppConfig::default());
-        assert_eq!(b.len(), 3);
+        assert_eq!(b.len(), 4);
+        assert_eq!(b[3], (HotkeyAction::Dictation, "Alt+Space".to_string()));
         assert_eq!(
             b[0],
             (HotkeyAction::ReadSelection, "Super+Alt+S".to_string())

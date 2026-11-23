@@ -54,6 +54,9 @@ pub struct AppConfig {
     /// Raccourci arrêt
     pub hotkey_stop: String,
 
+    /// Raccourci de dictée en appui maintenu (carte N-089)
+    pub hotkey_dictation: String,
+
     /// Lancer au démarrage Windows
     pub autostart: bool,
 
@@ -77,6 +80,7 @@ impl Default for AppConfig {
             hotkey_read: "Super+Alt+S".to_string(),
             hotkey_pause: "Ctrl+Shift+P".to_string(),
             hotkey_stop: "Ctrl+Shift+S".to_string(),
+            hotkey_dictation: "Alt+Space".to_string(),
             autostart: false,
             microphone: None,
             models_dir: None,
@@ -142,6 +146,7 @@ impl AppConfig {
             ("lecture", &self.hotkey_read),
             ("pause/reprise", &self.hotkey_pause),
             ("arrêt", &self.hotkey_stop),
+            ("dictée", &self.hotkey_dictation),
         ] {
             let hotkey = combo
                 .parse::<global_hotkey::hotkey::HotKey>()

@@ -669,6 +669,7 @@ pub fn run() {
                         // Le gestionnaire reste vivant dans l'état Tauri (réenregistrement à chaud, N-052).
                         app.manage(SharedHotkeys(Mutex::new(manager)));
                         let exec = view.clone();
+                        let dictation_hold = std::sync::Arc::new(crate::hotkey::hold::HoldGuard::default());
                         std::thread::spawn(move || {
                             use global_hotkey::GlobalHotKeyEvent;
                             for event in GlobalHotKeyEvent::receiver() {
@@ -695,6 +696,23 @@ pub fn run() {
                                     }
                                     crate::hotkey::HotkeyAction::Stop => {
                                         let _ = stop_reading_impl(&exec);
+                                    }
+                                    crate::hotkey::HotkeyAction::Dictation => {
+                                        // La répétition de WM_HOTKEY pendant le maintien est ignorée.
+                                        if !dictation_hold.try_begin() {
+                                            continue;
+                                        }
+                                        let combo = crate::config::AppConfig::load().unwrap_or_default().hotkey_dictation;
+                                        let Some(vk) = crate::hotkey::hold::main_key_vk(&combo) else {
+                                            dictation_hold.end();
+                                            eprintln!("[navi] dictée : touche de « {combo} » non gérée pour le maintien");
+                                            continue;
+                                        };
+                                        eprintln!("[navi] dictée : appui");
+                                        // Point d'accroche : N-090/N-092 y branchent capture micro, transcription et insertion.
+                                        crate::hotkey::hold::spawn_hold_watch(vk, dictation_hold.clone(), |end, held| {
+                                            eprintln!("[navi] dictée : fin ({end:?}) après {} ms", held.as_millis());
+                                        });
                                     }
                                 }
                             }
