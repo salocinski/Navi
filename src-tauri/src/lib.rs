@@ -283,6 +283,34 @@ fn get_status(state: tauri::State<NaviState>) -> StatusDto {
     }
 }
 
+#[derive(serde::Serialize)]
+struct DictationModelDto {
+    present: bool,
+    downloading: bool,
+    path: String,
+}
+
+/// État du modèle de dictée (présence et taille ; l'empreinte est contrôlée au premier usage).
+#[tauri::command]
+fn dictation_model_status(state: tauri::State<NaviState>) -> DictationModelDto {
+    let path = crate::stt::model::model_path();
+    DictationModelDto {
+        present: crate::stt::model::is_present(&path),
+        downloading: state.dictation.is_downloading(),
+        path: path.display().to_string(),
+    }
+}
+
+/// Télécharge le modèle de dictée en tâche de fond (progression : événements `dictation-state`).
+#[tauri::command]
+fn download_dictation_model(state: tauri::State<NaviState>) -> Result<(), String> {
+    if crate::stt::model::is_present(&crate::stt::model::model_path()) {
+        return Ok(());
+    }
+    state.dictation.start_download();
+    Ok(())
+}
+
 /// Charge le modèle Kokoro en tâche de fond (idempotent ; ~11 s au premier appel).
 /// Un seul chargement simultané autorisé — ort refuse plusieurs `Environment`.
 #[tauri::command]
@@ -590,6 +618,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             get_status,
+            dictation_model_status,
+            download_dictation_model,
             get_config,
             get_voices,
             set_config,
