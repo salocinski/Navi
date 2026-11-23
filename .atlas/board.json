@@ -1,5 +1,5 @@
 {
-  "estimated_total": 86,
+  "estimated_total": 97,
   "tickets": [
     {
       "id": "N-001",
@@ -484,9 +484,9 @@
     {
       "id": "N-061",
       "title": "Fournir le fichier de mentions légales tierces",
-      "description": "",
-      "state": "doing",
-      "updated_at": "2026-11-23T13:23:12Z",
+      "description": "[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Livre via PR #107 (7df2a49) : THIRD_PARTY_NOTICES.md genere par tools/gen-notices.mjs (337 paquets, 169 textes de licence, partie redigee Kokoro/ONNX Runtime/espeak-ng avec offre de source/attribution CC BY 4.0 de ff_siwis), LICENSE et notices embarques dans l'installeur, docs/licences.md mis a jour (ff_siwis embarquee). Non verifie : references SIWIS non relues a la source, version d'espeak-ng non indiquee, aucune revue juridique.",
+      "state": "done",
+      "updated_at": "2026-11-23T14:17:43Z",
       "assignee": ""
     },
     {
@@ -687,6 +687,94 @@
       "description": "[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Corrige via PR #105 (d75d08d) : open_settings en async (creation de fenetre depuis une commande synchrone bloquait sous Windows) et fermeture propre (liberation moteur/audio puis app.exit au lieu de process::exit). Cause non confirmee par journal. Nouvelle version de l'installeur declaree saine par le proprietaire apres test d'installation.",
       "state": "done",
       "updated_at": "2026-11-23T13:14:56Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-087",
+      "title": "[Dictée] Spike : mesurer Whisper Large v3 Turbo en local (CPU/GPU, latence, mémoire, taille réelle)",
+      "description": "Décide la durée maximale d'un appui maintenu et le repli sur un modèle plus petit. Choix propriétaire 2026-11-23 : Whisper Large v3 Turbo non quantifié, local.",
+      "state": "todo",
+      "updated_at": "2026-11-23T14:14:27Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-088",
+      "title": "[Dictée] Capturer le micro (16 kHz mono, choix du périphérique)",
+      "description": "cpal déjà présent via rodio. Indicateur micro Windows à vérifier.",
+      "state": "todo",
+      "updated_at": "2026-11-23T14:14:28Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-089",
+      "title": "[Dictée] Raccourci Alt+Espace en appui maintenu (détection du relâchement)",
+      "description": "Décision propriétaire : appui maintenu. RegisterHotKey ne signale pas le relâchement : interrogation GetAsyncKeyState après l'appui (ou relâchement émis par global-hotkey patché, à vérifier). Alt+Espace masque le menu système des fenêtres ; conflit possible avec PowerToys Run.",
+      "state": "todo",
+      "updated_at": "2026-11-23T14:14:29Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-090",
+      "title": "[Dictée] Intégrer Whisper derrière un trait SttEngine (détection auto FR/EN, chargement à la demande)",
+      "description": "whisper.cpp via whisper-rs (CMake + MSVC, à valider en CI). Ponctuation et casse automatiques natives. Langue : détection automatique anglais/français.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087",
+      "state": "todo",
+      "updated_at": "2026-11-23T14:14:31Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-091",
+      "title": "[Dictée] Insérer le texte par SendInput dans la fenêtre active au moment de l'insertion",
+      "description": "Saisie Unicode au curseur de texte de la fenêtre au premier plan au moment de l'insertion (décision propriétaire).\n\n[NOTE 2026-11-23 09:14] dépendances : N-090",
+      "state": "todo",
+      "updated_at": "2026-11-23T14:14:32Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-092",
+      "title": "[Dictée] Machine d'états de dictée, arrêt de la lecture au démarrage et pastille d'enregistrement",
+      "description": "La lecture à voix haute s'arrête quand la dictée démarre (décision propriétaire, évite l'écho micro). Lancer la lecture pendant une dictée : ignoré. Pastille rouge REC distincte, toujours visible pendant la capture (réutilise la pastille N-077).\n\n[NOTE 2026-11-23 09:14] dépendances : N-088, N-089, N-090",
+      "state": "todo",
+      "updated_at": "2026-11-23T14:14:34Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-093",
+      "title": "[Dictée] Réglages de dictée et section du panneau",
+      "description": "Raccourci, périphérique micro, état du modèle.\n\n[NOTE 2026-11-23 09:14] dépendances : N-090",
+      "state": "todo",
+      "updated_at": "2026-11-23T14:14:35Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-094",
+      "title": "[Dictée] Télécharger et gérer le modèle Whisper au premier usage, avec mentions légales",
+      "description": "Fichier d'environ 1,6 Go (à confirmer au spike) : téléchargement au premier usage recommandé plutôt qu'embarqué (installeur et limite de 2 Go par fichier des releases). Intégrité SHA-256 comme N-059. Liens : N-066, N-061. whisper.cpp et poids Whisper sous MIT.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087",
+      "state": "todo",
+      "updated_at": "2026-11-23T14:14:37Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-095",
+      "title": "[Dictée] Exécuter Navi toujours en administrateur (manifeste, tâche planifiée de démarrage, reprise de N-054)",
+      "description": "Décision propriétaire : toujours élevé. UAC à chaque lancement manuel ; le démarrage par clé de registre ne lance pas une appli élevée : tâche planifiée avec privilèges maximaux. Durcir ce que la fenêtre web peut appeler.",
+      "state": "todo",
+      "updated_at": "2026-11-23T14:14:38Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-096",
+      "title": "[Dictée] Tester la compatibilité (applications, fenêtres élevées) et rédiger le rapport",
+      "description": "Panel d'applications, comme N-016.\n\n[NOTE 2026-11-23 09:14] dépendances : N-091",
+      "state": "todo",
+      "updated_at": "2026-11-23T14:14:40Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-097",
+      "title": "[Dictée] Vie privée et accessibilité : aucun audio conservé ni envoyé, indicateur micro",
+      "description": "Tout reste local ; aucun enregistrement conservé.",
+      "state": "todo",
+      "updated_at": "2026-11-23T14:14:41Z",
       "assignee": ""
     }
   ]

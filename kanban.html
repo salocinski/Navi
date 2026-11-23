@@ -1231,7 +1231,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 61,
       "title": "Fournir le fichier de mentions légales tierces",
-      "status": "doing",
+      "status": "done",
       "prio": "P1",
       "kind": "tache",
       "milestone": "M2",
@@ -1240,7 +1240,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-026"
       ],
-      "note": ""
+      "note": "[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Livre via PR #107 (7df2a49) : THIRD_PARTY_NOTICES.md genere par tools/gen-notices.mjs (337 paquets, 169 textes de licence, partie redigee Kokoro/ONNX Runtime/espeak-ng avec offre de source/attribution CC BY 4.0 de ff_siwis), LICENSE et notices embarques dans l'installeur, docs/licences.md mis a jour (ff_siwis embarquee). Non verifie : references SIWIS non relues a la source, version d'espeak-ng non indiquee, aucune revue juridique."
     },
     {
       "num": 62,
@@ -1570,6 +1570,163 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "prio": "P2",
       "size": "M",
       "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 87,
+      "title": "[Dictée] Spike : mesurer Whisper Large v3 Turbo en local (CPU/GPU, latence, mémoire, taille réelle)",
+      "note": "Décide la durée maximale d'un appui maintenu et le repli sur un modèle plus petit. Choix propriétaire 2026-11-23 : Whisper Large v3 Turbo non quantifié, local.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P1",
+      "size": "L",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 88,
+      "title": "[Dictée] Capturer le micro (16 kHz mono, choix du périphérique)",
+      "note": "cpal déjà présent via rodio. Indicateur micro Windows à vérifier.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P1",
+      "size": "M",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 89,
+      "title": "[Dictée] Raccourci Alt+Espace en appui maintenu (détection du relâchement)",
+      "note": "Décision propriétaire : appui maintenu. RegisterHotKey ne signale pas le relâchement : interrogation GetAsyncKeyState après l'appui (ou relâchement émis par global-hotkey patché, à vérifier). Alt+Espace masque le menu système des fenêtres ; conflit possible avec PowerToys Run.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P1",
+      "size": "M",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 90,
+      "title": "[Dictée] Intégrer Whisper derrière un trait SttEngine (détection auto FR/EN, chargement à la demande)",
+      "note": "whisper.cpp via whisper-rs (CMake + MSVC, à valider en CI). Ponctuation et casse automatiques natives. Langue : détection automatique anglais/français.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087",
+      "deps": [
+        "N-087"
+      ],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P1",
+      "size": "L",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 91,
+      "title": "[Dictée] Insérer le texte par SendInput dans la fenêtre active au moment de l'insertion",
+      "note": "Saisie Unicode au curseur de texte de la fenêtre au premier plan au moment de l'insertion (décision propriétaire).\n\n[NOTE 2026-11-23 09:14] dépendances : N-090",
+      "deps": [
+        "N-090"
+      ],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P1",
+      "size": "L",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 92,
+      "title": "[Dictée] Machine d'états de dictée, arrêt de la lecture au démarrage et pastille d'enregistrement",
+      "note": "La lecture à voix haute s'arrête quand la dictée démarre (décision propriétaire, évite l'écho micro). Lancer la lecture pendant une dictée : ignoré. Pastille rouge REC distincte, toujours visible pendant la capture (réutilise la pastille N-077).\n\n[NOTE 2026-11-23 09:14] dépendances : N-088, N-089, N-090",
+      "deps": [
+        "N-088",
+        "N-089",
+        "N-090"
+      ],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "M",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 93,
+      "title": "[Dictée] Réglages de dictée et section du panneau",
+      "note": "Raccourci, périphérique micro, état du modèle.\n\n[NOTE 2026-11-23 09:14] dépendances : N-090",
+      "deps": [
+        "N-090"
+      ],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "M",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 94,
+      "title": "[Dictée] Télécharger et gérer le modèle Whisper au premier usage, avec mentions légales",
+      "note": "Fichier d'environ 1,6 Go (à confirmer au spike) : téléchargement au premier usage recommandé plutôt qu'embarqué (installeur et limite de 2 Go par fichier des releases). Intégrité SHA-256 comme N-059. Liens : N-066, N-061. whisper.cpp et poids Whisper sous MIT.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087",
+      "deps": [
+        "N-087"
+      ],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "L",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 95,
+      "title": "[Dictée] Exécuter Navi toujours en administrateur (manifeste, tâche planifiée de démarrage, reprise de N-054)",
+      "note": "Décision propriétaire : toujours élevé. UAC à chaque lancement manuel ; le démarrage par clé de registre ne lance pas une appli élevée : tâche planifiée avec privilèges maximaux. Durcir ce que la fenêtre web peut appeler.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P1",
+      "size": "L",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 96,
+      "title": "[Dictée] Tester la compatibilité (applications, fenêtres élevées) et rédiger le rapport",
+      "note": "Panel d'applications, comme N-016.\n\n[NOTE 2026-11-23 09:14] dépendances : N-091",
+      "deps": [
+        "N-091"
+      ],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "M",
+      "status": "todo",
+      "assigned_to": ""
+    },
+    {
+      "num": 97,
+      "title": "[Dictée] Vie privée et accessibilité : aucun audio conservé ni envoyé, indicateur micro",
+      "note": "Tout reste local ; aucun enregistrement conservé.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P3",
+      "size": "S",
+      "status": "todo",
       "assigned_to": ""
     }
   ]
