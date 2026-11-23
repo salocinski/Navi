@@ -1104,7 +1104,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 52,
       "title": "Rendre les raccourcis configurables et gérer les conflits",
-      "status": "backlog",
+      "status": "done",
       "prio": "P1",
       "kind": "tache",
       "milestone": "M2",
@@ -1114,7 +1114,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
         "N-051",
         "N-045"
       ],
-      "note": ""
+      "note": "[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-22] PR #96 fusionnée. Raccourcis configurables depuis la fenêtre Paramètres (saisie au clavier), appliqués à chaud via HotkeyManager::apply (échecs isolés, retour aux raccourcis précédents en cas de conflit, config non écrite). Validation : modificateur obligatoire, pas de doublon. cargo test 88 OK, clippy --all-targets -D warnings propre, CI verte ; changement de combinaison testé à la main. Non testé à la main : conflit avec une autre application et retour arrière."
     },
     {
       "num": 53,
