@@ -700,17 +700,17 @@
     {
       "id": "N-088",
       "title": "[Dictée] Capturer le micro (16 kHz mono, choix du périphérique)",
-      "description": "cpal déjà présent via rodio. Indicateur micro Windows à vérifier.",
-      "state": "doing",
-      "updated_at": "2026-11-23T17:29:13Z",
+      "description": "cpal déjà présent via rodio. Indicateur micro Windows à vérifier.\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Capture micro livree via PR #110 (audio/micro.rs, cpal, mono 16 kHz, plafond 60 s, config microphone). Reste a verifier : micro nomme/absent et indicateur micro Windows lors du branchement (N-089/N-090).",
+      "state": "done",
+      "updated_at": "2026-11-23T17:37:23Z",
       "assignee": ""
     },
     {
       "id": "N-089",
       "title": "[Dictée] Raccourci Alt+Espace en appui maintenu (détection du relâchement)",
       "description": "Décision propriétaire : appui maintenu. RegisterHotKey ne signale pas le relâchement : interrogation GetAsyncKeyState après l'appui (ou relâchement émis par global-hotkey patché, à vérifier). Alt+Espace masque le menu système des fenêtres ; conflit possible avec PowerToys Run.",
-      "state": "todo",
-      "updated_at": "2026-11-23T14:14:29Z",
+      "state": "doing",
+      "updated_at": "2026-11-23T17:37:24Z",
       "assignee": ""
     },
     {
