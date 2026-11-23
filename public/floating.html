@@ -27,6 +27,7 @@
         display: none;
       }
       body[data-state='generating'] #gen,
+      body[data-state='recording'] #rec,
       body[data-state='error'] #error {
         display: block;
       }
@@ -35,6 +36,10 @@
       }
       body[data-state='paused'] #pause {
         display: block;
+      }
+      /* dictée : pastille rouge REC qui pulse */
+      #rec .dot {
+        animation: pulse 1s ease-in-out infinite;
       }
       /* génération : arc bleu en rotation */
       #gen .arc {
@@ -61,6 +66,7 @@
       }
       @media (prefers-reduced-motion: reduce) {
         #gen .arc,
+        #rec .dot,
         #read .ring {
           animation: none;
         }
@@ -94,6 +100,11 @@
         />
       </g>
     </svg>
+    <!-- Dictée : disque rouge REC (micro ouvert) -->
+    <svg id="rec" viewBox="0 0 56 56" role="img" aria-label="Enregistrement de la dictée">
+      <circle cx="28" cy="28" r="24" fill="#1a0533" fill-opacity="0.9" />
+      <circle class="dot" cx="28" cy="28" r="13" fill="#ef4444" stroke="#fecaca" stroke-width="3" />
+    </svg>
     <!-- Lecture : anneau cyan pulsatile -->
     <svg id="read" viewBox="0 0 56 56" role="img" aria-label="Lecture en cours">
       <circle cx="28" cy="28" r="24" fill="#1a0533" fill-opacity="0.9" />
@@ -121,19 +132,29 @@
     </svg>
     <script>
       // Suit la machine d'états via les événements `navi-state` (mêmes que la fenêtre principale).
-      const VALID = new Set(['generating', 'playing', 'paused', 'error']);
+      const VALID = new Set(['generating', 'playing', 'paused', 'error', 'recording']);
       function appliquer(to) {
         const cible = to === 'capturing' || to === 'generating' ? 'generating' : to;
         if (VALID.has(cible)) {
           document.body.dataset.state = cible;
         }
       }
+      // Dictée : enregistrement = REC rouge ; transcription/saisie = arc de traitement.
+      const DICTEE = { recording: 'recording', transcribing: 'generating', inserting: 'generating' };
       const api = window.__TAURI__;
       if (api && api.event && api.event.listen) {
         api.event.listen('navi-state', (event) => {
           const p = event && event.payload;
           if (!p) return;
           if (p.type === 'phase-changed' && p.to) appliquer(p.to);
+          else if (p.type === 'error') appliquer('error');
+        });
+      }
+      if (api && api.event && api.event.listen) {
+        api.event.listen('dictation-state', (event) => {
+          const p = event && event.payload;
+          if (!p) return;
+          if (p.type === 'phase-changed' && DICTEE[p.to]) appliquer(DICTEE[p.to]);
           else if (p.type === 'error') appliquer('error');
         });
       }
