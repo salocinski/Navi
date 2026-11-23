@@ -54,6 +54,8 @@ rodio = "0.19"
 
 # Utilitaires
 libc = "0.2"
+# Empreintes SHA-256 des modèles (N-059) ; déjà présent dans Cargo.lock.
+sha2 = "0.10"
 
 # Tests
 #[cfg(test)]

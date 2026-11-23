@@ -102,6 +102,55 @@ struct Phonemizer {
     to_phonemes: unsafe extern "system" fn(*mut *const i8, i32, i32) -> *const i8,
 }
 
+/// Fichiers requis et empreintes SHA-256 attendues (Kokoro v1.0 int8).
+/// shortcut: empreintes figées dans le code, à déplacer dans un manifeste avec N-066.
+const KOKORO_FILES: [(&str, &str); 3] = [
+    (
+        KOKORO_MODEL_FILE,
+        "6e742170d309016e5891a994e1ce1559c702a2ccd0075e67ef7157974f6406cb",
+    ),
+    (
+        KOKORO_VOICES_FILE,
+        "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d",
+    ),
+    (
+        KOKORO_VOCAB_FILE,
+        "70abefbe8a1c8865e43e0a43bbdc25b91a33e4aa053479d443ccf23e20a59e5d",
+    ),
+];
+
+/// Dossier déjà vérifié : le hachage (~115 Mo) n'est refait que si le dossier change.
+static VERIFIED_DIR: Mutex<Option<PathBuf>> = Mutex::new(None);
+
+/// Vérifie présence et intégrité des fichiers de modèle de `dir`.
+pub fn check_models(dir: &std::path::Path) -> Result<(), TtsError> {
+    let mut verified = VERIFIED_DIR.lock().unwrap_or_else(|e| e.into_inner());
+    if verified.as_deref() == Some(dir) {
+        return Ok(());
+    }
+    check_files(dir, &KOKORO_FILES)?;
+    *verified = Some(dir.to_path_buf());
+    Ok(())
+}
+
+fn check_files(dir: &std::path::Path, files: &[(&str, &str)]) -> Result<(), TtsError> {
+    use sha2::{Digest, Sha256};
+    for (name, expected) in files {
+        let path = dir.join(name);
+        let mut file = std::fs::File::open(&path).map_err(|e| match e.kind() {
+            std::io::ErrorKind::NotFound => TtsError::ModelMissing(path.display().to_string()),
+            _ => TtsError::Io(format!("{} : {e}", path.display())),
+        })?;
+        let mut hasher = Sha256::new();
+        std::io::copy(&mut file, &mut hasher)
+            .map_err(|e| TtsError::Io(format!("{} : {e}", path.display())))?;
+        if format!("{:x}", hasher.finalize()) != *expected {
+            return Err(TtsError::ModelCorrupt(path.display().to_string()));
+        }
+    }
+    Ok(())
+}
+
 impl KokoroEngine {
     pub fn new(config: TtsConfig) -> Result<Self, Box<dyn std::error::Error>> {
         // Charger vocabulaire
@@ -328,5 +377,44 @@ impl Phonemizer {
             }
         }
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod models_tests {
+    use super::*;
+
+    // SHA-256 de "abc"
+    const ABC: &str = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+
+    #[test]
+    fn modele_present_et_intact() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("m.bin"), "abc").unwrap();
+        assert!(check_files(dir.path(), &[("m.bin", ABC)]).is_ok());
+    }
+
+    #[test]
+    fn modele_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let err = check_files(dir.path(), &[("m.bin", ABC)]).unwrap_err();
+        assert!(matches!(err, TtsError::ModelMissing(p) if p.ends_with("m.bin")));
+    }
+
+    #[test]
+    fn modele_altere_ou_tronque() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("m.bin"), "ab").unwrap();
+        let err = check_files(dir.path(), &[("m.bin", ABC)]).unwrap_err();
+        assert!(matches!(err, TtsError::ModelCorrupt(_)));
+    }
+
+    #[test]
+    fn dossier_configure_prioritaire() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(
+            crate::utils::resolve_models_dir_with(Some(dir.path())),
+            dir.path()
+        );
     }
 }
