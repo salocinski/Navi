@@ -716,17 +716,17 @@
     {
       "id": "N-090",
       "title": "[Dictée] Intégrer Whisper derrière un trait SttEngine (détection auto FR/EN, chargement à la demande)",
-      "description": "whisper.cpp via whisper-rs (CMake + MSVC, à valider en CI). Ponctuation et casse automatiques natives. Langue : détection automatique anglais/français.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087",
-      "state": "doing",
-      "updated_at": "2026-11-23T17:47:07Z",
+      "description": "whisper.cpp via whisper-rs (CMake + MSVC, à valider en CI). Ponctuation et casse automatiques natives. Langue : détection automatique anglais/français.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Trait SttEngine et moteur Whisper livres via PR #112 (stt/, whisper-rs 0.16 + CUDA 13.5, feature cuda, detection FR/EN). Mesure reelle : 1,48 s pour 24 s de francais sur RTX 3060 Ti. Reste : DLL CUDA a livrer (N-094), SHA-256 du modele (N-094), repli CPU (N-096), mentions legales (N-061), voie CUDA non verifiee en CI.",
+      "state": "done",
+      "updated_at": "2026-11-23T19:06:52Z",
       "assignee": ""
     },
     {
       "id": "N-091",
       "title": "[Dictée] Insérer le texte par SendInput dans la fenêtre active au moment de l'insertion",
       "description": "Saisie Unicode au curseur de texte de la fenêtre au premier plan au moment de l'insertion (décision propriétaire).\n\n[NOTE 2026-11-23 09:14] dépendances : N-090",
-      "state": "todo",
-      "updated_at": "2026-11-23T14:14:32Z",
+      "state": "doing",
+      "updated_at": "2026-11-23T19:07:50Z",
       "assignee": ""
     },
     {
