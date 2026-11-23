@@ -93,6 +93,7 @@ pub(crate) fn idle_secs() -> Option<u64> {
     (last != 0).then(|| now_secs().saturating_sub(last))
 }
 pub mod audio;
+pub mod autostart;
 pub mod hotkey;
 pub mod pipeline;
 pub mod state;
@@ -172,10 +173,19 @@ struct StatusDto {
 /// Fichier illisible : valeurs par défaut (journalisé) — l'utilisateur peut ainsi le réparer en enregistrant.
 #[tauri::command]
 fn get_config() -> crate::config::AppConfig {
-    crate::config::AppConfig::load().unwrap_or_else(|e| {
+    let mut config = crate::config::AppConfig::load().unwrap_or_else(|e| {
         eprintln!("[navi] config illisible, valeurs par défaut : {e}");
         Default::default()
-    })
+    });
+    // Le registre fait foi : l'utilisateur peut retirer Navi du démarrage depuis Windows.
+    config.autostart = crate::autostart::is_enabled();
+    config
+}
+
+/// Voix proposées dans la fenêtre Paramètres (source unique : `config::VOICES_*`).
+#[tauri::command]
+fn get_voices() -> serde_json::Value {
+    serde_json::json!({ "fr": crate::config::VOICES_FR, "en": crate::config::VOICES_EN })
 }
 
 /// Gestionnaire de raccourcis partagé : réenregistrement à chaud depuis `set_config`.
@@ -216,15 +226,33 @@ fn set_config(
     config.validate()?;
     let previous = crate::config::AppConfig::load().unwrap_or_default();
     let view = state.view();
-    let changed = crate::hotkey::bindings_of(&config) != crate::hotkey::bindings_of(&previous);
-    if changed && let Some(message) = apply_hotkeys(&hotkeys, &view, &config).failure_message() {
-        apply_hotkeys(&hotkeys, &view, &previous);
-        return Err(message);
-    }
-    config.save().map_err(|e| {
-        if changed {
+    let hotkeys_changed =
+        crate::hotkey::bindings_of(&config) != crate::hotkey::bindings_of(&previous);
+    let was_autostart = crate::autostart::is_enabled();
+    // Retour aux réglages précédents si une étape suivante échoue.
+    let rollback = || {
+        if hotkeys_changed {
             apply_hotkeys(&hotkeys, &view, &previous);
         }
+        if config.autostart != was_autostart {
+            let _ = crate::autostart::set_enabled(was_autostart);
+        }
+    };
+
+    if hotkeys_changed
+        && let Some(message) = apply_hotkeys(&hotkeys, &view, &config).failure_message()
+    {
+        rollback();
+        return Err(message);
+    }
+    if config.autostart != was_autostart
+        && let Err(e) = crate::autostart::set_enabled(config.autostart)
+    {
+        rollback();
+        return Err(format!("Démarrage avec Windows : {e}"));
+    }
+    config.save().map_err(|e| {
+        rollback();
         format!("Enregistrement impossible : {e}")
     })
 }
@@ -437,7 +465,11 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     let machine = state.machine.clone();
     let engine = state.engine.clone();
     let audio = state.audio.clone();
-    let speech_rate = config.speech_rate.clamp(0.5, 2.0);
+    let params = crate::pipeline::SynthesisParams {
+        language,
+        speed: config.speech_rate.clamp(0.5, 2.0),
+        voice: Some(config.voice_for(language).to_string()),
+    };
     std::thread::spawn(move || {
         eprintln!(
             "[navi] thread de synthèse démarré ({} segments)",
@@ -459,8 +491,7 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
                 &segments,
                 &sink,
                 &|| machine.is_generation_cancelled(token),
-                language,
-                speech_rate,
+                &params,
                 &|| {
                     let _ = machine.next_chunk();
                 },
@@ -547,6 +578,7 @@ pub fn run() {
             greet,
             get_status,
             get_config,
+            get_voices,
             set_config,
             load_model,
             start_reading,

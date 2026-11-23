@@ -94,19 +94,36 @@ pub(crate) fn fit_segments(
     Ok(out)
 }
 
+/// Réglages de synthèse communs à tous les segments d'une lecture.
+pub struct SynthesisParams {
+    pub language: Option<TtsLanguage>,
+    /// Vitesse de lecture (réglage `speech_rate`, carte N-051).
+    pub speed: f32,
+    /// Voix du réglage de langue (carte N-053) ; `None` = voix par défaut du moteur.
+    pub voice: Option<String>,
+}
+
+impl Default for SynthesisParams {
+    fn default() -> Self {
+        Self {
+            language: None,
+            speed: 1.0,
+            voice: None,
+        }
+    }
+}
+
 /// Synthétise chaque segment et pousse l'audio dans `sink`.
 ///
 /// S'arrête avant un segment si `is_cancelled()` retourne vrai — l'appelant
 /// (`stop`) vide ensuite la file audio et invalide le jeton (TW-020).
-/// `speed` : vitesse de lecture (réglage `speech_rate`, carte N-051).
 /// Retourne le nombre de segments synthétisés.
 pub fn synthesize_segments(
     engine: &dyn TtsEngine,
     segments: &[Segment],
     sink: &dyn AudioSink,
     is_cancelled: &dyn Fn() -> bool,
-    language: Option<TtsLanguage>,
-    speed: f32,
+    params: &SynthesisParams,
     on_segment_done: &dyn Fn(),
 ) -> Result<usize, String> {
     let mut count = 0;
@@ -125,13 +142,13 @@ pub fn synthesize_segments(
             seg.text.chars().count()
         );
         let mut samples = 0;
-        for piece in fit_segments(engine, &seg.text, language)? {
+        for piece in fit_segments(engine, &seg.text, params.language)? {
             let out = engine
                 .synthesize(&SynthesisRequest {
                     text: piece,
-                    voice: None,
-                    language,
-                    speed,
+                    voice: params.voice.clone(),
+                    language: params.language,
+                    speed: params.speed,
                 })
                 .map_err(|e| {
                     format!(
@@ -213,8 +230,10 @@ mod tests {
             &segments(5),
             &sink,
             &|| false,
-            Some(TtsLanguage::French),
-            1.0,
+            &SynthesisParams {
+                language: Some(TtsLanguage::French),
+                ..Default::default()
+            },
             &|| (),
         )
         .unwrap();
@@ -240,8 +259,10 @@ mod tests {
             &segments(5),
             &sink,
             &is_cancelled,
-            Some(TtsLanguage::French),
-            1.0,
+            &SynthesisParams {
+                language: Some(TtsLanguage::French),
+                ..Default::default()
+            },
             &|| (),
         )
         .unwrap();
@@ -358,8 +379,10 @@ mod tests {
             &segs,
             &sink,
             &|| false,
-            Some(TtsLanguage::English),
-            1.0,
+            &SynthesisParams {
+                language: Some(TtsLanguage::English),
+                ..Default::default()
+            },
             &|| (),
         )
         .unwrap();
@@ -367,8 +390,8 @@ mod tests {
     }
 
     #[test]
-    fn la_vitesse_est_transmise_au_moteur() {
-        struct SpeedProbe(Mutex<Vec<f32>>);
+    fn vitesse_et_voix_sont_transmises_au_moteur() {
+        struct SpeedProbe(Mutex<Vec<(f32, Option<String>)>>);
         impl TtsEngine for SpeedProbe {
             fn name(&self) -> &'static str {
                 "speed"
@@ -389,7 +412,10 @@ mod tests {
                 &self,
                 request: &SynthesisRequest,
             ) -> Result<crate::tts::SynthesisOutput, crate::tts::TtsError> {
-                self.0.lock().unwrap().push(request.speed);
+                self.0
+                    .lock()
+                    .unwrap()
+                    .push((request.speed, request.voice.clone()));
                 Ok(crate::tts::SynthesisOutput {
                     samples: vec![0.0],
                     sample_rate: 24_000,
@@ -402,11 +428,19 @@ mod tests {
             &segments(2),
             &MemorySink::new(),
             &|| false,
-            None,
-            1.5,
+            &SynthesisParams {
+                speed: 1.5,
+                voice: Some("bf_emma".into()),
+                ..Default::default()
+            },
             &|| (),
         )
         .unwrap();
-        assert_eq!(*probe.0.lock().unwrap(), vec![1.5, 1.5]);
+        let seen = probe.0.lock().unwrap();
+        assert_eq!(seen.len(), 2);
+        assert!(
+            seen.iter()
+                .all(|(v, voice)| *v == 1.5 && voice.as_deref() == Some("bf_emma"))
+        );
     }
 }
