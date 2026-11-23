@@ -36,4 +36,11 @@ export default tseslint.config(
       '@typescript-eslint/no-require-imports': 'off',
     },
   },
+  {
+    // Scripts Node en modules ES (ex. tools/gen-notices.mjs).
+    files: ['tools/**/*.mjs'],
+    languageOptions: {
+      globals: { console: 'readonly', URL: 'readonly' },
+    },
+  },
 );

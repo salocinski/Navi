@@ -20,7 +20,7 @@ Navi est distribué sous **GPL-3.0-or-later** via des releases GitHub. Conséque
 | `voices-v1.0.bin` (conteneur) | Apache-2.0 (artefact de la même publication) | ✅ | Ne pas embarquer `ff_siwis` (voir ligne suivante) |
 | Voix `af_heart` (retenue, féminine) | Sous Apache-2.0, **aucune attribution CC BY listée** (VOICES.md) | ✅ | Provenance des données d'entraînement non documentée — à mentionner honnêtement |
 | Voix `am_adam` (retenue, masculine) | Sous Apache-2.0, aucune attribution CC BY listée | ✅ | Notée **F+ / qualité D en amont** (VOICES.md). Choix humain validé à l'écoute (carte TW-29) — à reconsidérer si l'oreille change : am_michael, am_fenrir, am_puck notés C+ |
-| Voix `ff_siwis` (écartée) | Poids Apache-2.0, voix **CC BY 4.0 (SIWIS, Edinburgh DataShare)** | ✅ mais **hors distribution** | Attribution CC BY devenue inutile : Navi n'embarque pas cette voix |
+| Voix `ff_siwis` (**embarquée**, voix française par défaut depuis N-053) | Poids Apache-2.0, voix **CC BY 4.0 (SIWIS, Edinburgh DataShare)** | ✅ | **Attribution CC BY 4.0 requise** : ajoutée à `THIRD_PARTY_NOTICES.md` (N-061). Supersede la décision « hors distribution » de la passe 2 |
 | kokoro-onnx (prototype Python) | MIT — `thewh1teagle/kokoro-onnx` LICENSE | ✅ | Conserver copyright + texte MIT |
 | espeak-ng (phonémisation FR/EN) | **GPL-3.0-or-later** — `espeak-ng/espeak-ng` COPYING | ✅ (homogène) | Lié directement ; crédits dans les mentions tierces |
 | misaki (G2P EN/JA/KO/ZH/VI) | Apache-2.0 | ✅ | **Pas de français** (README vérifié le 2026-11-17) — pas dans la chaîne FR |
@@ -40,7 +40,7 @@ Navi est distribué sous **GPL-3.0-or-later** via des releases GitHub. Conséque
 ## Clôture et renvois
 
 - [x] Fichiers LICENSE bruts de chaque artefact lus (URL dans le tableau)
-- [x] Licence SIWIS : sans objet, `ff_siwis` hors distribution
+- [x] Licence SIWIS : `ff_siwis` désormais embarquée → attribution CC BY 4.0 dans `THIRD_PARTY_NOTICES.md` (N-061)
 - [x] Phonémiseur : espeak-ng conservé, légitimé par le choix GPL-3.0
-- [ ] `cargo tree` / `cargo about` → renvoyé aux cartes TW-60 (installeur) et TW-61 (mentions tierces)
+- [x] Inventaire des dépendances → `THIRD_PARTY_NOTICES.md`, généré par `tools/gen-notices.mjs` (N-061) ; installeur : N-060
 - [x] Décision de redistribution → carte TW-26 (clôturée le 2026-11-17)

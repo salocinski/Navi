@@ -4,6 +4,8 @@
     "targets": ["nsis"],
     "resources": {
       "resources/hey_listen.mp3": "resources/hey_listen.mp3",
+      "../LICENSE": "LICENSE.txt",
+      "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
       "../models/kokoro/*": "models/kokoro/",
       "../models/phonemizer/**/*": "models/phonemizer/"
     }

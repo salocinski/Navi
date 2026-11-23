@@ -9,6 +9,10 @@ kanban.html
 kanban.html.bak
 *.jfif
 *.pdf
+# Fichier généré par tools/gen-notices.mjs (texte des licences tierces, non reformaté)
+THIRD_PARTY_NOTICES.md
+tools/notices-manuel.md
+
 # Docs ATLAS : maintenus à la main, exclus du formatage automatique
 docs/
 BACKLOG.md
