@@ -8,6 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "bundle:win": "tauri build --config src-tauri/tauri.bundle.conf.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
