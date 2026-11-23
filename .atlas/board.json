@@ -692,17 +692,17 @@
     {
       "id": "N-087",
       "title": "[Dictée] Spike : mesurer Whisper Large v3 Turbo en local (CPU/GPU, latence, mémoire, taille réelle)",
-      "description": "Décide la durée maximale d'un appui maintenu et le repli sur un modèle plus petit. Choix propriétaire 2026-11-23 : Whisper Large v3 Turbo non quantifié, local.\n\n[NOTE 2026-11-23 10:43] [SPIKE 2026-11-23] GPU RTX 3060 Ti : 0,6 s (5 s) a 3,6 s (60 s) apres relachement, RAM ~0,5 Go, VRAM ~2 Gio. CPU i7-7700K inutilisable (~38 s par fenetre de 30 s). Detail : docs/s3-87-spike-whisper.md. Reste : anglais et modele de repli non mesures.",
-      "state": "doing",
-      "updated_at": "2026-11-23T14:33:16Z",
+      "description": "Décide la durée maximale d'un appui maintenu et le repli sur un modèle plus petit. Choix propriétaire 2026-11-23 : Whisper Large v3 Turbo non quantifié, local.\n\n[NOTE 2026-11-23 10:43] [SPIKE 2026-11-23] GPU RTX 3060 Ti : 0,6 s (5 s) a 3,6 s (60 s) apres relachement, RAM ~0,5 Go, VRAM ~2 Gio. CPU i7-7700K inutilisable (~38 s par fenetre de 30 s). Detail : docs/s3-87-spike-whisper.md. Reste : anglais et modele de repli non mesures.\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Spike livre via PR #109 (docs/s3-87-spike-whisper.md). GPU RTX 3060 Ti viable (0,6 s a 3,6 s pour 5 a 60 s de parole, VRAM ~2 Gio), CPU inutilisable. Anglais et modele de repli non mesures (decision du proprietaire).",
+      "state": "done",
+      "updated_at": "2026-11-23T17:29:41Z",
       "assignee": ""
     },
     {
       "id": "N-088",
       "title": "[Dictée] Capturer le micro (16 kHz mono, choix du périphérique)",
       "description": "cpal déjà présent via rodio. Indicateur micro Windows à vérifier.",
-      "state": "todo",
-      "updated_at": "2026-11-23T14:14:28Z",
+      "state": "doing",
+      "updated_at": "2026-11-23T17:29:13Z",
       "assignee": ""
     },
     {
