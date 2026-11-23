@@ -64,6 +64,9 @@ cpal = "0.15"
 # Transcription (dictée, N-090) : whisper.cpp compilé avec CUDA (CMake + CUDA Toolkit requis au build).
 whisper-rs = "0.16"
 
+# Téléchargement du modèle de dictée (N-094) ; déjà tirée par ort (ureq 3 dans Cargo.lock).
+ureq = "3"
+
 # Utilitaires
 libc = "0.2"
 # Empreintes SHA-256 des modèles (N-059) ; déjà présent dans Cargo.lock.

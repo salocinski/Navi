@@ -2,7 +2,7 @@
 
 Navi est distribué sous licence **GPL-3.0-or-later** (texte complet : fichier `LICENSE`, installé avec l'application). Il embarque les composants tiers listés ci-dessous, qui restent soumis à leurs propres licences. Ce fichier est généré : voir `tools/gen-notices.mjs` (partie rédigée : `tools/notices-manuel.md`).
 
-Navi fonctionne **100 % en local** : aucun texte ni aucun son n'est envoyé hors de l'ordinateur.
+Navi fonctionne **100 % en local** : aucun texte ni aucun son n'est envoyé hors de l'ordinateur. Seule exception : le modèle de dictée vocale (1,5 Go) est téléchargé une fois, au premier usage de la dictée, depuis Hugging Face (https://huggingface.co/ggerganov/whisper.cpp) ; ce serveur voit donc l'adresse IP de l'utilisateur à ce moment-là. Le fichier est vérifié par empreinte SHA-256.
 
 ## Moteur de synthèse vocale et modèles
 
@@ -18,6 +18,17 @@ Le texte intégral des licences Apache-2.0 et MIT figure plus bas, parmi les tex
 ### espeak-ng — offre de code source (GPL-3.0)
 
 Le binaire d'espeak-ng est fourni avec Navi sous GPL-3.0-or-later. Son code source correspondant est disponible à l'adresse https://github.com/espeak-ng/espeak-ng ; sur demande adressée au dépôt de Navi (https://github.com/salocinski/Navi), le code source de la version distribuée est fourni.
+
+## Dictée vocale
+
+| Composant | Auteur / source | Licence |
+|---|---|---|
+| Whisper Large v3 Turbo — poids `ggml-large-v3-turbo.bin` (téléchargés, non embarqués) | OpenAI — https://github.com/openai/whisper ; conversion ggml : https://huggingface.co/ggerganov/whisper.cpp | MIT |
+| whisper.cpp / ggml (moteur de transcription, compilé dans Navi) | Georgi Gerganov et les contributeurs — https://github.com/ggml-org/whisper.cpp | MIT |
+| whisper-rs / whisper-rs-sys (liaison Rust) | Tazz4843 et les contributeurs — https://codeberg.org/tazz4843/whisper-rs | Unlicense (domaine public) |
+| Bibliothèques d'exécution CUDA `cublas64_13.dll`, `cublasLt64_13.dll` (embarquées dans l'installeur) | NVIDIA Corporation — CUDA Toolkit 13.5 | Contrat de licence du CUDA Toolkit (EULA NVIDIA), annexe « Attachment A » : bibliothèques redistribuables. https://docs.nvidia.com/cuda/eula/ |
+
+Les bibliothèques NVIDIA sont redistribuées sans modification, uniquement comme composants de Navi, pour l'exécution de la transcription sur carte graphique NVIDIA. Elles restent la propriété de NVIDIA et ne sont pas couvertes par la licence GPL de Navi.
 
 ## Voix
 

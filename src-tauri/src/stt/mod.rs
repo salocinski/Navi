@@ -3,6 +3,7 @@
 //! Pendant de `tts::engine::TtsEngine` : le moteur est chargé à la demande (le modèle pèse 1,5 Go,
 //! ~3 s de chargement, spike N-087) et peut être déchargé après inactivité.
 
+pub mod model;
 pub mod whisper;
 
 use crate::tts::engine::TtsLanguage;

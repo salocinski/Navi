@@ -7,9 +7,11 @@ use crate::audio::micro::MicCapture;
 use crate::hotkey::hold::{HoldEnd, HoldGuard, spawn_hold_watch};
 use crate::insert::insert_text;
 use crate::state::PlaybackState;
-use crate::stt::whisper::{MODEL_FILE, WhisperEngine};
+use crate::stt::model::{self, ModelState};
+use crate::stt::whisper::WhisperEngine;
 use crate::stt::{MIN_SAMPLES, SttEngine};
 use serde::Serialize;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -38,6 +40,15 @@ pub enum DictationEvent {
         to: DictationState,
     },
     Error {
+        message: String,
+    },
+    /// Téléchargement du modèle : octets reçus / total (émis à chaque pour cent).
+    ModelDownload {
+        done: u64,
+        total: u64,
+    },
+    ModelReady,
+    ModelFailed {
         message: String,
     },
 }
@@ -86,6 +97,13 @@ impl DictationMachine {
 
     pub fn subscribe(&self, listener: impl Fn(DictationEvent) + Send + Sync + 'static) {
         self.lock().listeners.push(Arc::new(listener));
+    }
+
+    pub fn emit(&self, event: DictationEvent) {
+        let listeners = self.lock().listeners.clone();
+        for l in &listeners {
+            l(event.clone());
+        }
     }
 
     /// Change d'état si `allowed(état actuel)` ; notifie hors verrou.
@@ -162,20 +180,72 @@ impl DictationMachine {
     }
 }
 
-/// Dictée partagée : machine d'états + moteur Whisper (chargé à la demande).
+/// Dictée partagée : machine d'états + moteur Whisper (chargé à la demande) + état du modèle.
 #[derive(Clone, Default)]
 pub struct Dictation {
     pub machine: DictationMachine,
     engine: Arc<Mutex<Option<WhisperEngine>>>,
+    /// Empreinte du fichier modèle déjà contrôlée dans ce processus (le hachage prend ~4 s).
+    verified: Arc<AtomicBool>,
+    downloading: Arc<AtomicBool>,
 }
 
-/// Emplacement du modèle : `NAVI_STT_MODEL`, sinon à côté des modèles Kokoro.
-/// shortcut: dossier provisoire ; N-094 fixe l'emplacement et le téléchargement.
-fn model_path(config: &crate::config::AppConfig) -> std::path::PathBuf {
-    if let Ok(p) = std::env::var("NAVI_STT_MODEL") {
-        return p.into();
+impl Dictation {
+    pub fn is_downloading(&self) -> bool {
+        self.downloading.load(Ordering::SeqCst)
     }
-    crate::utils::resolve_models_dir_with(config.models_dir.as_deref()).join(MODEL_FILE)
+
+    /// Lance le téléchargement du modèle en tâche de fond ; `false` s'il est déjà en cours.
+    pub fn start_download(&self) -> bool {
+        if self.downloading.swap(true, Ordering::SeqCst) {
+            return false;
+        }
+        let this = self.clone();
+        std::thread::spawn(move || {
+            let mut last_pct = u64::MAX;
+            let result = model::download(&model::model_path(), |done, total| {
+                let pct = done * 100 / total;
+                if pct != last_pct {
+                    last_pct = pct;
+                    this.machine
+                        .emit(DictationEvent::ModelDownload { done, total });
+                }
+            });
+            this.verified.store(result.is_ok(), Ordering::SeqCst);
+            this.downloading.store(false, Ordering::SeqCst);
+            match result {
+                Ok(()) => this.machine.emit(DictationEvent::ModelReady),
+                Err(message) => {
+                    eprintln!("[navi] modèle de dictée : {message}");
+                    this.machine.emit(DictationEvent::ModelFailed { message });
+                }
+            }
+        });
+        true
+    }
+
+    /// Modèle utilisable ou erreur lisible ; lance le téléchargement s'il est absent ou corrompu.
+    /// Le modèle fourni par `NAVI_STT_MODEL` n'est ni contrôlé ni remplacé.
+    fn ensure_model(&self, path: &std::path::Path) -> Result<(), String> {
+        if model::is_overridden() || self.verified.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+        if self.is_downloading() {
+            return Err("Modèle de dictée en cours de téléchargement".into());
+        }
+        let reason = match model::verify(path)? {
+            ModelState::Valid => {
+                self.verified.store(true, Ordering::SeqCst);
+                return Ok(());
+            }
+            ModelState::Missing => "absent",
+            ModelState::Corrupt => "corrompu",
+        };
+        self.start_download();
+        Err(format!(
+            "Modèle de dictée {reason} : téléchargement lancé (1,5 Go), à réessayer une fois terminé"
+        ))
+    }
 }
 
 /// Démarre une dictée sur appui du raccourci. `guard` est libéré au relâchement.
@@ -211,17 +281,11 @@ pub fn start(view: &crate::NaviRef, vk: u16, guard: Arc<HoldGuard>) {
         }
     };
     spawn_hold_watch(vk, guard, move |end, held| {
-        process(&dictation, &config, capture, end, held)
+        process(&dictation, capture, end, held)
     });
 }
 
-fn process(
-    dictation: &Dictation,
-    config: &crate::config::AppConfig,
-    capture: MicCapture,
-    end: HoldEnd,
-    held: Duration,
-) {
+fn process(dictation: &Dictation, capture: MicCapture, end: HoldEnd, held: Duration) {
     let pcm = capture.stop();
     eprintln!("[navi] dictée : {end:?} après {} ms", held.as_millis());
     if held < MIN_HOLD || pcm.len() < MIN_SAMPLES {
@@ -231,7 +295,7 @@ fn process(
     if dictation.machine.to_transcribing().is_err() {
         return;
     }
-    let text = match transcribe(dictation, config, &pcm) {
+    let text = match transcribe(dictation, &pcm) {
         Ok(t) => t,
         Err(e) => return dictation.machine.fail(e),
     };
@@ -248,16 +312,14 @@ fn process(
     }
 }
 
-fn transcribe(
-    dictation: &Dictation,
-    config: &crate::config::AppConfig,
-    pcm: &[f32],
-) -> Result<String, String> {
+fn transcribe(dictation: &Dictation, pcm: &[f32]) -> Result<String, String> {
+    let path = model::model_path();
+    dictation.ensure_model(&path)?;
     let mut guard = dictation
         .engine
         .lock()
         .map_err(|_| "verrou moteur de dictée".to_string())?;
-    let engine = guard.get_or_insert_with(|| WhisperEngine::new(model_path(config)));
+    let engine = guard.get_or_insert_with(|| WhisperEngine::new(path));
     engine.load().map_err(|e| e.to_string())?;
     let out = engine.transcribe(pcm, None).map_err(|e| e.to_string())?;
     Ok(out.text)

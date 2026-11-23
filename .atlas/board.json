@@ -732,9 +732,9 @@
     {
       "id": "N-092",
       "title": "[Dictée] Machine d'états de dictée, arrêt de la lecture au démarrage et pastille d'enregistrement",
-      "description": "La lecture à voix haute s'arrête quand la dictée démarre (décision propriétaire, évite l'écho micro). Lancer la lecture pendant une dictée : ignoré. Pastille rouge REC distincte, toujours visible pendant la capture (réutilise la pastille N-077).\n\n[NOTE 2026-11-23 09:14] dépendances : N-088, N-089, N-090",
-      "state": "doing",
-      "updated_at": "2026-11-23T19:20:01Z",
+      "description": "La lecture à voix haute s'arrête quand la dictée démarre (décision propriétaire, évite l'écho micro). Lancer la lecture pendant une dictée : ignoré. Pastille rouge REC distincte, toujours visible pendant la capture (réutilise la pastille N-077).\n\n[NOTE 2026-11-23 09:14] dépendances : N-088, N-089, N-090\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Machine d'etats de dictee, arret de la lecture au demarrage et pastille REC livres via PR #114 (CI Prettier corrigee). Non verifie : essai reel dans l'application lancee, chemin CUDA.",
+      "state": "done",
+      "updated_at": "2026-11-23T19:41:11Z",
       "assignee": ""
     },
     {
@@ -749,8 +749,8 @@
       "id": "N-094",
       "title": "[Dictée] Télécharger et gérer le modèle Whisper au premier usage, avec mentions légales",
       "description": "Fichier d'environ 1,6 Go (à confirmer au spike) : téléchargement au premier usage recommandé plutôt qu'embarqué (installeur et limite de 2 Go par fichier des releases). Intégrité SHA-256 comme N-059. Liens : N-066, N-061. whisper.cpp et poids Whisper sous MIT.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087",
-      "state": "todo",
-      "updated_at": "2026-11-23T14:14:37Z",
+      "state": "doing",
+      "updated_at": "2026-11-23T19:41:13Z",
       "assignee": ""
     },
     {

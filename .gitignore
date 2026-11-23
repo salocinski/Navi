@@ -28,6 +28,7 @@ pnpm-debug.log*
 scratch/
 src-tauri/gen/
 src-tauri/target/
+src-tauri/cuda-redist/
 yarn-debug.log*
 yarn-error.log*
 *.bak
