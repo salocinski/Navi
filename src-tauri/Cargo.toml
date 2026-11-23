@@ -51,6 +51,8 @@ libloading = "0.9"
 
 # Audio
 rodio = "0.19"
+# Capture micro (dictée, N-088) ; même version que celle déjà tirée par rodio.
+cpal = "0.15"
 
 # Utilitaires
 libc = "0.2"

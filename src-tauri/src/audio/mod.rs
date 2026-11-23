@@ -1,5 +1,7 @@
 //! Lecture audio (rodio)
 
+pub mod micro;
+
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, buffer::SamplesBuffer};
 use std::collections::VecDeque;
 use std::sync::{Arc, Condvar, Mutex};
