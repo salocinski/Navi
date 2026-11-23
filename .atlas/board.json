@@ -748,17 +748,17 @@
     {
       "id": "N-094",
       "title": "[Dictée] Télécharger et gérer le modèle Whisper au premier usage, avec mentions légales",
-      "description": "Fichier d'environ 1,6 Go (à confirmer au spike) : téléchargement au premier usage recommandé plutôt qu'embarqué (installeur et limite de 2 Go par fichier des releases). Intégrité SHA-256 comme N-059. Liens : N-066, N-061. whisper.cpp et poids Whisper sous MIT.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087",
-      "state": "doing",
-      "updated_at": "2026-11-23T19:41:13Z",
+      "description": "Fichier d'environ 1,6 Go (à confirmer au spike) : téléchargement au premier usage recommandé plutôt qu'embarqué (installeur et limite de 2 Go par fichier des releases). Intégrité SHA-256 comme N-059. Liens : N-066, N-061. whisper.cpp et poids Whisper sous MIT.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Telechargement verifie (SHA-256) du modele de dictee, DLL CUDA (cublas, cublasLt) prevues pour l'installeur et mentions legales livres via PR #115. Non verifie : installeur NSIS avec DLL, machine sans GPU NVIDIA, conformite NVIDIA.",
+      "state": "done",
+      "updated_at": "2026-11-23T22:43:35Z",
       "assignee": ""
     },
     {
       "id": "N-095",
       "title": "[Dictée] Exécuter Navi toujours en administrateur (manifeste, tâche planifiée de démarrage, reprise de N-054)",
       "description": "Décision propriétaire : toujours élevé. UAC à chaque lancement manuel ; le démarrage par clé de registre ne lance pas une appli élevée : tâche planifiée avec privilèges maximaux. Durcir ce que la fenêtre web peut appeler.",
-      "state": "todo",
-      "updated_at": "2026-11-23T14:14:38Z",
+      "state": "doing",
+      "updated_at": "2026-11-23T22:43:43Z",
       "assignee": ""
     },
     {
