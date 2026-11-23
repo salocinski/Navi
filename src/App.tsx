@@ -7,20 +7,27 @@ type Phase = 'idle' | 'capturing' | 'generating' | 'playing' | 'paused' | 'stopp
 
 interface StatusDto {
   phase: Phase;
-  current_chunk: number;
-  total_chunks: number;
-  engine_loaded: boolean;
-  audio_ready: boolean;
   hotkey_error?: string | null;
 }
 
 interface StateEventPayload {
   type: 'phase-changed' | 'progress' | 'error';
-  from?: Phase;
   to?: Phase;
-  current?: number;
-  total?: number;
   message?: string;
+}
+
+interface AppConfig {
+  voice_fr: string;
+  voice_en: string;
+  speech_rate: number;
+  hotkey_read: string;
+  hotkey_pause: string;
+  hotkey_stop: string;
+}
+
+interface Voices {
+  fr: string[];
+  en: string[];
 }
 
 const PHASE_LABEL: Record<Phase, string> = {
@@ -34,165 +41,139 @@ const PHASE_LABEL: Record<Phase, string> = {
 };
 
 function App() {
-  const [status, setStatus] = useState<StatusDto>({
-    phase: 'idle',
-    current_chunk: 0,
-    total_chunks: 0,
-    engine_loaded: false,
-    audio_ready: false,
-    hotkey_error: null,
-  });
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [hotkeyError, setHotkeyError] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [config, setConfig] = useState<AppConfig | null>(null);
+  const [voices, setVoices] = useState<Voices>({ fr: [], en: [] });
 
-  async function refreshStatus() {
-    const dto = await invoke<StatusDto>('get_status');
-    setStatus(dto);
-  }
-
-  async function handleRead() {
-    setBusy(true);
+  async function run(action: () => Promise<unknown>) {
     setLastError(null);
     try {
-      await invoke('start_reading');
-      await refreshStatus();
-    } catch (err) {
-      setLastError(String(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handlePauseResume() {
-    setLastError(null);
-    try {
-      if (status.phase === 'paused') {
-        await invoke('resume_reading');
-      } else {
-        await invoke('pause_reading');
-      }
-      await refreshStatus();
+      await action();
     } catch (err) {
       setLastError(String(err));
     }
   }
 
-  async function handleStop() {
-    setLastError(null);
-    try {
-      await invoke('stop_reading');
-      await refreshStatus();
-    } catch (err) {
-      setLastError(String(err));
-    }
-  }
+  const handlePauseResume = () =>
+    run(() => invoke(phase === 'paused' ? 'resume_reading' : 'pause_reading'));
 
-  async function handlePreload() {
-    setLastError(null);
-    try {
-      await invoke('load_model');
-      await refreshStatus();
-    } catch (err) {
-      setLastError(String(err));
-    }
-  }
+  // Relit la configuration avant d'écrire : le panneau ne doit jamais écraser un réglage
+  // modifié entre-temps dans la fenêtre Paramètres.
+  const updateConfig = (patch: Partial<AppConfig>) =>
+    run(async () => {
+      const current = await invoke<AppConfig>('get_config');
+      const next = { ...current, ...patch };
+      await invoke('set_config', { config: next });
+      setConfig(next);
+    });
 
   useEffect(() => {
     // Préchargement du modèle Kokoro au lancement (non bloquant, idempotent).
-    invoke('load_model').catch(() => {
-      /* le message d'erreur est remontée via l'UI si besoin */
-    });
+    invoke('load_model').catch(() => {});
+    invoke<Voices>('get_voices').then(setVoices);
 
-    let mounted = true;
+    const loadAll = () => {
+      invoke<StatusDto>('get_status').then((dto) => {
+        setPhase(dto.phase);
+        setHotkeyError(dto.hotkey_error ?? null);
+      });
+      invoke<AppConfig>('get_config').then(setConfig);
+    };
+    loadAll();
+    window.addEventListener('focus', loadAll);
 
-    invoke<StatusDto>('get_status').then((dto) => {
-      if (mounted) setStatus(dto);
-    });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') invoke('hide_panel');
+    };
+    window.addEventListener('keydown', onKey);
 
     const unlisten = listen<StateEventPayload>('navi-state', (event) => {
       const payload = event.payload;
-      if (payload.type === 'phase-changed' && payload.to) {
-        setStatus((s) => ({ ...s, phase: payload.to! }));
-      } else if (payload.type === 'progress') {
-        setStatus((s) => ({
-          ...s,
-          current_chunk: payload.current ?? s.current_chunk,
-          total_chunks: payload.total ?? s.total_chunks,
-        }));
-      } else if (payload.type === 'error' && payload.message) {
-        setLastError(payload.message);
-      }
+      if (payload.type === 'phase-changed' && payload.to) setPhase(payload.to);
+      else if (payload.type === 'error' && payload.message) setLastError(payload.message);
     });
 
     return () => {
-      mounted = false;
+      window.removeEventListener('focus', loadAll);
+      window.removeEventListener('keydown', onKey);
       unlisten.then((fn) => fn());
     };
   }, []);
 
-  const progressPercent =
-    status.total_chunks > 0 ? Math.round((status.current_chunk / status.total_chunks) * 100) : 0;
+  const playing = phase === 'playing' || phase === 'paused';
 
   return (
-    <main className="container">
-      <h1>Navi</h1>
-      <p className="subtitle">
-        Lecteur local — {status.engine_loaded ? 'modèle chargé' : 'modèle non chargé'} ·{' '}
-        {status.audio_ready ? 'audio prêt' : 'audio non prêt'}
-      </p>
-
-      <div className="status-row">
-        <span className={`phase-badge phase-${status.phase}`}>{PHASE_LABEL[status.phase]}</span>
-        {status.total_chunks > 0 && (
-          <span className="progress-text">
-            {status.current_chunk}/{status.total_chunks} segments ({progressPercent}%)
-          </span>
-        )}
-      </div>
-
-      <progress max={Math.max(status.total_chunks, 1)} value={status.current_chunk} />
+    <main className="panel">
+      <header>
+        <h1>Navi</h1>
+        <span className={`phase-badge phase-${phase}`}>{PHASE_LABEL[phase]}</span>
+      </header>
 
       {lastError && <p className="error-box">{lastError}</p>}
-
-      {status.hotkey_error && (
-        <p className="error-box" title="Un raccourci n'a pas pu être enregistré">
-          ⚠️ {status.hotkey_error}
-        </p>
-      )}
+      {hotkeyError && <p className="error-box">⚠️ {hotkeyError}</p>}
 
       <div className="action-row">
-        <button
-          onClick={handleRead}
-          disabled={
-            busy ||
-            status.phase === 'capturing' ||
-            status.phase === 'generating' ||
-            status.phase === 'playing'
-          }
-        >
-          {busy ? 'Capture…' : 'Lire la sélection'}
+        <button onClick={handlePauseResume} disabled={!playing}>
+          {phase === 'paused' ? 'Reprendre' : 'Pause'}
         </button>
         <button
-          onClick={handlePauseResume}
-          disabled={status.phase !== 'playing' && status.phase !== 'paused'}
-        >
-          {status.phase === 'paused' ? 'Reprendre' : 'Pause'}
-        </button>
-        <button
-          onClick={handleStop}
-          disabled={status.phase === 'idle' || status.phase === 'stopped'}
+          onClick={() => run(() => invoke('stop_reading'))}
+          disabled={phase === 'idle' || phase === 'stopped'}
         >
           Arrêt
         </button>
-        <button onClick={handlePreload} disabled={status.engine_loaded}>
-          {status.engine_loaded ? 'Modèle chargé ✓' : 'Charger le modèle'}
-        </button>
       </div>
 
-      <p className="note">
-        La lecture capture le texte sélectionné dans la fenêtre au premier plan (Ctrl+C simulé), le
-        nettoie, le segmente et synthétise avec Kokoro, puis joue le résultat.
-      </p>
+      {config && (
+        <section className="settings">
+          <label>
+            Voix française
+            <select
+              value={config.voice_fr}
+              onChange={(e) => updateConfig({ voice_fr: e.target.value })}
+            >
+              {voices.fr.map((v) => (
+                <option key={v}>{v}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Voix anglaise
+            <select
+              value={config.voice_en}
+              onChange={(e) => updateConfig({ voice_en: e.target.value })}
+            >
+              {voices.en.map((v) => (
+                <option key={v}>{v}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Vitesse ×{config.speech_rate.toFixed(1)}
+            <input
+              type="range"
+              min="0.5"
+              max="2"
+              step="0.1"
+              value={config.speech_rate}
+              onChange={(e) => setConfig({ ...config, speech_rate: Number(e.target.value) })}
+              onPointerUp={() => updateConfig({ speech_rate: config.speech_rate })}
+              onKeyUp={() => updateConfig({ speech_rate: config.speech_rate })}
+            />
+          </label>
+          <p className="shortcuts">
+            Lire : {config.hotkey_read} · Pause : {config.hotkey_pause} · Arrêt:{' '}
+            {config.hotkey_stop}
+          </p>
+        </section>
+      )}
+
+      <footer>
+        <button onClick={() => run(() => invoke('open_settings'))}>Paramètres</button>
+        <button onClick={() => invoke('quit_app')}>Quitter</button>
+      </footer>
     </main>
   );
 }
