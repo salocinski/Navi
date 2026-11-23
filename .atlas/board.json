@@ -420,17 +420,17 @@
     {
       "id": "N-053",
       "title": "Choisir voix, vitesse et volume",
-      "description": "",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] PR #98 fusionnée. Voix par langue (voice_fr/voice_en, listes validées, voix suivant la langue détectée) ; vitesse et volume déjà livrés en TW-051. Le français est désormais lu par ff_siwis. cargo test 91 OK, clippy --all-targets -D warnings propre ; testé à la main.",
+      "state": "done",
+      "updated_at": "2026-11-23T00:41:37Z",
       "assignee": ""
     },
     {
       "id": "N-054",
       "title": "Proposer le lancement au démarrage de Windows",
-      "description": "Activable et désactivable.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Activable et désactivable.\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] PR #98 fusionnée. Démarrage avec Windows via HKCU Run (module autostart, sans dépendance), retour arrière complet dans set_config, état réel lu depuis le registre. En dev la case enregistre le navi.exe de target/debug. cargo test 91 OK, clippy --all-targets -D warnings propre ; testé à la main.",
+      "state": "done",
+      "updated_at": "2026-11-23T00:41:37Z",
       "assignee": ""
     },
     {
