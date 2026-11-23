@@ -1047,7 +1047,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 48,
       "title": "Créer le panneau ancré à l'icône de notification",
-      "status": "doing",
+      "status": "done",
       "prio": "P1",
       "kind": "tache",
       "milestone": "M1",
@@ -1056,12 +1056,12 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-032"
       ],
-      "note": "UI retenue (maquette A) : panneau au-dessus de l'icône, comme Wi-Fi ou Volume. Contenu : état et segment courant, phrase en cours, progression par segments, pause/reprise, arrêt, vitesse, voix auto, rappel des raccourcis, paramètres, quitter.\nPas de mini-lecteur flottant (pastille B écartée).\n\nCritères :\n- [ ] S'ouvre au clic sur l'icône, se ferme au clic extérieur ou Échap\n- [ ] Ne prend pas le focus de l'application active à l'ouverture automatique éventuelle\n- [ ] Pause/reprise/arrêt fonctionnent depuis le panneau"
+      "note": "UI retenue (maquette A) : panneau au-dessus de l'icône, comme Wi-Fi ou Volume. Contenu : état et segment courant, phrase en cours, progression par segments, pause/reprise, arrêt, vitesse, voix auto, rappel des raccourcis, paramètres, quitter.\nPas de mini-lecteur flottant (pastille B écartée).\n\nCritères :\n- [ ] S'ouvre au clic sur l'icône, se ferme au clic extérieur ou Échap\n- [ ] Ne prend pas le focus de l'application active à l'ouverture automatique éventuelle\n- [ ] Pause/reprise/arrêt fonctionnent depuis le panneau\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Livre via PR #102 (9f70461), fusionnee par le proprietaire : panneau ancre a l'icone (fenetre main sans bordure, toujours au-dessus), ouverture au clic gauche, fermeture au clic exterieur et Echap, pause/reprise/arret, choix des voix FR/EN, vitesse, raccourcis, Parametres, Quitter. cargo test 120 OK, clippy/tsc/eslint OK. Non verifie par l'agent : lancement reel de l'application."
     },
     {
       "num": 49,
       "title": "Abouter le panneau (multi-écrans, DPI, barre en haut ou sur le côté)",
-      "status": "backlog",
+      "status": "done",
       "prio": "P2",
       "kind": "tache",
       "milestone": "M2",
@@ -1070,7 +1070,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-048"
       ],
-      "note": "Ancrage correct près de l'icône quelle que soit la position de la barre ; thème clair/sombre ; fermeture propre."
+      "note": "Ancrage correct près de l'icône quelle que soit la position de la barre ; thème clair/sombre ; fermeture propre.\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Couvert par la PR #102 (9f70461) avec la carte 48 : placement selon le bord de la barre des taches (haut, bas, gauche, droite, auto-masquee), ecran de l'icone, DPI, coordonnees negatives ; 7 tests unitaires de placement. Non verifie par l'agent : rendu reel multi-ecrans/DPI."
     },
     {
       "num": 50,
