@@ -29,12 +29,10 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "resources": {
-      "resources/hey_listen.mp3": "resources/hey_listen.mp3",
-      "../models/kokoro/*": "models/kokoro/",
-      "../models/phonemizer/**/*": "models/phonemizer/"
-    },
+    "targets": "all",
+    "resources": [
+      "resources/hey_listen.mp3"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
