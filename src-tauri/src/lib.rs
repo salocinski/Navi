@@ -95,6 +95,7 @@ pub(crate) fn idle_secs() -> Option<u64> {
 pub mod audio;
 pub mod autostart;
 pub mod hotkey;
+pub mod insert;
 pub mod pipeline;
 pub mod state;
 pub mod stt;
