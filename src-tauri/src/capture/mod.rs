@@ -477,7 +477,7 @@ fn send_copy_keystroke() -> Result<(), CaptureError> {
 /// à envoyer « Win+Alt+Ctrl+C » à la cible, qui n'exécute pas la copie — le presse-papiers
 /// ne change pas et la capture échoue. On attend donc le relâchement complet
 /// (borné ; best effort au-delà, la copie échouera avec un message clair comme avant).
-fn wait_for_modifiers_released(timeout: Duration) {
+pub(crate) fn wait_for_modifiers_released(timeout: Duration) {
     const MODIFIERS: [windows::Win32::UI::Input::KeyboardAndMouse::VIRTUAL_KEY; 11] = [
         VK_CONTROL,
         VK_LCONTROL,

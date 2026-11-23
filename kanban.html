@@ -1614,7 +1614,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 90,
       "title": "[Dictée] Intégrer Whisper derrière un trait SttEngine (détection auto FR/EN, chargement à la demande)",
-      "note": "whisper.cpp via whisper-rs (CMake + MSVC, à valider en CI). Ponctuation et casse automatiques natives. Langue : détection automatique anglais/français.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087",
+      "note": "whisper.cpp via whisper-rs (CMake + MSVC, à valider en CI). Ponctuation et casse automatiques natives. Langue : détection automatique anglais/français.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Trait SttEngine et moteur Whisper livres via PR #112 (stt/, whisper-rs 0.16 + CUDA 13.5, feature cuda, detection FR/EN). Mesure reelle : 1,48 s pour 24 s de francais sur RTX 3060 Ti. Reste : DLL CUDA a livrer (N-094), SHA-256 du modele (N-094), repli CPU (N-096), mentions legales (N-061), voie CUDA non verifiee en CI.",
       "deps": [
         "N-087"
       ],
@@ -1623,7 +1623,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "milestone": "M2",
       "prio": "P1",
       "size": "L",
-      "status": "doing",
+      "status": "done",
       "assigned_to": ""
     },
     {
@@ -1638,7 +1638,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "milestone": "M2",
       "prio": "P1",
       "size": "L",
-      "status": "todo",
+      "status": "doing",
       "assigned_to": ""
     },
     {
