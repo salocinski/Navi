@@ -97,6 +97,7 @@ pub mod autostart;
 pub mod hotkey;
 pub mod pipeline;
 pub mod state;
+pub mod stt;
 pub mod text;
 pub mod tts;
 pub mod ui;

@@ -708,17 +708,17 @@
     {
       "id": "N-089",
       "title": "[Dictée] Raccourci Alt+Espace en appui maintenu (détection du relâchement)",
-      "description": "Décision propriétaire : appui maintenu. RegisterHotKey ne signale pas le relâchement : interrogation GetAsyncKeyState après l'appui (ou relâchement émis par global-hotkey patché, à vérifier). Alt+Espace masque le menu système des fenêtres ; conflit possible avec PowerToys Run.",
-      "state": "doing",
-      "updated_at": "2026-11-23T17:37:24Z",
+      "description": "Décision propriétaire : appui maintenu. RegisterHotKey ne signale pas le relâchement : interrogation GetAsyncKeyState après l'appui (ou relâchement émis par global-hotkey patché, à vérifier). Alt+Espace masque le menu système des fenêtres ; conflit possible avec PowerToys Run.\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Detection de l'appui maintenu livree via PR #111 (hotkey/hold.rs, Alt+Espace, GetAsyncKeyState, plafond 60 s, config hotkey_dictation). Reste a verifier : essai reel dans l'application et conflit eventuel PowerToys Run.",
+      "state": "done",
+      "updated_at": "2026-11-23T17:47:05Z",
       "assignee": ""
     },
     {
       "id": "N-090",
       "title": "[Dictée] Intégrer Whisper derrière un trait SttEngine (détection auto FR/EN, chargement à la demande)",
       "description": "whisper.cpp via whisper-rs (CMake + MSVC, à valider en CI). Ponctuation et casse automatiques natives. Langue : détection automatique anglais/français.\n\n[NOTE 2026-11-23 09:14] dépendances : N-087",
-      "state": "todo",
-      "updated_at": "2026-11-23T14:14:31Z",
+      "state": "doing",
+      "updated_at": "2026-11-23T17:47:07Z",
       "assignee": ""
     },
     {

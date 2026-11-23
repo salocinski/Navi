@@ -1601,14 +1601,14 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 89,
       "title": "[Dictée] Raccourci Alt+Espace en appui maintenu (détection du relâchement)",
-      "note": "Décision propriétaire : appui maintenu. RegisterHotKey ne signale pas le relâchement : interrogation GetAsyncKeyState après l'appui (ou relâchement émis par global-hotkey patché, à vérifier). Alt+Espace masque le menu système des fenêtres ; conflit possible avec PowerToys Run.",
+      "note": "Décision propriétaire : appui maintenu. RegisterHotKey ne signale pas le relâchement : interrogation GetAsyncKeyState après l'appui (ou relâchement émis par global-hotkey patché, à vérifier). Alt+Espace masque le menu système des fenêtres ; conflit possible avec PowerToys Run.\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Detection de l'appui maintenu livree via PR #111 (hotkey/hold.rs, Alt+Espace, GetAsyncKeyState, plafond 60 s, config hotkey_dictation). Reste a verifier : essai reel dans l'application et conflit eventuel PowerToys Run.",
       "deps": [],
       "epic": "realisation",
       "kind": "tache",
       "milestone": "M2",
       "prio": "P1",
       "size": "M",
-      "status": "doing",
+      "status": "done",
       "assigned_to": ""
     },
     {
@@ -1623,7 +1623,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "milestone": "M2",
       "prio": "P1",
       "size": "L",
-      "status": "todo",
+      "status": "doing",
       "assigned_to": ""
     },
     {
