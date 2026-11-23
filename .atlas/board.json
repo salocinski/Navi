@@ -476,9 +476,9 @@
     {
       "id": "N-060",
       "title": "Créer l'installeur Windows",
-      "description": "MSIX ou NSIS ; bundle ou téléchargement selon l'audit de licences.",
-      "state": "doing",
-      "updated_at": "2026-11-23T01:54:23Z",
+      "description": "MSIX ou NSIS ; bundle ou téléchargement selon l'audit de licences.\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Livre via PR #104 (8deec10) et PR #105 (d75d08d) : installeur NSIS (npm run bundle:win, config src-tauri/tauri.bundle.conf.json) embarquant models/kokoro et models/phonemizer ; resolve_models_dir cherche <exe>/models/kokoro. CI corrigee (ressources hors tauri.conf.json, models/ absent en CI). Test d'installation : premiere version en echec (Parametres vide, blocage a la fermeture, N-086), nouvelle version declaree saine par le proprietaire. Reste hors perimetre : version macOS (N-085), installeur non signe (SmartScreen), numero de version inchange 0.1.0.",
+      "state": "done",
+      "updated_at": "2026-11-23T13:14:58Z",
       "assignee": ""
     },
     {
@@ -684,9 +684,9 @@
     {
       "id": "N-086",
       "title": "Application installée : fenêtre Paramètres vide et blocage à la fermeture",
-      "description": "",
-      "state": "doing",
-      "updated_at": "2026-11-23T13:03:53Z",
+      "description": "[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Corrige via PR #105 (d75d08d) : open_settings en async (creation de fenetre depuis une commande synchrone bloquait sous Windows) et fermeture propre (liberation moteur/audio puis app.exit au lieu de process::exit). Cause non confirmee par journal. Nouvelle version de l'installeur declaree saine par le proprietaire apres test d'installation.",
+      "state": "done",
+      "updated_at": "2026-11-23T13:14:56Z",
       "assignee": ""
     }
   ]
