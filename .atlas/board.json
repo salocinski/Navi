@@ -724,17 +724,17 @@
     {
       "id": "N-091",
       "title": "[Dictée] Insérer le texte par SendInput dans la fenêtre active au moment de l'insertion",
-      "description": "Saisie Unicode au curseur de texte de la fenêtre au premier plan au moment de l'insertion (décision propriétaire).\n\n[NOTE 2026-11-23 09:14] dépendances : N-090",
-      "state": "doing",
-      "updated_at": "2026-11-23T19:07:50Z",
+      "description": "Saisie Unicode au curseur de texte de la fenêtre au premier plan au moment de l'insertion (décision propriétaire).\n\n[NOTE 2026-11-23 09:14] dépendances : N-090\n\n[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Insertion Unicode par SendInput livree via PR #113 (insert/, lots de 256, Entree/Tab, test reel dans fenetre EDIT). Non verifie : fenetres elevees (N-095), applications reelles (N-096).",
+      "state": "done",
+      "updated_at": "2026-11-23T19:20:00Z",
       "assignee": ""
     },
     {
       "id": "N-092",
       "title": "[Dictée] Machine d'états de dictée, arrêt de la lecture au démarrage et pastille d'enregistrement",
       "description": "La lecture à voix haute s'arrête quand la dictée démarre (décision propriétaire, évite l'écho micro). Lancer la lecture pendant une dictée : ignoré. Pastille rouge REC distincte, toujours visible pendant la capture (réutilise la pastille N-077).\n\n[NOTE 2026-11-23 09:14] dépendances : N-088, N-089, N-090",
-      "state": "todo",
-      "updated_at": "2026-11-23T14:14:34Z",
+      "state": "doing",
+      "updated_at": "2026-11-23T19:20:01Z",
       "assignee": ""
     },
     {

@@ -94,6 +94,7 @@ pub(crate) fn idle_secs() -> Option<u64> {
 }
 pub mod audio;
 pub mod autostart;
+pub mod dictation;
 pub mod hotkey;
 pub mod insert;
 pub mod pipeline;
@@ -121,6 +122,8 @@ pub struct NaviRef {
     pub loading: Arc<std::sync::atomic::AtomicBool>,
     /// Rapport d'enregistrement des raccourcis (pour l'UI).
     pub hotkey_report: Arc<Mutex<crate::hotkey::RegistrationReport>>,
+    /// Dictée vocale (machine d'états + moteur Whisper).
+    pub dictation: crate::dictation::Dictation,
 }
 
 /// État partagé de Navi (machines à états + moteur Kokoro + audio).
@@ -130,6 +133,7 @@ pub struct NaviState {
     audio: Arc<Mutex<Option<crate::audio::AudioHandle>>>,
     loading: Arc<std::sync::atomic::AtomicBool>,
     hotkey_report: Arc<Mutex<crate::hotkey::RegistrationReport>>,
+    dictation: crate::dictation::Dictation,
 }
 
 impl NaviState {
@@ -140,6 +144,7 @@ impl NaviState {
             audio: Arc::new(Mutex::new(None)),
             loading: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             hotkey_report: Arc::new(Mutex::new(crate::hotkey::RegistrationReport::default())),
+            dictation: crate::dictation::Dictation::default(),
         }
     }
 
@@ -150,6 +155,7 @@ impl NaviState {
             audio: self.audio.clone(),
             loading: self.loading.clone(),
             hotkey_report: self.hotkey_report.clone(),
+            dictation: self.dictation.clone(),
         }
     }
 }
@@ -334,6 +340,9 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
 }
 
 pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
+    if state.dictation.machine.is_active() {
+        return Err("Lecture ignorée : une dictée est en cours".to_string());
+    }
     touch_user_activity();
     state.machine.begin_capture()?;
 
@@ -637,6 +646,35 @@ pub fn run() {
                 });
             }
 
+            // Dictée (carte N-092) : événements pour la pastille + affichage REC / traitement / erreur.
+            {
+                let handle = app.handle().clone();
+                let machine = state.dictation.machine.clone();
+                state.dictation.machine.subscribe(move |event| {
+                    use crate::dictation::{DictationEvent, DictationState};
+                    let _ = handle.emit("dictation-state", &event);
+                    let DictationEvent::PhaseChanged { to, .. } = event else {
+                        return;
+                    };
+                    let Some(window) = handle.get_webview_window(crate::ui::flotteur::LABEL) else {
+                        return;
+                    };
+                    if to == DictationState::Idle {
+                        let _ = window.hide();
+                        return;
+                    }
+                    let _ = window.show();
+                    if to == DictationState::Error {
+                        // L'erreur reste visible 3 s puis la pastille se masque.
+                        let machine = machine.clone();
+                        std::thread::spawn(move || {
+                            std::thread::sleep(std::time::Duration::from_secs(3));
+                            machine.clear_error();
+                        });
+                    }
+                });
+            }
+
             crate::ui::panneau::setup(app.handle());
 
             // Icône de zone de notification + menu (carte N-047) — feuille DA docs/pistes-interface.html.
@@ -710,11 +748,7 @@ pub fn run() {
                                             eprintln!("[navi] dictée : touche de « {combo} » non gérée pour le maintien");
                                             continue;
                                         };
-                                        eprintln!("[navi] dictée : appui");
-                                        // Point d'accroche : N-090/N-092 y branchent capture micro, transcription et insertion.
-                                        crate::hotkey::hold::spawn_hold_watch(vk, dictation_hold.clone(), |end, held| {
-                                            eprintln!("[navi] dictée : fin ({end:?}) après {} ms", held.as_millis());
-                                        });
+                                        crate::dictation::start(&exec, vk, dictation_hold.clone());
                                     }
                                 }
                             }
