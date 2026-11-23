@@ -140,7 +140,11 @@
         }
       }
       // Dictée : enregistrement = REC rouge ; transcription/saisie = arc de traitement.
-      const DICTEE = { recording: 'recording', transcribing: 'generating', inserting: 'generating' };
+      const DICTEE = {
+        recording: 'recording',
+        transcribing: 'generating',
+        inserting: 'generating',
+      };
       const api = window.__TAURI__;
       if (api && api.event && api.event.listen) {
         api.event.listen('navi-state', (event) => {
