@@ -484,9 +484,9 @@
     {
       "id": "N-061",
       "title": "Fournir le fichier de mentions légales tierces",
-      "description": "",
-      "state": "doing",
-      "updated_at": "2026-11-23T13:23:12Z",
+      "description": "[RESOLUTION 2026-11-23] [RESOLUTION 2026-11-23] Livre via PR #107 (7df2a49) : THIRD_PARTY_NOTICES.md genere par tools/gen-notices.mjs (337 paquets, 169 textes de licence, partie redigee Kokoro/ONNX Runtime/espeak-ng avec offre de source/attribution CC BY 4.0 de ff_siwis), LICENSE et notices embarques dans l'installeur, docs/licences.md mis a jour (ff_siwis embarquee). Non verifie : references SIWIS non relues a la source, version d'espeak-ng non indiquee, aucune revue juridique.",
+      "state": "done",
+      "updated_at": "2026-11-23T14:17:43Z",
       "assignee": ""
     },
     {
