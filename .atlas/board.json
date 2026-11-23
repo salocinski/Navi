@@ -1,5 +1,5 @@
 {
-  "estimated_total": 85,
+  "estimated_total": 86,
   "tickets": [
     {
       "id": "N-001",
@@ -679,6 +679,14 @@
       "description": "",
       "state": "todo",
       "updated_at": "2026-11-23T05:08:59Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-086",
+      "title": "Application installée : fenêtre Paramètres vide et blocage à la fermeture",
+      "description": "",
+      "state": "doing",
+      "updated_at": "2026-11-23T13:03:53Z",
       "assignee": ""
     }
   ]
