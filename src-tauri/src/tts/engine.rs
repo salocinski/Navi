@@ -100,6 +100,8 @@ pub enum TtsError {
     UnknownVoice(String),
     /// Modèle/poids introuvables au chemin configuré.
     ModelMissing(String),
+    /// Fichier de modèle présent mais altéré (empreinte SHA-256 différente).
+    ModelCorrupt(String),
     /// Échec de phonémisation.
     Phonemization(String),
     /// Échec d'inférence ONNX.
@@ -122,6 +124,10 @@ impl fmt::Display for TtsError {
             TtsError::ModelMissing(path) => write!(
                 f,
                 "Modèle introuvable au chemin {path} — vérifiez l'installation des modèles"
+            ),
+            TtsError::ModelCorrupt(path) => write!(
+                f,
+                "Fichier de modèle corrompu ou incomplet : {path} — réinstallez les modèles"
             ),
             TtsError::Phonemization(detail) => write!(f, "Phonémisation impossible : {detail}"),
             TtsError::Inference(detail) => write!(f, "Inférence ONNX échouée : {detail}"),

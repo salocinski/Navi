@@ -294,7 +294,9 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
     let machine = view.machine.clone();
     std::thread::spawn(move || {
         let result = (|| -> Result<crate::tts::KokoroEngine, String> {
-            let dir = crate::utils::resolve_models_dir();
+            let settings = crate::config::AppConfig::load().unwrap_or_default();
+            let dir = crate::utils::resolve_models_dir_with(settings.models_dir.as_deref());
+            crate::tts::check_models(&dir).map_err(|e| e.to_string())?;
             let config = crate::tts::TtsConfig::with_dir(&dir);
             let mut kokoro = crate::tts::KokoroEngine::new(config).map_err(|e| {
                 format!(

@@ -56,6 +56,12 @@ pub fn resolve_signature() -> PathBuf {
 /// Ordre : `NAVI_MODELS_DIR` → `<repo>/models/kokoro/` (si l'ONNX y existe) →
 /// `<repo>/models/` → `%APPDATA%/Navi/models`.
 pub fn resolve_models_dir() -> PathBuf {
+    resolve_models_dir_with(None)
+}
+
+/// Comme `resolve_models_dir`, avec le dossier choisi dans les réglages (`models_dir`),
+/// prioritaire sur les emplacements par défaut mais pas sur `NAVI_MODELS_DIR`.
+pub fn resolve_models_dir_with(configured: Option<&std::path::Path>) -> PathBuf {
     if let Ok(dir) = std::env::var("NAVI_MODELS_DIR") {
         let path = PathBuf::from(&dir);
         if path.join("kokoro-v1.0.int8.onnx").exists() {
@@ -64,6 +70,10 @@ pub fn resolve_models_dir() -> PathBuf {
         if path.join("kokoro").join("kokoro-v1.0.int8.onnx").exists() {
             return path.join("kokoro");
         }
+    }
+
+    if let Some(dir) = configured {
+        return dir.to_path_buf();
     }
 
     // Racine du dépôt : le crate est `src-tauri`, les modèles sont à `models/kokoro/`.
