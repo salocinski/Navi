@@ -2,6 +2,24 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Voix françaises proposées (carte N-053) : Kokoro n'en fournit qu'une.
+pub const VOICES_FR: &[&str] = &["ff_siwis"];
+
+/// Voix anglaises proposées (toutes présentes dans `voices-v1.0.bin`).
+pub const VOICES_EN: &[&str] = &[
+    "af_heart",
+    "af_bella",
+    "af_nicole",
+    "af_sarah",
+    "af_sky",
+    "am_adam",
+    "am_michael",
+    "bf_emma",
+    "bf_isabella",
+    "bm_george",
+    "bm_lewis",
+];
+
 // `serde(default)` : un config.json écrit avant l'ajout d'un champ reste lisible.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -9,11 +27,11 @@ pub struct AppConfig {
     /// Langue par défaut pour le TTS
     pub default_language: String,
 
-    /// Voix féminine (ID Kokoro)
-    pub voice_female: String,
+    /// Voix des textes français (ID Kokoro, parmi `VOICES_FR`)
+    pub voice_fr: String,
 
-    /// Voix masculine (ID Kokoro)
-    pub voice_male: String,
+    /// Voix des textes anglais (ID Kokoro, parmi `VOICES_EN`)
+    pub voice_en: String,
 
     /// Vitesse de lecture (0.5 - 2.0)
     pub speech_rate: f32,
@@ -47,8 +65,8 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             default_language: "auto".to_string(),
-            voice_female: "af_heart".to_string(),
-            voice_male: "am_adam".to_string(),
+            voice_fr: "ff_siwis".to_string(),
+            voice_en: "am_adam".to_string(),
             speech_rate: 1.0,
             volume: 1.0,
             startup_sound: true,
@@ -98,8 +116,11 @@ impl AppConfig {
         if !["auto", "fr", "en"].contains(&self.default_language.as_str()) {
             return Err(format!("Langue inconnue : « {} »", self.default_language));
         }
-        if self.voice_female.trim().is_empty() || self.voice_male.trim().is_empty() {
-            return Err("Les identifiants de voix ne peuvent pas être vides".into());
+        if !VOICES_FR.contains(&self.voice_fr.as_str()) {
+            return Err(format!("Voix française inconnue : « {} »", self.voice_fr));
+        }
+        if !VOICES_EN.contains(&self.voice_en.as_str()) {
+            return Err(format!("Voix anglaise inconnue : « {} »", self.voice_en));
         }
         if !(0.5..=2.0).contains(&self.speech_rate) {
             return Err("La vitesse doit être comprise entre 0,5 et 2,0".into());
@@ -143,6 +164,14 @@ impl AppConfig {
         Ok(())
     }
 
+    /// Voix à utiliser pour une langue détectée (anglais par défaut si inconnue).
+    pub fn voice_for(&self, language: Option<crate::tts::engine::TtsLanguage>) -> &str {
+        match language {
+            Some(crate::tts::engine::TtsLanguage::French) => &self.voice_fr,
+            _ => &self.voice_en,
+        }
+    }
+
     /// Volume effectif de la signature : borné à 0.0–1.0, 0.0 si la valeur n'est pas un nombre.
     pub fn startup_sound_gain(&self) -> f32 {
         if self.startup_sound_volume.is_nan() {
@@ -169,8 +198,8 @@ mod tests {
         let config = AppConfig::default();
         assert_eq!(config.speech_rate, 1.0);
         assert_eq!(config.volume, 1.0);
-        assert_eq!(config.voice_female, "af_heart");
-        assert_eq!(config.voice_male, "am_adam");
+        assert_eq!(config.voice_fr, "ff_siwis");
+        assert_eq!(config.voice_en, "am_adam");
     }
 
     #[test]
@@ -230,7 +259,11 @@ mod tests {
             ..Default::default()
         });
         ko(AppConfig {
-            voice_male: "  ".into(),
+            voice_en: "inconnue".into(),
+            ..Default::default()
+        });
+        ko(AppConfig {
+            voice_fr: "am_adam".into(), // voix anglaise pour le français
             ..Default::default()
         });
         ko(AppConfig {
@@ -277,5 +310,29 @@ mod tests {
         assert_eq!(AppConfig::load_from(&path).unwrap().volume, 1.0);
         std::fs::write(&path, "{ pas du json").unwrap();
         assert!(AppConfig::load_from(&path).is_err());
+    }
+
+    #[test]
+    fn voix_choisie_selon_la_langue() {
+        use crate::tts::engine::TtsLanguage::{English, French};
+        let c = AppConfig {
+            voice_en: "bf_emma".into(),
+            ..Default::default()
+        };
+        assert_eq!(c.voice_for(Some(French)), "ff_siwis");
+        assert_eq!(c.voice_for(Some(English)), "bf_emma");
+        assert_eq!(c.voice_for(None), "bf_emma");
+    }
+
+    #[test]
+    fn les_voix_proposees_sont_valides() {
+        for v in VOICES_EN {
+            AppConfig {
+                voice_en: (*v).into(),
+                ..Default::default()
+            }
+            .validate()
+            .unwrap();
+        }
     }
 }

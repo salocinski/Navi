@@ -79,10 +79,10 @@
           <option value="fr">Français</option>
           <option value="en">Anglais</option>
         </select>
-        <label for="voice_female">Voix féminine (identifiant Kokoro)</label>
-        <input type="text" id="voice_female" />
-        <label for="voice_male">Voix masculine (identifiant Kokoro)</label>
-        <input type="text" id="voice_male" />
+        <label for="voice_fr">Voix des textes français</label>
+        <select id="voice_fr"></select>
+        <label for="voice_en">Voix des textes anglais</label>
+        <select id="voice_en"></select>
         <label for="speech_rate">Vitesse</label>
         <input type="range" id="speech_rate" min="0.5" max="2" step="0.1" />
         <output for="speech_rate" id="speech_rate_out"></output>
@@ -127,7 +127,7 @@
         <label class="inline"
           ><input type="checkbox" id="autostart" /> Lancer Navi au démarrage de Windows</label
         >
-        <p class="hint">Pas encore appliqué (carte TW-54).</p>
+        <p class="hint">Reflète l'état réel de Windows ; appliqué à l'enregistrement.</p>
         <label for="models_dir">Dossier des modèles (vide = emplacement par défaut)</label>
         <input type="text" id="models_dir" />
         <p class="hint">Pas encore appliqué (carte TW-59).</p>
@@ -142,9 +142,9 @@
       const $ = (id) => document.getElementById(id);
       const SLIDERS = ['speech_rate', 'volume', 'startup_sound_volume'];
       const TEXTS = [
+        'voice_fr',
+        'voice_en',
         'default_language',
-        'voice_female',
-        'voice_male',
         'hotkey_read',
         'hotkey_pause',
         'hotkey_stop',
@@ -165,6 +165,10 @@
 
       async function load() {
         try {
+          const voices = await invoke('get_voices');
+          ['fr', 'en'].forEach((lang) =>
+            voices[lang].forEach((v) => $('voice_' + lang).add(new Option(v, v))),
+          );
           loaded = await invoke('get_config');
           TEXTS.forEach((k) => ($(k).value = loaded[k]));
           CHECKS.forEach((k) => ($(k).checked = loaded[k]));

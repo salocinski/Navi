@@ -26,8 +26,10 @@ fn main() {
         &segs,
         &audio,
         &|| false,
-        Some(navi_lib::tts::engine::TtsLanguage::French),
-        1.0,
+        &navi_lib::pipeline::SynthesisParams {
+            language: Some(navi_lib::tts::engine::TtsLanguage::French),
+            ..Default::default()
+        },
         &|| (),
     )
     .expect("synthèse");
