@@ -764,17 +764,17 @@
     {
       "id": "N-096",
       "title": "[Dictée] Tester la compatibilité (applications, fenêtres élevées) et rédiger le rapport",
-      "description": "Panel d'applications, comme N-016.\n\n[NOTE 2026-11-23 09:14] dépendances : N-091",
-      "state": "doing",
-      "updated_at": "2026-11-24T00:24:54Z",
+      "description": "Panel d'applications, comme N-016.\n\n[NOTE 2026-11-23 09:14] dépendances : N-091\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-23] Recette de compatibilité de la saisie dictée (exemple insert_recipe, rapport docs/s3-96-compat-dictee.md) : OK Bloc-notes, Chrome, Edge, PowerShell conhost ; réserve : 1er caractère perdu dans un Bloc-notes activé par script sans clic. PR #118 fusionnée. Non joué : fenêtres élevées (UAC), Word/VS Code/Discord/Outlook, chaîne complète micro+Whisper.",
+      "state": "done",
+      "updated_at": "2026-11-24T00:36:14Z",
       "assignee": ""
     },
     {
       "id": "N-097",
       "title": "[Dictée] Vie privée et accessibilité : aucun audio conservé ni envoyé, indicateur micro",
       "description": "Tout reste local ; aucun enregistrement conservé.",
-      "state": "todo",
-      "updated_at": "2026-11-23T14:14:41Z",
+      "state": "doing",
+      "updated_at": "2026-11-24T00:36:15Z",
       "assignee": ""
     }
   ]
