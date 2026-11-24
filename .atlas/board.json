@@ -740,9 +740,9 @@
     {
       "id": "N-093",
       "title": "[Dictée] Réglages de dictée et section du panneau",
-      "description": "Raccourci, périphérique micro, état du modèle.\n\n[NOTE 2026-11-23 09:14] dépendances : N-090",
-      "state": "doing",
-      "updated_at": "2026-11-24T00:14:12Z",
+      "description": "Raccourci, périphérique micro, état du modèle.\n\n[NOTE 2026-11-23 09:14] dépendances : N-090\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-23] Section Dictée vocale des réglages : raccourci, choix du micro (commande list_microphones), état du modèle avec téléchargement et progression. PR #117 fusionnée. Non vérifié : essai manuel de la page dans l'application.",
+      "state": "done",
+      "updated_at": "2026-11-24T00:24:52Z",
       "assignee": ""
     },
     {
@@ -765,8 +765,8 @@
       "id": "N-096",
       "title": "[Dictée] Tester la compatibilité (applications, fenêtres élevées) et rédiger le rapport",
       "description": "Panel d'applications, comme N-016.\n\n[NOTE 2026-11-23 09:14] dépendances : N-091",
-      "state": "todo",
-      "updated_at": "2026-11-23T14:14:40Z",
+      "state": "doing",
+      "updated_at": "2026-11-24T00:24:54Z",
       "assignee": ""
     },
     {
