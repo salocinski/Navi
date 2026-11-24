@@ -818,7 +818,7 @@ pub fn run() {
             let state = NaviState::new();
             track_last_foreground();
             touch_user_activity();
-            state.dictation.verify_in_background();
+            state.dictation.preload_in_background();
             let handle = app.handle().clone();
             state.machine.subscribe(move |event| {
                 // Événements consommés par l'UI via @tauri-apps/api/event (`navi-state`).
