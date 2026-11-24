@@ -8,7 +8,7 @@
       "../LICENSE": "LICENSE.txt",
       "../THIRD_PARTY_NOTICES.md": "THIRD_PARTY_NOTICES.md",
       "../models/kokoro/*": "models/kokoro/",
-      "../models/phonemizer/**/*": "models/phonemizer/",
+      "../models/phonemizer": "models/phonemizer",
       "cuda-redist/cublas64_13.dll": "cublas64_13.dll",
       "cuda-redist/cublasLt64_13.dll": "cublasLt64_13.dll"
     }
