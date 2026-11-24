@@ -2685,6 +2685,7 @@ dependencies = [
  "libloading 0.9.1",
  "npyz",
  "ort",
+ "ring",
  "rodio",
  "serde",
  "serde_json",
