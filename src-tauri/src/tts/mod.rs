@@ -47,32 +47,56 @@ impl TtsConfig {
     }
 }
 
+/// Dossiers où chercher la DLL espeak-ng et ses données : à côté des modèles téléchargés, puis
+/// dans l'application installée (`<exe>/models/phonemizer`), puis dans le dépôt (développement).
+fn phonemizer_candidates(models_dir: &std::path::Path) -> Vec<std::path::PathBuf> {
+    let mut dirs: Vec<std::path::PathBuf> = Vec::new();
+    if let Some(parent) = models_dir.parent() {
+        dirs.push(parent.join("phonemizer"));
+    }
+    if let Some(exe_dir) = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+    {
+        dirs.push(exe_dir.join("models").join("phonemizer"));
+    }
+    dirs.push(
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("models")
+            .join("phonemizer"),
+    );
+    dirs
+}
+
+/// Premier dossier qui contient la DLL `espeak-ng.dll` ET son dossier `espeak-ng-data`
+/// (un dossier de données absent ferme l'application) et d'où le code peut être chargé.
+fn find_phonemizer(candidates: &[std::path::PathBuf]) -> Option<std::path::PathBuf> {
+    candidates
+        .iter()
+        .find(|d| {
+            d.join("espeak-ng.dll").is_file()
+                && d.join("espeak-ng-data").is_dir()
+                && crate::utils::may_load_code_from(d)
+        })
+        .cloned()
+}
+
 impl Default for TtsConfig {
     fn default() -> Self {
         let base = crate::utils::resolve_models_dir();
-        let phonemizer_dir = base
-            .parent()
-            .map(|p| p.join("phonemizer"))
-            .filter(|p| p.exists())
-            .unwrap_or_else(|| base.clone());
-        let (espeak_lib_path, espeak_data_path) = {
-            let dll = phonemizer_dir.join("espeak-ng.dll");
-            if dll.exists() && crate::utils::may_load_code_from(&phonemizer_dir) {
-                (
-                    dll.to_string_lossy().to_string(),
-                    phonemizer_dir
-                        .join("espeak-ng-data")
-                        .to_string_lossy()
-                        .to_string(),
-                )
-            } else {
+        let (espeak_lib_path, espeak_data_path) =
+            match find_phonemizer(&phonemizer_candidates(&base)) {
+                Some(dir) => (
+                    dir.join("espeak-ng.dll").to_string_lossy().to_string(),
+                    dir.join("espeak-ng-data").to_string_lossy().to_string(),
+                ),
                 // Repli : installation système (Program Files)
-                (
+                None => (
                     "C:\\Program Files\\eSpeak NG\\libespeak-ng.dll".to_string(),
                     "C:\\Program Files\\eSpeak NG\\espeak-ng-data".to_string(),
-                )
-            }
-        };
+                ),
+            };
         Self {
             model_path: base.join(KOKORO_MODEL_FILE),
             voices_path: base.join(KOKORO_VOICES_FILE),
@@ -334,6 +358,10 @@ impl KokoroEngine {
 
 impl Phonemizer {
     fn new(lib_path: &str, data_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        // espeak-ng termine le processus (exit 1) si son dossier de données est introuvable.
+        if !std::path::Path::new(data_path).is_dir() {
+            return Err(format!("données espeak-ng introuvables : {data_path}").into());
+        }
         let lib = unsafe { libloading::Library::new(lib_path)? };
 
         let init: unsafe extern "system" fn(i32, i32, *const i8, i32) -> i32 =
@@ -424,5 +452,28 @@ mod models_tests {
             crate::utils::resolve_models_dir_with(Some(dir.path())),
             dir.path()
         );
+    }
+}
+
+#[cfg(test)]
+mod phonemizer_tests {
+    use super::*;
+
+    #[test]
+    fn find_phonemizer_exige_la_dll_et_le_dossier_de_donnees() {
+        let racine = tempfile::tempdir().unwrap();
+        let aplati = racine.path().join("aplati"); // DLL sans espeak-ng-data (installeur aplati)
+        let complet = racine.path().join("complet");
+        std::fs::create_dir_all(&aplati).unwrap();
+        std::fs::write(aplati.join("espeak-ng.dll"), b"x").unwrap();
+        std::fs::create_dir_all(complet.join("espeak-ng-data")).unwrap();
+        std::fs::write(complet.join("espeak-ng.dll"), b"x").unwrap();
+        let absent = racine.path().join("absent");
+
+        assert_eq!(
+            find_phonemizer(&[absent.clone(), aplati.clone(), complet.clone()]),
+            Some(complet)
+        );
+        assert_eq!(find_phonemizer(&[absent, aplati]), None);
     }
 }
