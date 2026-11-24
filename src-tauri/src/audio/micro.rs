@@ -97,6 +97,16 @@ impl MicCapture {
         })
     }
 
+    /// N-107 : copie de l'audio déjà capturé (mono 16 kHz), utilisable depuis un autre thread
+    /// pendant l'enregistrement (transcription en temps réel).
+    pub fn snapshotter(&self) -> impl Fn() -> Vec<f32> + Send + 'static {
+        let (samples, rate) = (self.samples.clone(), self.rate);
+        move || {
+            let native = samples.lock().unwrap_or_else(|e| e.into_inner()).clone();
+            resample_mono(&native, rate, TARGET_RATE)
+        }
+    }
+
     /// Arrête la capture et rend l'audio converti en mono 16 kHz.
     pub fn stop(self) -> Vec<f32> {
         let _ = self.stop_tx.send(());

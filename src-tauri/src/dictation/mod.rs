@@ -17,6 +17,12 @@ use std::time::Duration;
 
 /// En dessous, l'appui est un effleurement accidentel : ni transcription ni erreur.
 const MIN_HOLD: Duration = Duration::from_millis(300);
+/// N-107 : cadence de la transcription provisoire affichée pendant l'enregistrement.
+const PARTIAL_EVERY: Duration = Duration::from_millis(600);
+/// Audio nouveau minimal (0,5 s à 16 kHz) avant de relancer une transcription provisoire.
+const PARTIAL_MIN_NEW: usize = 8_000;
+/// Fenêtre maximale d'une transcription provisoire (30 s à 16 kHz), la durée traitée par Whisper.
+const PARTIAL_MAX_SAMPLES: usize = 480_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -46,6 +52,11 @@ pub enum DictationEvent {
     ModelDownload {
         done: u64,
         total: u64,
+    },
+    /// N-107 : texte reconnu pendant l'enregistrement (puis texte final), pour le cartouche de la
+    /// pastille. Jamais journalisé.
+    Partial {
+        text: String,
     },
     ModelReady,
     ModelFailed {
@@ -305,12 +316,65 @@ pub fn start(view: &crate::NaviRef, vk: u16, guard: Arc<HoldGuard>) {
             return;
         }
     };
+    let running = Arc::new(AtomicBool::new(true));
+    spawn_partials(dictation.clone(), capture.snapshotter(), running.clone());
     spawn_hold_watch(vk, guard, move |end, held| {
-        process(&dictation, capture, end, held)
+        process(&dictation, capture, end, held, &running)
     });
 }
 
-fn process(dictation: &Dictation, capture: MicCapture, end: HoldEnd, held: Duration) {
+/// N-107 : pendant l'enregistrement, retranscrit périodiquement l'audio capturé et l'émet en
+/// `Partial`. Sans modèle déjà prêt (préchargé) ou si le moteur est occupé : pas de texte provisoire.
+// shortcut: retranscription complète de l'audio à chaque passe (coût croissant jusqu'à 30 s), pas
+// de flux incrémental ; passer à un décodage par fenêtre glissante si la latence devient gênante.
+fn spawn_partials(
+    dictation: Dictation,
+    snapshot: impl Fn() -> Vec<f32> + Send + 'static,
+    running: Arc<AtomicBool>,
+) {
+    std::thread::spawn(move || {
+        let mut last_len = 0;
+        loop {
+            std::thread::sleep(PARTIAL_EVERY);
+            if !running.load(Ordering::SeqCst) {
+                break;
+            }
+            let mut pcm = snapshot();
+            if pcm.len() < MIN_SAMPLES || pcm.len() < last_len + PARTIAL_MIN_NEW {
+                continue;
+            }
+            last_len = pcm.len();
+            if pcm.len() > PARTIAL_MAX_SAMPLES {
+                pcm.drain(..pcm.len() - PARTIAL_MAX_SAMPLES);
+            }
+            let Ok(mut guard) = dictation.engine.try_lock() else {
+                continue;
+            };
+            let Some(engine) = guard.as_mut() else {
+                continue;
+            };
+            if engine.load().is_err() {
+                continue;
+            }
+            if let Ok(out) = engine.transcribe(&pcm, None)
+                && running.load(Ordering::SeqCst)
+            {
+                dictation.machine.emit(DictationEvent::Partial {
+                    text: out.text.trim().to_string(),
+                });
+            }
+        }
+    });
+}
+
+fn process(
+    dictation: &Dictation,
+    capture: MicCapture,
+    end: HoldEnd,
+    held: Duration,
+    running: &AtomicBool,
+) {
+    running.store(false, Ordering::SeqCst);
     let pcm = capture.stop();
     eprintln!("[navi] dictée : {end:?} après {} ms", held.as_millis());
     if held < MIN_HOLD || pcm.len() < MIN_SAMPLES {
@@ -328,6 +392,10 @@ fn process(dictation: &Dictation, capture: MicCapture, end: HoldEnd, held: Durat
         dictation.machine.finish();
         return;
     }
+    // Le cartouche montre le texte final jusqu'à la saisie dans la fenêtre visée.
+    dictation
+        .machine
+        .emit(DictationEvent::Partial { text: text.clone() });
     if dictation.machine.to_inserting().is_err() {
         return;
     }
