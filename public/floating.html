@@ -17,14 +17,43 @@
         user-select: none;
       }
       body {
-        display: grid;
-        place-items: center;
+        position: relative;
       }
+      /* N-107 : le cercle est en bas à gauche de la fenêtre, le cartouche de dictée au-dessus. */
       svg {
+        position: absolute;
+        left: 72px; /* centré sous le cartouche (fenêtre de 200 px) */
+        bottom: 0;
         width: 56px;
         height: 56px;
         filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55));
         display: none;
+      }
+      /* N-107 : le cartouche s'élargit avec le texte jusqu'à 200 px, puis grandit vers le haut. */
+      #cartouche {
+        display: none;
+        position: absolute;
+        left: 0;
+        bottom: 62px;
+        width: 200px;
+        justify-content: center;
+      }
+      #texte {
+        box-sizing: border-box;
+        width: max-content;
+        max-width: 200px;
+        padding: 8px 12px;
+        border-radius: 12px;
+        background: rgba(26, 5, 51, 0.92);
+        color: #fff;
+        font:
+          13px/1.35 'Segoe UI',
+          sans-serif;
+        overflow-wrap: anywhere;
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55));
+      }
+      body[data-cartouche='on'] #cartouche {
+        display: flex;
       }
       body[data-state='generating'] #gen,
       body[data-state='recording'] #rec,
@@ -83,6 +112,8 @@
   </head>
   <body data-state="generating">
     <div id="annonce" class="sr-only" role="status" aria-live="polite"></div>
+    <!-- Dictée : texte reconnu en temps réel, affiché jusqu'à la saisie (N-107) -->
+    <div id="cartouche" aria-hidden="true"><div id="texte"></div></div>
     <!-- Génération / capture : piste + arc bleu tournant -->
     <svg id="gen" viewBox="0 0 56 56" role="img" aria-label="Génération en cours">
       <circle cx="28" cy="28" r="24" fill="#1a0533" fill-opacity="0.9" />
@@ -160,24 +191,34 @@
         transcribing: 'Dictée : transcription en cours',
         inserting: 'Dictée : saisie du texte',
       };
+      const cartouche = (texte) => {
+        document.body.dataset.cartouche = texte === null ? 'off' : 'on';
+        if (texte !== null) document.getElementById('texte').textContent = texte;
+      };
       const annoncer = (texte) => (document.getElementById('annonce').textContent = texte || '');
       const api = window.__TAURI__;
       if (api && api.event && api.event.listen) {
         api.event.listen('navi-state', (event) => {
           const p = event && event.payload;
           if (!p) return;
-          if (p.type === 'phase-changed' && p.to) appliquer(p.to);
-          else if (p.type === 'error') appliquer('error');
+          if (p.type === 'phase-changed' && p.to) {
+            cartouche(null);
+            appliquer(p.to);
+          } else if (p.type === 'error') appliquer('error');
         });
       }
       if (api && api.event && api.event.listen) {
         api.event.listen('dictation-state', (event) => {
           const p = event && event.payload;
           if (!p) return;
-          if (p.type === 'phase-changed' && DICTEE[p.to]) {
+          if (p.type === 'partial') {
+            if (p.text) cartouche(p.text);
+          } else if (p.type === 'phase-changed' && DICTEE[p.to]) {
+            if (p.to === 'recording') cartouche('Écoute…');
             appliquer(DICTEE[p.to]);
             annoncer(ANNONCES[p.to]);
           } else if (p.type === 'error') {
+            cartouche(null);
             appliquer('error');
             annoncer('Erreur de dictée : ' + (p.message || ''));
           }
