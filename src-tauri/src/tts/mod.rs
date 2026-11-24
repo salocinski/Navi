@@ -56,7 +56,7 @@ impl Default for TtsConfig {
             .unwrap_or_else(|| base.clone());
         let (espeak_lib_path, espeak_data_path) = {
             let dll = phonemizer_dir.join("espeak-ng.dll");
-            if dll.exists() {
+            if dll.exists() && crate::utils::may_load_code_from(&phonemizer_dir) {
                 (
                     dll.to_string_lossy().to_string(),
                     phonemizer_dir

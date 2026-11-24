@@ -170,6 +170,11 @@ impl AppConfig {
         {
             return Err("Le dossier des modèles ne peut pas être vide (laisser non défini)".into());
         }
+        if let Some(dir) = &self.models_dir
+            && !dir.is_absolute()
+        {
+            return Err("Le dossier des modèles doit être un chemin absolu".into());
+        }
         Ok(())
     }
 
@@ -291,6 +296,18 @@ mod tests {
             models_dir: Some("".into()),
             ..Default::default()
         });
+        ko(AppConfig {
+            models_dir: Some("models".into()), // relatif : refusé (processus élevé)
+            ..Default::default()
+        });
+        assert!(
+            AppConfig {
+                models_dir: Some(std::env::temp_dir()),
+                ..Default::default()
+            }
+            .validate()
+            .is_ok()
+        );
     }
 
     #[test]
