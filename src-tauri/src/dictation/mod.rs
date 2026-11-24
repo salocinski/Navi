@@ -195,18 +195,27 @@ impl Dictation {
         self.downloading.load(Ordering::SeqCst)
     }
 
-    /// N-105 : contrôle l'empreinte du modèle au lancement, en tâche de fond, pour que la première
-    /// dictée n'attende pas le hachage (~8 s). Modèle absent ou corrompu : rien ici, le
-    /// téléchargement reste déclenché par la première dictée, jamais à l'insu de l'utilisateur.
-    pub fn verify_in_background(&self) {
-        if model::is_overridden() {
-            return;
-        }
+    /// N-105/N-106 : au lancement, en tâche de fond, contrôle l'empreinte du modèle puis le charge
+    /// sur le GPU, pour que la première dictée n'attende ni le hachage (~8 s) ni le chargement
+    /// (~2 s). Modèle absent ou corrompu : rien ici, le téléchargement reste déclenché par la
+    /// première dictée, jamais à l'insu de l'utilisateur.
+    pub fn preload_in_background(&self) {
         let verified = self.verified.clone();
+        let engine = self.engine.clone();
         std::thread::spawn(move || {
             let path = model::model_path();
-            if path.is_file() && matches!(model::verify(&path), Ok(ModelState::Valid)) {
+            if !path.is_file() {
+                return;
+            }
+            if !model::is_overridden() {
+                if !matches!(model::verify(&path), Ok(ModelState::Valid)) {
+                    return;
+                }
                 verified.store(true, Ordering::SeqCst);
+            }
+            let Ok(mut guard) = engine.lock() else { return };
+            if let Err(e) = guard.get_or_insert_with(|| WhisperEngine::new(path)).load() {
+                eprintln!("[navi] préchargement du modèle de dictée : {e}");
             }
         });
     }
