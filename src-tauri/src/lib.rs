@@ -490,8 +490,9 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
 }
 
 /// N-100 : supprime le modèle de lecture puis le réinstalle (retour à un état sain).
-/// Refusé pendant un chargement ou un téléchargement ; la session ONNX est libérée avant la
-/// suppression (fichiers verrouillés sous Windows).
+/// Refusé pendant un chargement ou un téléchargement. Seule la session ONNX est libérée (fichiers
+/// verrouillés sous Windows) : le moteur et son environnement ort sont conservés, car ort ne
+/// permet de créer l'environnement qu'une fois par processus (N-102 : sinon l'application se ferme).
 #[tauri::command]
 fn reinstall_kokoro(state: tauri::State<NaviState>) -> Result<(), String> {
     use std::sync::atomic::Ordering;
@@ -500,17 +501,24 @@ fn reinstall_kokoro(state: tauri::State<NaviState>) -> Result<(), String> {
         return Err("Un chargement du modèle est en cours, réessayez dans un instant".to_string());
     }
     std::thread::spawn(move || {
-        let removed = (|| -> Result<(), String> {
-            *view
+        let reinstalled = (|| -> Result<(), String> {
+            if let Some(engine) = view
                 .engine
                 .lock()
-                .map_err(|_| "verrou moteur".to_string())? = None;
+                .map_err(|_| "verrou moteur".to_string())?
+                .as_ref()
+            {
+                engine.unload_session();
+            }
             let settings = crate::config::AppConfig::load().unwrap_or_default();
             let dir = crate::utils::resolve_models_dir_with(settings.models_dir.as_deref());
-            crate::tts::install::remove(&dir)
+            crate::tts::install::remove(&dir)?;
+            crate::tts::install::install(&dir)?;
+            crate::tts::check_models(&dir).map_err(|e| e.to_string())
         })();
         view.loading.store(false, Ordering::SeqCst);
-        match removed {
+        match reinstalled {
+            // Moteur déjà créé : la session se recharge à la prochaine lecture ; sinon on le crée.
             Ok(()) => {
                 let _ = ensure_engine(&view);
             }
