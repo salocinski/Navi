@@ -1670,7 +1670,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "milestone": "M2",
       "prio": "P2",
       "size": "M",
-      "status": "todo",
+      "status": "doing",
       "assigned_to": ""
     },
     {
@@ -1691,14 +1691,14 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 95,
       "title": "[Dictée] Exécuter Navi toujours en administrateur (manifeste, tâche planifiée de démarrage, reprise de N-054)",
-      "note": "Décision propriétaire : toujours élevé. UAC à chaque lancement manuel ; le démarrage par clé de registre ne lance pas une appli élevée : tâche planifiée avec privilèges maximaux. Durcir ce que la fenêtre web peut appeler.",
+      "note": "Décision propriétaire : toujours élevé. UAC à chaque lancement manuel ; le démarrage par clé de registre ne lance pas une appli élevée : tâche planifiée avec privilèges maximaux. Durcir ce que la fenêtre web peut appeler.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-23] Navi s'exécute toujours en administrateur : manifeste requireAdministrator (release seulement), démarrage par tâche planifiée avec migration de l'ancienne valeur Run, installeur NSIS perMachine, durcissement des entrées modifiables par l'utilisateur. PR #116 fusionnée. Non vérifié : tâche élevée réelle, UAC, démarrage à l'ouverture de session, installeur, saisie en fenêtre élevée.",
       "deps": [],
       "epic": "realisation",
       "kind": "tache",
       "milestone": "M2",
       "prio": "P1",
       "size": "L",
-      "status": "doing",
+      "status": "done",
       "assigned_to": ""
     },
     {

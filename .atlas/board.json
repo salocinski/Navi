@@ -741,8 +741,8 @@
       "id": "N-093",
       "title": "[Dictée] Réglages de dictée et section du panneau",
       "description": "Raccourci, périphérique micro, état du modèle.\n\n[NOTE 2026-11-23 09:14] dépendances : N-090",
-      "state": "todo",
-      "updated_at": "2026-11-23T14:14:35Z",
+      "state": "doing",
+      "updated_at": "2026-11-24T00:14:12Z",
       "assignee": ""
     },
     {
@@ -756,9 +756,9 @@
     {
       "id": "N-095",
       "title": "[Dictée] Exécuter Navi toujours en administrateur (manifeste, tâche planifiée de démarrage, reprise de N-054)",
-      "description": "Décision propriétaire : toujours élevé. UAC à chaque lancement manuel ; le démarrage par clé de registre ne lance pas une appli élevée : tâche planifiée avec privilèges maximaux. Durcir ce que la fenêtre web peut appeler.",
-      "state": "doing",
-      "updated_at": "2026-11-23T22:43:43Z",
+      "description": "Décision propriétaire : toujours élevé. UAC à chaque lancement manuel ; le démarrage par clé de registre ne lance pas une appli élevée : tâche planifiée avec privilèges maximaux. Durcir ce que la fenêtre web peut appeler.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-23] Navi s'exécute toujours en administrateur : manifeste requireAdministrator (release seulement), démarrage par tâche planifiée avec migration de l'ancienne valeur Run, installeur NSIS perMachine, durcissement des entrées modifiables par l'utilisateur. PR #116 fusionnée. Non vérifié : tâche élevée réelle, UAC, démarrage à l'ouverture de session, installeur, saisie en fenêtre élevée.",
+      "state": "done",
+      "updated_at": "2026-11-24T00:14:11Z",
       "assignee": ""
     },
     {
