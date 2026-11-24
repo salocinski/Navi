@@ -314,14 +314,24 @@ fn process(dictation: &Dictation, capture: MicCapture, end: HoldEnd, held: Durat
 
 fn transcribe(dictation: &Dictation, pcm: &[f32]) -> Result<String, String> {
     let path = model::model_path();
+    let t0 = std::time::Instant::now();
     dictation.ensure_model(&path)?;
+    let t_verif = t0.elapsed();
     let mut guard = dictation
         .engine
         .lock()
         .map_err(|_| "verrou moteur de dictée".to_string())?;
     let engine = guard.get_or_insert_with(|| WhisperEngine::new(path));
+    let t1 = std::time::Instant::now();
     engine.load().map_err(|e| e.to_string())?;
+    let t_load = t1.elapsed();
+    let t2 = std::time::Instant::now();
     let out = engine.transcribe(pcm, None).map_err(|e| e.to_string())?;
+    eprintln!(
+        "[navi] dictée : vérification {t_verif:?}, chargement {t_load:?}, transcription {:?} ({} échantillons)",
+        t2.elapsed(),
+        pcm.len()
+    );
     // N-098 : première transcription réussie, l'ancienne version du modèle devient inutile.
     crate::models_store::confirm_use("whisper");
     Ok(out.text)
