@@ -489,6 +489,37 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
     Ok(())
 }
 
+/// N-100 : supprime le modèle de lecture puis le réinstalle (retour à un état sain).
+/// Refusé pendant un chargement ou un téléchargement ; la session ONNX est libérée avant la
+/// suppression (fichiers verrouillés sous Windows).
+#[tauri::command]
+fn reinstall_kokoro(state: tauri::State<NaviState>) -> Result<(), String> {
+    use std::sync::atomic::Ordering;
+    let view = state.view();
+    if view.loading.swap(true, Ordering::SeqCst) {
+        return Err("Un chargement du modèle est en cours, réessayez dans un instant".to_string());
+    }
+    std::thread::spawn(move || {
+        let removed = (|| -> Result<(), String> {
+            *view.engine.lock().map_err(|_| "verrou moteur".to_string())? = None;
+            let settings = crate::config::AppConfig::load().unwrap_or_default();
+            let dir = crate::utils::resolve_models_dir_with(settings.models_dir.as_deref());
+            crate::tts::install::remove(&dir)
+        })();
+        view.loading.store(false, Ordering::SeqCst);
+        match removed {
+            Ok(()) => {
+                let _ = ensure_engine(&view);
+            }
+            Err(message) => {
+                eprintln!("[navi] réinstallation du modèle échouée : {message}");
+                view.machine.set_error(message);
+            }
+        }
+    });
+    Ok(())
+}
+
 /// Lance la lecture de la sélection courante : capture → nettoyage → langue → segments → audio.
 #[tauri::command]
 fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
@@ -751,6 +782,7 @@ pub fn run() {
             list_microphones,
             download_dictation_model,
             kokoro_model_status,
+            reinstall_kokoro,
             check_model_updates,
             model_update_status,
             model_versions,
