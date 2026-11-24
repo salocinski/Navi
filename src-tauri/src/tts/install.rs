@@ -65,6 +65,18 @@ pub fn is_installed(dir: &Path) -> bool {
     missing_in(dir, &specs()).is_empty()
 }
 
+/// N-100 : supprime les fichiers du modèle de lecture ; le prochain `install` les retélécharge.
+pub fn remove(dir: &Path) -> Result<(), String> {
+    for s in specs() {
+        match std::fs::remove_file(dir.join(&s.name)) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(format!("suppression de {} impossible : {e}", s.name)),
+        }
+    }
+    Ok(())
+}
+
 /// (téléchargement en cours, octets reçus, octets attendus)
 pub fn progress() -> (bool, u64, u64) {
     (
@@ -135,6 +147,17 @@ mod tests {
             2,
             "taille inattendue = à retélécharger"
         );
+    }
+
+    #[test]
+    fn remove_supprime_les_fichiers_et_tolere_l_absence() {
+        let dir = tempfile::tempdir().unwrap();
+        for s in specs() {
+            std::fs::write(dir.path().join(&s.name), b"x").unwrap();
+        }
+        remove(dir.path()).unwrap();
+        assert!(specs().iter().all(|s| !dir.path().join(&s.name).exists()));
+        remove(dir.path()).unwrap(); // déjà absent : sans erreur
     }
 
     #[test]

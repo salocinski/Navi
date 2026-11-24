@@ -154,6 +154,7 @@
           Téléchargé une seule fois depuis GitHub au premier lancement, puis la lecture fonctionne
           hors ligne.
         </p>
+        <button type="button" id="kokoro_reinstall">Réinstaller le modèle de lecture</button>
         <label class="inline"
           ><input type="checkbox" id="update_check_weekly" /> Vérifier chaque semaine si une mise à
           jour d'un modèle est disponible</label
@@ -297,6 +298,23 @@
         clearTimeout(kokoroTimer);
         if (!m.present) kokoroTimer = setTimeout(() => refreshKokoro().catch(() => {}), 1500);
       }
+
+      $('kokoro_reinstall').addEventListener('click', async () => {
+        if (
+          !confirm(
+            'Supprimer le modèle de lecture puis le télécharger à nouveau (environ 120 Mo) ?',
+          )
+        )
+          return;
+        try {
+          await invoke('reinstall_kokoro');
+          $('kokoro_state').textContent = 'Réinstallation en cours…';
+          clearTimeout(kokoroTimer);
+          kokoroTimer = setTimeout(() => refreshKokoro().catch(() => {}), 1000);
+        } catch (err) {
+          $('kokoro_state').textContent = 'Réinstallation impossible : ' + err;
+        }
+      });
 
       // Disponibilité de mise à jour des modèles (notification seule).
       const MODEL_LABELS = { kokoro: 'Lecture (Kokoro)', whisper: 'Dictée (Whisper)' };
