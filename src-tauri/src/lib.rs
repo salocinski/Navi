@@ -416,58 +416,75 @@ fn stage_model_rollback(id: String) -> Result<(), String> {
     crate::models_store::update(|s| s.stage_rollback(&id)).and_then(|r| r)
 }
 
+/// Crée le moteur Kokoro si besoin (installation au premier usage, vérification, chargement).
+/// Bloquant et à chargement unique : un appel concurrent attend la fin du premier — ort refuse
+/// plusieurs `Environment`. N-099 : la lecture passe aussi par ici, le moteur n'existe qu'après.
+pub(crate) fn ensure_engine(view: &NaviRef) -> Result<(), String> {
+    use std::sync::atomic::Ordering;
+    let ready = || -> Result<bool, String> {
+        Ok(view
+            .engine
+            .lock()
+            .map_err(|_| "verrou moteur".to_string())?
+            .is_some())
+    };
+    loop {
+        if ready()? {
+            return Ok(());
+        }
+        if !view.loading.swap(true, Ordering::SeqCst) {
+            break;
+        }
+        // shortcut: attente par sondage (100 ms), sans délai maximal ; à remplacer par un Condvar si besoin.
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        if !view.loading.load(Ordering::SeqCst) && !ready()? {
+            return Err("Chargement du modèle échoué".to_string());
+        }
+    }
+    let result = (|| -> Result<crate::tts::KokoroEngine, String> {
+        let settings = crate::config::AppConfig::load().unwrap_or_default();
+        let dir = crate::utils::resolve_models_dir_with(settings.models_dir.as_deref());
+        // N-066 : premier usage, les fichiers du modèle sont téléchargés (vérifiés par SHA-256) puis restent locaux.
+        if !crate::tts::install::is_installed(&dir) {
+            crate::tts::install::install(&dir)?;
+        }
+        crate::tts::check_models(&dir).map_err(|e| e.to_string())?;
+        let config = crate::tts::TtsConfig::with_dir(&dir);
+        let mut kokoro = crate::tts::KokoroEngine::new(config).map_err(|e| {
+            format!(
+                "chargement moteur impossible ({e}). Modèles attendus dans {}",
+                dir.display()
+            )
+        })?;
+        crate::tts::TtsEngine::load(&mut kokoro)
+            .map_err(|e| format!("modèle Kokoro non chargeable : {e}"))?;
+        Ok(kokoro)
+    })();
+    let outcome = match result {
+        Ok(kokoro) => {
+            // N-098 : premier chargement réussi, l'ancienne version du modèle devient inutile.
+            crate::models_store::confirm_use("kokoro");
+            view.engine
+                .lock()
+                .map_err(|_| "verrou moteur".to_string())
+                .map(|mut guard| *guard = Some(kokoro))
+        }
+        Err(message) => {
+            eprintln!("[navi] chargement moteur échoué : {message}");
+            view.machine.set_error(message.clone());
+            Err(message)
+        }
+    };
+    view.loading.store(false, Ordering::SeqCst);
+    outcome
+}
+
 /// Charge le modèle Kokoro en tâche de fond (idempotent ; ~11 s au premier appel).
-/// Un seul chargement simultané autorisé — ort refuse plusieurs `Environment`.
 #[tauri::command]
 fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
     let view = state.view();
-    if view
-        .engine
-        .lock()
-        .map_err(|_| "verrou moteur".to_string())?
-        .is_some()
-    {
-        return Ok(());
-    }
-    if view.loading.swap(true, std::sync::atomic::Ordering::SeqCst) {
-        return Ok(()); // un chargement est déjà en cours
-    }
-    let machine = view.machine.clone();
     std::thread::spawn(move || {
-        let result = (|| -> Result<crate::tts::KokoroEngine, String> {
-            let settings = crate::config::AppConfig::load().unwrap_or_default();
-            let dir = crate::utils::resolve_models_dir_with(settings.models_dir.as_deref());
-            // N-066 : premier usage, les fichiers du modèle sont téléchargés (vérifiés par SHA-256) puis restent locaux.
-            if !crate::tts::install::is_installed(&dir) {
-                crate::tts::install::install(&dir)?;
-            }
-            crate::tts::check_models(&dir).map_err(|e| e.to_string())?;
-            let config = crate::tts::TtsConfig::with_dir(&dir);
-            let mut kokoro = crate::tts::KokoroEngine::new(config).map_err(|e| {
-                format!(
-                    "chargement moteur impossible ({e}). Modèles attendus dans {}",
-                    dir.display()
-                )
-            })?;
-            crate::tts::TtsEngine::load(&mut kokoro)
-                .map_err(|e| format!("modèle Kokoro non chargeable : {e}"))?;
-            Ok(kokoro)
-        })();
-        match result {
-            Ok(kokoro) => {
-                // N-098 : premier chargement réussi, l'ancienne version du modèle devient inutile.
-                crate::models_store::confirm_use("kokoro");
-                if let Ok(mut guard) = view.engine.lock() {
-                    *guard = Some(kokoro);
-                }
-            }
-            Err(message) => {
-                eprintln!("[navi] chargement moteur échoué : {message}");
-                machine.set_error(message);
-            }
-        }
-        view.loading
-            .store(false, std::sync::atomic::Ordering::SeqCst);
+        let _ = ensure_engine(&view);
     });
     Ok(())
 }
@@ -503,6 +520,7 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
                 // Le chargement est idempotent (ensure_session) ; un préchargement
                 // concurrent au démarrage est réutilisé, pas doublonné.
                 (|| -> Result<(), String> {
+                    ensure_engine(&view)?;
                     let mut guard = view
                         .engine
                         .lock()
