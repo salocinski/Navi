@@ -97,6 +97,7 @@ pub mod autostart;
 pub mod dictation;
 pub mod hotkey;
 pub mod insert;
+pub mod models_update;
 pub mod pipeline;
 pub mod state;
 pub mod stt;
@@ -227,12 +228,14 @@ fn apply_hotkeys(
 /// gestionnaire de raccourcis (exigence de `RegisterHotKey`).
 #[tauri::command]
 fn set_config(
-    config: crate::config::AppConfig,
+    mut config: crate::config::AppConfig,
     state: tauri::State<NaviState>,
     hotkeys: tauri::State<SharedHotkeys>,
 ) -> Result<(), String> {
     config.validate()?;
     let previous = crate::config::AppConfig::load().unwrap_or_default();
+    // La date du dernier contrôle appartient à l'application : une page de réglages ouverte avant le contrôle ne l'efface pas.
+    config.last_update_check = previous.last_update_check;
     let view = state.view();
     let hotkeys_changed =
         crate::hotkey::bindings_of(&config) != crate::hotkey::bindings_of(&previous);
@@ -317,6 +320,42 @@ fn download_dictation_model(state: tauri::State<NaviState>) -> Result<(), String
     Ok(())
 }
 
+#[derive(serde::Serialize)]
+struct KokoroModelDto {
+    present: bool,
+    downloading: bool,
+    done: u64,
+    total: u64,
+}
+
+/// État du modèle de lecture (présence et taille ; l'empreinte est contrôlée au chargement).
+#[tauri::command]
+fn kokoro_model_status() -> KokoroModelDto {
+    let settings = crate::config::AppConfig::load().unwrap_or_default();
+    let dir = crate::utils::resolve_models_dir_with(settings.models_dir.as_deref());
+    let (downloading, done, total) = crate::tts::install::progress();
+    KokoroModelDto {
+        present: crate::tts::install::is_installed(&dir),
+        downloading,
+        done,
+        total,
+    }
+}
+
+/// Contrôle à la demande de la disponibilité d'une mise à jour des modèles (aucune installation).
+#[tauri::command]
+async fn check_model_updates() -> Result<crate::models_update::CheckResult, String> {
+    tauri::async_runtime::spawn_blocking(crate::models_update::run_check)
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// Dernier résultat de contrôle de la session, s'il y en a un.
+#[tauri::command]
+fn model_update_status() -> Option<crate::models_update::CheckResult> {
+    crate::models_update::last()
+}
+
 /// Charge le modèle Kokoro en tâche de fond (idempotent ; ~11 s au premier appel).
 /// Un seul chargement simultané autorisé — ort refuse plusieurs `Environment`.
 #[tauri::command]
@@ -338,6 +377,10 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
         let result = (|| -> Result<crate::tts::KokoroEngine, String> {
             let settings = crate::config::AppConfig::load().unwrap_or_default();
             let dir = crate::utils::resolve_models_dir_with(settings.models_dir.as_deref());
+            // N-066 : premier usage, les fichiers du modèle sont téléchargés (vérifiés par SHA-256) puis restent locaux.
+            if !crate::tts::install::is_installed(&dir) {
+                crate::tts::install::install(&dir)?;
+            }
             crate::tts::check_models(&dir).map_err(|e| e.to_string())?;
             let config = crate::tts::TtsConfig::with_dir(&dir);
             let mut kokoro = crate::tts::KokoroEngine::new(config).map_err(|e| {
@@ -627,6 +670,9 @@ pub fn run() {
             dictation_model_status,
             list_microphones,
             download_dictation_model,
+            kokoro_model_status,
+            check_model_updates,
+            model_update_status,
             get_config,
             get_voices,
             set_config,
@@ -878,6 +924,19 @@ pub fn run() {
             std::thread::spawn(|| {
                 if let Err(e) = crate::autostart::migrate_legacy() {
                     eprintln!("[navi] migration du démarrage automatique : {e}");
+                }
+            });
+
+            // Contrôle hebdomadaire de disponibilité de mise à jour des modèles (N-066, opt-in).
+            std::thread::spawn(|| {
+                let config = crate::config::AppConfig::load().unwrap_or_default();
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |d| d.as_secs());
+                if crate::models_update::is_due(config.update_check_weekly, config.last_update_check, now)
+                    && let Err(e) = crate::models_update::run_check()
+                {
+                    eprintln!("[navi] contrôle de mise à jour des modèles : {e}");
                 }
             });
 

@@ -65,6 +65,12 @@ pub struct AppConfig {
 
     /// Répertoire des modèles (optionnel, défaut: ~/AppData/Navi/models)
     pub models_dir: Option<std::path::PathBuf>,
+
+    /// Vérifier chaque semaine si une mise à jour d'un modèle existe (N-066, désactivé par défaut)
+    pub update_check_weekly: bool,
+
+    /// Date du dernier contrôle (secondes Unix) ; écrite par l'application, conservée par `set_config`
+    pub last_update_check: Option<u64>,
 }
 
 impl Default for AppConfig {
@@ -84,6 +90,8 @@ impl Default for AppConfig {
             autostart: false,
             microphone: None,
             models_dir: None,
+            update_check_weekly: false,
+            last_update_check: None,
         }
     }
 }

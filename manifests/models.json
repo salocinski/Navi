@@ -1,0 +1,16 @@
+{
+  "models": [
+    {
+      "id": "kokoro",
+      "version": "1.0-int8",
+      "format": 1,
+      "sha256": "6e742170d309016e5891a994e1ce1559c702a2ccd0075e67ef7157974f6406cb"
+    },
+    {
+      "id": "whisper",
+      "version": "large-v3-turbo",
+      "format": 1,
+      "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69"
+    }
+  ]
+}

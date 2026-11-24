@@ -146,6 +146,28 @@
       </fieldset>
 
       <fieldset>
+        <legend>Modèles</legend>
+        <label>Modèle de lecture (Kokoro, environ 120 Mo)</label>
+        <div id="kokoro_state" role="status" aria-live="polite"></div>
+        <progress id="kokoro_progress" max="100" value="0" hidden></progress>
+        <p class="hint">
+          Téléchargé une seule fois depuis GitHub au premier lancement, puis la lecture fonctionne
+          hors ligne.
+        </p>
+        <label class="inline"
+          ><input type="checkbox" id="update_check_weekly" /> Vérifier chaque semaine si une mise à
+          jour d'un modèle est disponible</label
+        >
+        <button type="button" id="update_check">Vérifier la disponibilité d'une mise à jour</button>
+        <div id="update_state" role="status" aria-live="polite"></div>
+        <p class="hint">
+          Une requête anonyme lit la liste publique des modèles du dépôt Navi : aucun texte, son ou
+          identifiant n'est envoyé. Rien n'est installé automatiquement ; la case est décochée par
+          défaut.
+        </p>
+      </fieldset>
+
+      <fieldset>
         <legend>Système</legend>
         <label class="inline"
           ><input type="checkbox" id="autostart" /> Lancer Navi au démarrage de Windows</label
@@ -173,7 +195,7 @@
         'hotkey_stop',
         'hotkey_dictation',
       ];
-      const CHECKS = ['startup_sound', 'autostart'];
+      const CHECKS = ['startup_sound', 'autostart', 'update_check_weekly'];
       const status = $('status');
 
       function show(message, isError) {
@@ -203,6 +225,8 @@
           $('models_dir').value = loaded.models_dir ?? '';
           await loadMicrophones();
           await refreshModel();
+          await refreshKokoro();
+          await refreshUpdates();
         } catch (err) {
           show('Lecture de la configuration impossible : ' + err, true);
         }
@@ -252,6 +276,58 @@
         } else if (p.type === 'model-ready') showModel('Modèle installé.');
         else if (p.type === 'model-failed')
           showModel('Téléchargement échoué : ' + p.message, { canDownload: true });
+      });
+
+      // Modèle de lecture (Kokoro) : téléchargé automatiquement au premier lancement ; l'état est
+      // interrogé tant que les fichiers manquent.
+      let kokoroTimer;
+      async function refreshKokoro() {
+        const m = await invoke('kokoro_model_status');
+        const pct = m.total > 0 ? Math.floor((m.done / m.total) * 100) : 0;
+        $('kokoro_progress').hidden = !m.downloading;
+        if (m.downloading) $('kokoro_progress').value = pct;
+        $('kokoro_state').textContent = m.downloading
+          ? 'Téléchargement : ' + pct + ' %'
+          : m.present
+            ? 'Modèle installé.'
+            : 'Modèle absent : il sera téléchargé au prochain démarrage de Navi.';
+        clearTimeout(kokoroTimer);
+        if (!m.present) kokoroTimer = setTimeout(() => refreshKokoro().catch(() => {}), 1500);
+      }
+
+      // Disponibilité de mise à jour des modèles (notification seule).
+      const MODEL_LABELS = { kokoro: 'Lecture (Kokoro)', whisper: 'Dictée (Whisper)' };
+      function showUpdates(r) {
+        const parts = r.models.map(
+          (m) =>
+            (MODEL_LABELS[m.id] ?? m.id) +
+            ' : ' +
+            (m.available
+              ? 'mise à jour disponible (' + m.version + ')'
+              : m.needs_app_update
+                ? 'nécessite une version plus récente de Navi'
+                : 'à jour'),
+        );
+        $('update_state').textContent =
+          parts.join(' · ') +
+          ' — contrôle du ' +
+          new Date(r.checked_at * 1000).toLocaleString('fr-FR') +
+          '.';
+      }
+      async function refreshUpdates() {
+        const r = await invoke('model_update_status');
+        if (r) showUpdates(r);
+      }
+      $('update_check').addEventListener('click', async () => {
+        $('update_check').disabled = true;
+        $('update_state').textContent = 'Vérification en cours…';
+        try {
+          showUpdates(await invoke('check_model_updates'));
+        } catch (err) {
+          $('update_state').textContent = 'Vérification impossible : ' + err;
+        } finally {
+          $('update_check').disabled = false;
+        }
       });
 
       // Saisie d'un raccourci : la combinaison pressée est convertie au format attendu par

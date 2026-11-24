@@ -1,6 +1,7 @@
 //! Moteur TTS (Kokoro via ONNX Runtime)
 
 pub mod engine;
+pub mod install;
 pub use engine::TtsEngine;
 pub use engine::{SynthesisOutput, SynthesisRequest, TTS_SAMPLE_RATE, TtsError, TtsLanguage};
 
