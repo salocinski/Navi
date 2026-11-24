@@ -160,10 +160,13 @@
         >
         <button type="button" id="update_check">Vérifier la disponibilité d'une mise à jour</button>
         <div id="update_state" role="status" aria-live="polite"></div>
+        <div id="model_versions"></div>
         <p class="hint">
           Une requête anonyme lit la liste publique des modèles du dépôt Navi : aucun texte, son ou
-          identifiant n'est envoyé. Rien n'est installé automatiquement ; la case est décochée par
-          défaut.
+          identifiant n'est envoyé. La liste est signée : une liste altérée est refusée. Rien n'est
+          installé sans votre accord ; une mise à jour téléchargée s'applique au prochain démarrage
+          de Navi, et l'ancienne version est conservée jusqu'à la première utilisation réussie de la
+          nouvelle. La case est décochée par défaut.
         </p>
       </fieldset>
 
@@ -313,11 +316,102 @@
           ' — contrôle du ' +
           new Date(r.checked_at * 1000).toLocaleString('fr-FR') +
           '.';
+        lastUpdates = r.models;
+        renderVersions().catch(() => {});
       }
       async function refreshUpdates() {
         const r = await invoke('model_update_status');
         if (r) showUpdates(r);
+        else await renderVersions();
       }
+      // Versions des modèles : mise à jour explicite (téléchargée puis appliquée au prochain démarrage)
+      // et retour à la version précédente.
+      let lastUpdates = [];
+      function confirmClick(button, label, confirmLabel, action) {
+        button.type = 'button';
+        button.textContent = label;
+        let timer;
+        button.addEventListener('click', async () => {
+          if (button.dataset.armed !== '1') {
+            button.dataset.armed = '1';
+            button.textContent = confirmLabel;
+            timer = setTimeout(() => {
+              button.dataset.armed = '';
+              button.textContent = label;
+            }, 8000);
+            return;
+          }
+          clearTimeout(timer);
+          button.dataset.armed = '';
+          button.disabled = true;
+          try {
+            await action();
+          } catch (err) {
+            $('update_state').textContent = 'Échec : ' + err;
+          } finally {
+            await renderVersions();
+          }
+        });
+        return button;
+      }
+      async function downloadUpdate(id) {
+        const timer = setInterval(async () => {
+          const p = await invoke('model_update_progress');
+          if (p.downloading && p.total > 0)
+            $('update_state').textContent =
+              'Téléchargement : ' + Math.floor((p.done / p.total) * 100) + ' %';
+        }, 1000);
+        try {
+          await invoke('stage_model_update', { id });
+          $('update_state').textContent =
+            'Mise à jour téléchargée et vérifiée : elle sera appliquée au prochain démarrage de Navi.';
+        } finally {
+          clearInterval(timer);
+        }
+      }
+      async function renderVersions() {
+        const versions = await invoke('model_versions');
+        const box = $('model_versions');
+        box.replaceChildren();
+        for (const v of versions) {
+          const row = document.createElement('div');
+          const info = document.createElement('span');
+          info.textContent =
+            (MODEL_LABELS[v.id] ?? v.id) +
+            ' — version ' +
+            v.version +
+            (v.pending === 'update'
+              ? ' · mise à jour téléchargée, appliquée au prochain démarrage'
+              : v.pending === 'rollback'
+                ? ' · retour à la version précédente au prochain démarrage'
+                : '');
+          row.append(info);
+          const update = lastUpdates.find((u) => u.id === v.id);
+          if (update?.available && !v.pending) {
+            const mb = Math.max(1, Math.round(update.download_bytes / 1048576));
+            row.append(
+              confirmClick(
+                document.createElement('button'),
+                'Télécharger la version ' + update.version + ' (' + mb + ' Mo)',
+                'Confirmer le téléchargement de ' + mb + ' Mo ?',
+                () => downloadUpdate(v.id),
+              ),
+            );
+          }
+          if (v.has_previous && !v.pending) {
+            row.append(
+              confirmClick(
+                document.createElement('button'),
+                'Revenir à la version précédente',
+                'Confirmer le retour à la version précédente ?',
+                () => invoke('stage_model_rollback', { id: v.id }),
+              ),
+            );
+          }
+          box.append(row);
+        }
+      }
+
       $('update_check').addEventListener('click', async () => {
         $('update_check').disabled = true;
         $('update_state').textContent = 'Vérification en cours…';

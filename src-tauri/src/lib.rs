@@ -97,6 +97,7 @@ pub mod autostart;
 pub mod dictation;
 pub mod hotkey;
 pub mod insert;
+pub mod models_store;
 pub mod models_update;
 pub mod pipeline;
 pub mod state;
@@ -356,6 +357,65 @@ fn model_update_status() -> Option<crate::models_update::CheckResult> {
     crate::models_update::last()
 }
 
+#[derive(serde::Serialize)]
+struct ModelVersionDto {
+    id: &'static str,
+    version: String,
+    has_previous: bool,
+    /// `update` ou `rollback` : changement appliqué au prochain démarrage.
+    pending: Option<&'static str>,
+}
+
+/// Version installée de chaque modèle, retour arrière possible et changement en attente.
+#[tauri::command]
+fn model_versions() -> Vec<ModelVersionDto> {
+    let store = crate::models_store::read();
+    crate::models_store::IDS
+        .iter()
+        .filter_map(|id| {
+            let pinned = crate::models_store::pinned(id)?;
+            Some(ModelVersionDto {
+                id,
+                version: store.version(id, &pinned),
+                has_previous: store.has_previous(id),
+                pending: store.pending(id),
+            })
+        })
+        .collect()
+}
+
+#[derive(serde::Serialize)]
+struct DownloadProgressDto {
+    downloading: bool,
+    done: u64,
+    total: u64,
+}
+
+#[tauri::command]
+fn model_update_progress() -> DownloadProgressDto {
+    let (downloading, done, total) = crate::models_update::progress();
+    DownloadProgressDto {
+        downloading,
+        done,
+        total,
+    }
+}
+
+/// Télécharge la mise à jour d'un modèle (action explicite) ; appliquée au prochain démarrage.
+#[tauri::command]
+async fn stage_model_update(id: String) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || crate::models_update::stage_update(&id))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+/// Demande le retour à la version précédente d'un modèle ; appliqué au prochain démarrage.
+#[tauri::command]
+fn stage_model_rollback(id: String) -> Result<(), String> {
+    crate::models_store::pinned(&id).ok_or("Modèle inconnu")?;
+    crate::models_store::update(|s| s.stage_rollback(&id)).and_then(|r| r)
+}
+
 /// Charge le modèle Kokoro en tâche de fond (idempotent ; ~11 s au premier appel).
 /// Un seul chargement simultané autorisé — ort refuse plusieurs `Environment`.
 #[tauri::command]
@@ -395,6 +455,8 @@ fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
         })();
         match result {
             Ok(kokoro) => {
+                // N-098 : premier chargement réussi, l'ancienne version du modèle devient inutile.
+                crate::models_store::confirm_use("kokoro");
                 if let Ok(mut guard) = view.engine.lock() {
                     *guard = Some(kokoro);
                 }
@@ -673,6 +735,10 @@ pub fn run() {
             kokoro_model_status,
             check_model_updates,
             model_update_status,
+            model_versions,
+            model_update_progress,
+            stage_model_update,
+            stage_model_rollback,
             get_config,
             get_voices,
             set_config,
@@ -686,6 +752,8 @@ pub fn run() {
             ui::quit_app,
         ])
         .setup(|app| {
+            // N-098 : mises à jour et retours arrière de modèles en attente, avant tout chargement.
+            crate::models_store::apply_pending();
             let state = NaviState::new();
             track_last_foreground();
             touch_user_activity();

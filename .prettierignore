@@ -21,3 +21,6 @@ README.md
 index.html
 tsconfig.json
 tsconfig.node.json
+
+# Manifeste signé (N-098) : tout reformatage invaliderait la signature
+manifests/

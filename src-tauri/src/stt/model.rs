@@ -15,6 +15,24 @@ pub const MODEL_URL: &str =
 pub const MODEL_SIZE: u64 = 1_624_555_275;
 pub const MODEL_SHA256: &str = "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69";
 
+/// Valeurs livrées avec cette version de Navi.
+pub fn pinned_file() -> crate::models_store::FileSpec {
+    crate::models_store::FileSpec {
+        name: MODEL_FILE.into(),
+        url: MODEL_URL.into(),
+        size: MODEL_SIZE,
+        sha256: MODEL_SHA256.into(),
+    }
+}
+
+/// Fichier attendu : celui d'une mise à jour installée (N-098), sinon celui livré.
+fn current() -> crate::models_store::FileSpec {
+    crate::models_store::files("whisper")
+        .into_iter()
+        .next()
+        .unwrap_or_else(pinned_file)
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum ModelState {
     Missing,
@@ -40,7 +58,8 @@ pub fn model_path() -> PathBuf {
 
 /// Contrôle bon marché (existence + taille), sans hacher le fichier.
 pub fn is_present(path: &Path) -> bool {
-    std::fs::metadata(path).is_ok_and(|m| m.is_file() && (is_overridden() || m.len() == MODEL_SIZE))
+    std::fs::metadata(path)
+        .is_ok_and(|m| m.is_file() && (is_overridden() || m.len() == current().size))
 }
 
 fn hex_sha256(reader: &mut impl Read) -> std::io::Result<String> {
@@ -69,7 +88,8 @@ fn verify_with(path: &Path, size: u64, sha256: &str) -> Result<ModelState, Strin
 
 /// Taille puis SHA-256 du modèle (~4 s pour 1,5 Go).
 pub fn verify(path: &Path) -> Result<ModelState, String> {
-    verify_with(path, MODEL_SIZE, MODEL_SHA256)
+    let spec = current();
+    verify_with(path, spec.size, &spec.sha256)
 }
 
 /// Copie `src` vers `dst` en hachant au fil de l'eau ; refuse tout flux de taille ou d'empreinte inattendue.
@@ -112,7 +132,8 @@ fn copy_verified(
 /// shortcut: pas de reprise ni de délai sur le corps (un téléchargement interrompu repart de zéro ;
 /// une connexion qui se fige sans erreur reste en attente) ; ajouter `Range` si les coupures gênent.
 pub fn download(dest: &Path, progress: impl FnMut(u64, u64)) -> Result<(), String> {
-    download_to(MODEL_URL, dest, MODEL_SIZE, MODEL_SHA256, progress)
+    let spec = current();
+    download_to(&spec.url, dest, spec.size, &spec.sha256, progress)
 }
 
 /// Téléchargement vérifié (taille et SHA-256 exigés), partagé avec les modèles de lecture (N-066).

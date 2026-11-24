@@ -129,7 +129,14 @@ pub fn check_models(dir: &std::path::Path) -> Result<(), TtsError> {
     if verified.as_deref() == Some(dir) {
         return Ok(());
     }
-    check_files(dir, &KOKORO_FILES)?;
+    // Empreintes attendues : celles d'une mise à jour installée (N-098), sinon les valeurs livrées ; le vocabulaire reste épinglé.
+    let specs = install::specs();
+    let mut files: Vec<(&str, &str)> = specs
+        .iter()
+        .map(|s| (s.name.as_str(), s.sha256.as_str()))
+        .collect();
+    files.extend(KOKORO_FILES.iter().filter(|(n, _)| *n == KOKORO_VOCAB_FILE));
+    check_files(dir, &files)?;
     *verified = Some(dir.to_path_buf());
     Ok(())
 }

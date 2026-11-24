@@ -69,6 +69,8 @@ whisper-rs = "0.16"
 
 # Téléchargement du modèle de dictée (N-094) ; déjà tirée par ort (ureq 3 dans Cargo.lock).
 ureq = "3"
+# Vérification de la signature ed25519 du manifeste des modèles (N-098) ; déjà tirée par rustls (ring 0.17 dans Cargo.lock).
+ring = "0.17"
 
 # Utilitaires
 libc = "0.2"

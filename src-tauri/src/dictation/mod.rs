@@ -322,6 +322,8 @@ fn transcribe(dictation: &Dictation, pcm: &[f32]) -> Result<String, String> {
     let engine = guard.get_or_insert_with(|| WhisperEngine::new(path));
     engine.load().map_err(|e| e.to_string())?;
     let out = engine.transcribe(pcm, None).map_err(|e| e.to_string())?;
+    // N-098 : première transcription réussie, l'ancienne version du modèle devient inutile.
+    crate::models_store::confirm_use("whisper");
     Ok(out.text)
 }
 

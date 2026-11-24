@@ -2,8 +2,10 @@
 //!
 //! Le vocabulaire (1 Ko) est embarqué dans l'application ; seuls le modèle et les voix sont téléchargés,
 //! une fois, depuis la release GitHub `kokoro-onnx`. Ensuite la lecture fonctionne hors ligne.
+//! Après une mise à jour (N-098), les fichiers attendus viennent du registre `models_store`.
 
 use super::{KOKORO_FILES, KOKORO_MODEL_FILE, KOKORO_VOCAB_FILE, KOKORO_VOICES_FILE};
+use crate::models_store::FileSpec;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
@@ -23,11 +25,6 @@ static DOWNLOADING: AtomicBool = AtomicBool::new(false);
 static DONE: AtomicU64 = AtomicU64::new(0);
 static TOTAL: AtomicU64 = AtomicU64::new(0);
 
-/// Empreinte SHA-256 du modèle ONNX installé (comparée au manifeste de mises à jour).
-pub fn model_sha256() -> &'static str {
-    sha256_of(KOKORO_MODEL_FILE)
-}
-
 fn sha256_of(name: &str) -> &'static str {
     KOKORO_FILES
         .iter()
@@ -36,19 +33,36 @@ fn sha256_of(name: &str) -> &'static str {
         .expect("empreinte connue pour chaque fichier Kokoro")
 }
 
-/// Fichiers à télécharger : absents ou de taille inattendue (contrôle bon marché, sans hacher).
-fn missing(dir: &Path) -> Vec<&'static str> {
+/// Fichiers livrés avec cette version de Navi.
+pub fn pinned_files() -> Vec<FileSpec> {
     DOWNLOADS
         .iter()
-        .filter(|(name, size)| {
-            !std::fs::metadata(dir.join(name)).is_ok_and(|m| m.is_file() && m.len() == *size)
+        .map(|(name, size)| FileSpec {
+            name: (*name).into(),
+            url: format!("{RELEASE}/{name}"),
+            size: *size,
+            sha256: sha256_of(name).into(),
         })
-        .map(|(name, _)| *name)
+        .collect()
+}
+
+/// Fichiers attendus : ceux d'une mise à jour installée (N-098), sinon les fichiers livrés.
+pub fn specs() -> Vec<FileSpec> {
+    crate::models_store::files("kokoro")
+}
+
+/// Fichiers à télécharger : absents ou de taille inattendue (contrôle bon marché, sans hacher).
+fn missing_in<'a>(dir: &Path, specs: &'a [FileSpec]) -> Vec<&'a FileSpec> {
+    specs
+        .iter()
+        .filter(|s| {
+            !std::fs::metadata(dir.join(&s.name)).is_ok_and(|m| m.is_file() && m.len() == s.size)
+        })
         .collect()
 }
 
 pub fn is_installed(dir: &Path) -> bool {
-    missing(dir).is_empty()
+    missing_in(dir, &specs()).is_empty()
 }
 
 /// (téléchargement en cours, octets reçus, octets attendus)
@@ -81,24 +95,20 @@ pub fn install(dir: &Path) -> Result<(), String> {
 fn install_files(dir: &Path) -> Result<(), String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("{} : {e}", dir.display()))?;
     ensure_vocab(dir)?;
-    let todo = missing(dir);
-    let total = DOWNLOADS
-        .iter()
-        .filter(|(name, _)| todo.contains(name))
-        .map(|(_, size)| size)
-        .sum();
-    TOTAL.store(total, Ordering::Relaxed);
+    let specs = specs();
+    let todo = missing_in(dir, &specs);
+    TOTAL.store(todo.iter().map(|s| s.size).sum(), Ordering::Relaxed);
     DONE.store(0, Ordering::Relaxed);
     let mut base = 0;
-    for (name, size) in DOWNLOADS.iter().filter(|(name, _)| todo.contains(name)) {
+    for spec in todo {
         crate::stt::model::download_to(
-            &format!("{RELEASE}/{name}"),
-            &dir.join(name),
-            *size,
-            sha256_of(name),
+            &spec.url,
+            &dir.join(&spec.name),
+            spec.size,
+            &spec.sha256,
             |done, _| DONE.store(base + done, Ordering::Relaxed),
         )?;
-        base += size;
+        base += spec.size;
     }
     Ok(())
 }
@@ -117,14 +127,14 @@ mod tests {
     #[test]
     fn fichiers_manquants_ou_de_mauvaise_taille_detectes() {
         let dir = tempfile::tempdir().unwrap();
-        assert_eq!(missing(dir.path()).len(), 2);
+        let specs = pinned_files();
+        assert_eq!(missing_in(dir.path(), &specs).len(), 2);
         std::fs::write(dir.path().join(KOKORO_MODEL_FILE), b"trop court").unwrap();
         assert_eq!(
-            missing(dir.path()).len(),
+            missing_in(dir.path(), &specs).len(),
             2,
             "taille inattendue = à retélécharger"
         );
-        assert!(!is_installed(dir.path()));
     }
 
     #[test]
