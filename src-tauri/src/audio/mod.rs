@@ -56,8 +56,9 @@ enum AudioMessage {
     Resume,
     /// Arrêt : invalide le consommateur, vide la file, ferme le sink.
     Stop,
-    /// Nouvelle session : vide la file, nouveau sink + consommateur.
-    Reset,
+    /// Nouvelle session : vide la file, nouveau sink + consommateur ; répond le résultat
+    /// (périphérique rouvert ou absent → erreur remontée à l'appelant).
+    Reset(std::sync::mpsc::Sender<Result<(), String>>),
     /// Volume (0.0–1.0).
     SetVolume(f32),
     /// Demande d'état lecture (réponse oneshot depuis le thread audio).
@@ -84,7 +85,7 @@ impl AudioHandle {
         std::thread::spawn(move || {
             let player = AudioPlayer::new();
             match player {
-                Ok(player) => {
+                Ok(mut player) => {
                     let _ = init_tx.send(Ok(()));
                     for message in rx {
                         match message {
@@ -92,8 +93,8 @@ impl AudioHandle {
                             AudioMessage::Pause => player.pause(),
                             AudioMessage::Resume => player.resume(),
                             AudioMessage::Stop => player.stop(),
-                            AudioMessage::Reset => {
-                                let _ = player.reset();
+                            AudioMessage::Reset(reply) => {
+                                let _ = reply.send(player.reset().map_err(|e| e.to_string()));
                             }
                             AudioMessage::SetVolume(volume) => player.set_volume(volume),
                             AudioMessage::IsPlaying(reply) => {
@@ -140,7 +141,10 @@ impl AudioHandle {
 
     /// Nouvelle session : file vidée, nouveau sink, consommateur réinitialisé.
     pub fn reset(&self) -> Result<(), String> {
-        self.send(AudioMessage::Reset)
+        let (tx, rx) = std::sync::mpsc::channel();
+        self.send(AudioMessage::Reset(tx))?;
+        rx.recv_timeout(std::time::Duration::from_secs(5))
+            .map_err(|_| "Périphérique audio : timeout au changement de sortie".to_string())?
     }
 
     pub fn set_volume(&self, volume: f32) -> Result<(), String> {
@@ -164,6 +168,19 @@ impl crate::pipeline::AudioSink for AudioHandle {
     }
 }
 
+/// Nom du périphérique de sortie par défaut, `None` s'il n'y en a pas ou s'il est illisible.
+fn default_output_name() -> Option<String> {
+    use cpal::traits::{DeviceTrait, HostTrait};
+    cpal::default_host().default_output_device()?.name().ok()
+}
+
+/// Vrai si le périphérique par défaut n'est plus celui du flux ouvert.
+/// shortcut: deux sorties de même nom ne se distinguent pas, et un changement pendant une
+/// lecture n'est vu qu'à la lecture suivante ; passer aux notifications Windows si besoin.
+fn needs_reopen(opened: Option<&str>, current: Option<&str>) -> bool {
+    opened != current
+}
+
 /// Gestionnaire de lecture audio avec file (queue).
 ///
 /// Cycle de vie : `new` → `reset()` → `enqueue…` → `pause`/`resume`/`stop`.
@@ -172,6 +189,8 @@ impl crate::pipeline::AudioSink for AudioHandle {
 pub struct AudioPlayer {
     _stream: OutputStream,
     handle: OutputStreamHandle,
+    /// Nom du périphérique de sortie ouvert (N-042) : comparé au défaut courant à chaque `reset()`.
+    device_name: Option<String>,
     sink: Arc<Mutex<Option<Sink>>>,
     pending: Arc<Mutex<SegmentQueue>>,
     condvar: Arc<Condvar>,
@@ -181,11 +200,13 @@ pub struct AudioPlayer {
 
 impl AudioPlayer {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        let device_name = default_output_name();
         let (stream, handle) = OutputStream::try_default()?;
         let sink = Sink::try_new(&handle)?;
         let player = Self {
             _stream: stream,
             handle,
+            device_name,
             sink: Arc::new(Mutex::new(Some(sink))),
             pending: Arc::new(Mutex::new(SegmentQueue::new())),
             condvar: Arc::new(Condvar::new()),
@@ -352,10 +373,20 @@ impl AudioPlayer {
 
     /// Prépare une nouvelle session de lecture : invalide le consommateur courant,
     /// nouveau sink + consommateur spawné, file vidée.
-    pub fn reset(&self) -> Result<(), rodio::PlayError> {
+    pub fn reset(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // N-042 : le défaut Windows a changé (casque, HDMI) ou a disparu → on rouvre le flux ;
+        // sans périphérique, `try_default` échoue et l'ancien flux reste en place.
+        let current = default_output_name();
+        let reopened = if needs_reopen(self.device_name.as_deref(), current.as_deref()) {
+            Some(OutputStream::try_default()?)
+        } else {
+            None
+        };
         // Sink créé d'abord : si le périphérique refuse, l'ancien consommateur
         // reste valide et la session en cours n'est pas cassée.
-        let sink = Some(Sink::try_new(&self.handle)?);
+        let sink = Some(Sink::try_new(
+            reopened.as_ref().map_or(&self.handle, |(_, h)| h),
+        )?);
         // Invalider AVANT de remplacer le sink : un consommateur retardataire ne
         // peut pas ajouter un segment de l'ancienne session au nouveau sink.
         self.invalidate_consumers();
@@ -363,6 +394,11 @@ impl AudioPlayer {
         self.clear_queue();
         *self.sink.lock().unwrap() = sink;
         self.spawn_consumer();
+        if let Some((stream, handle)) = reopened {
+            self._stream = stream;
+            self.handle = handle;
+            self.device_name = current;
+        }
         Ok(())
     }
 
@@ -444,6 +480,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn reouverture_selon_le_peripherique_par_defaut() {
+        assert!(!needs_reopen(Some("Haut-parleurs"), Some("Haut-parleurs")));
+        assert!(needs_reopen(Some("Haut-parleurs"), Some("Casque")));
+        assert!(needs_reopen(Some("Casque"), None)); // sortie disparue : l'ouverture échouera proprement
+        assert!(needs_reopen(None, Some("Casque"))); // sortie apparue
+        assert!(!needs_reopen(None, None));
+    }
+
+    #[test]
     fn file_fifo_ordre_respecte() {
         let mut q = SegmentQueue::new();
         q.push(vec![1.0]);
@@ -512,7 +557,7 @@ mod tests {
     /// (CI), il est déclaré non concluant et rend la main.
     #[test]
     fn reset_apres_stop_relance_un_consommateur() {
-        let Ok(player) = AudioPlayer::new() else {
+        let Ok(mut player) = AudioPlayer::new() else {
             eprintln!("[audio] test ignoré : aucun périphérique de sortie");
             return;
         };
