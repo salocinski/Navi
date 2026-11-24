@@ -283,6 +283,12 @@ fn get_status(state: tauri::State<NaviState>) -> StatusDto {
     }
 }
 
+/// Micros disponibles pour la dictée (réglages, N-093).
+#[tauri::command]
+fn list_microphones() -> Vec<String> {
+    crate::audio::micro::list_input_devices()
+}
+
 #[derive(serde::Serialize)]
 struct DictationModelDto {
     present: bool,
@@ -619,6 +625,7 @@ pub fn run() {
             greet,
             get_status,
             dictation_model_status,
+            list_microphones,
             download_dictation_model,
             get_config,
             get_voices,
