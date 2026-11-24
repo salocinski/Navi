@@ -501,7 +501,10 @@ fn reinstall_kokoro(state: tauri::State<NaviState>) -> Result<(), String> {
     }
     std::thread::spawn(move || {
         let removed = (|| -> Result<(), String> {
-            *view.engine.lock().map_err(|_| "verrou moteur".to_string())? = None;
+            *view
+                .engine
+                .lock()
+                .map_err(|_| "verrou moteur".to_string())? = None;
             let settings = crate::config::AppConfig::load().unwrap_or_default();
             let dir = crate::utils::resolve_models_dir_with(settings.models_dir.as_deref());
             crate::tts::install::remove(&dir)

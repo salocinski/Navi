@@ -300,7 +300,11 @@
       }
 
       $('kokoro_reinstall').addEventListener('click', async () => {
-        if (!confirm('Supprimer le modèle de lecture puis le télécharger à nouveau (environ 120 Mo) ?'))
+        if (
+          !confirm(
+            'Supprimer le modèle de lecture puis le télécharger à nouveau (environ 120 Mo) ?',
+          )
+        )
           return;
         try {
           await invoke('reinstall_kokoro');
