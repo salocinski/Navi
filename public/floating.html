@@ -64,6 +64,14 @@
           stroke-opacity: 1;
         }
       }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
       @media (prefers-reduced-motion: reduce) {
         #gen .arc,
         #rec .dot,
@@ -74,6 +82,7 @@
     </style>
   </head>
   <body data-state="generating">
+    <div id="annonce" class="sr-only" role="status" aria-live="polite"></div>
     <!-- Génération / capture : piste + arc bleu tournant -->
     <svg id="gen" viewBox="0 0 56 56" role="img" aria-label="Génération en cours">
       <circle cx="28" cy="28" r="24" fill="#1a0533" fill-opacity="0.9" />
@@ -145,6 +154,13 @@
         transcribing: 'generating',
         inserting: 'generating',
       };
+      // Annonce vocale (lecteur d'écran) : la pastille est visuelle, le texte caché la double.
+      const ANNONCES = {
+        recording: 'Dictée : enregistrement en cours',
+        transcribing: 'Dictée : transcription en cours',
+        inserting: 'Dictée : saisie du texte',
+      };
+      const annoncer = (texte) => (document.getElementById('annonce').textContent = texte || '');
       const api = window.__TAURI__;
       if (api && api.event && api.event.listen) {
         api.event.listen('navi-state', (event) => {
@@ -158,8 +174,13 @@
         api.event.listen('dictation-state', (event) => {
           const p = event && event.payload;
           if (!p) return;
-          if (p.type === 'phase-changed' && DICTEE[p.to]) appliquer(DICTEE[p.to]);
-          else if (p.type === 'error') appliquer('error');
+          if (p.type === 'phase-changed' && DICTEE[p.to]) {
+            appliquer(DICTEE[p.to]);
+            annoncer(ANNONCES[p.to]);
+          } else if (p.type === 'error') {
+            appliquer('error');
+            annoncer('Erreur de dictée : ' + (p.message || ''));
+          }
         });
       }
     </script>
