@@ -195,6 +195,22 @@ impl Dictation {
         self.downloading.load(Ordering::SeqCst)
     }
 
+    /// N-105 : contrôle l'empreinte du modèle au lancement, en tâche de fond, pour que la première
+    /// dictée n'attende pas le hachage (~8 s). Modèle absent ou corrompu : rien ici, le
+    /// téléchargement reste déclenché par la première dictée, jamais à l'insu de l'utilisateur.
+    pub fn verify_in_background(&self) {
+        if model::is_overridden() {
+            return;
+        }
+        let verified = self.verified.clone();
+        std::thread::spawn(move || {
+            let path = model::model_path();
+            if path.is_file() && matches!(model::verify(&path), Ok(ModelState::Valid)) {
+                verified.store(true, Ordering::SeqCst);
+            }
+        });
+    }
+
     /// Lance le téléchargement du modèle en tâche de fond ; `false` s'il est déjà en cours.
     pub fn start_download(&self) -> bool {
         if self.downloading.swap(true, Ordering::SeqCst) {
