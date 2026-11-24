@@ -1,6 +1,6 @@
 [package]
 name = "navi"
-version = "0.1.0"
+version = "0.1.1"
 description = "Navi - Lecteur de texte à voix haute 100% local"
 authors = ["you"]
 edition = "2024"
