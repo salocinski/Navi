@@ -20,6 +20,12 @@
 - Navi s'exécute en administrateur (saisie dans les fenêtres élevées) ; démarrage à l'ouverture de session par tâche planifiée sans invite UAC ; installeur par machine (`Program Files`).
 - Mentions légales des composants tiers dans `THIRD_PARTY_NOTICES.md`.
 
+### Modèles
+
+- Kokoro est installé au premier usage ; contrôle de mise à jour des modèles au démarrage.
+- Mise à jour des modèles par l'utilisateur : manifeste signé (ed25519), remplacement atomique des fichiers et retour arrière en cas d'échec.
+- Réouverture de la sortie audio quand le périphérique par défaut change.
+
 ### Limites connues
 
 - **Installeur non signé** : Windows SmartScreen affichera un avertissement.
