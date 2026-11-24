@@ -1,5 +1,15 @@
 # Journal des versions
 
+## 0.1.1 — 2026-11-24 (non signée)
+
+### Corrections
+
+- Lecture d'une sélection : le moteur de lecture est maintenant créé (installation, vérification, chargement) au lieu d'échouer avec « Moteur TTS non chargé » quand la lecture précède la fin du chargement. L'erreur réelle est affichée en cas d'échec.
+
+### Ajouts
+
+- Paramètres > Modèles : bouton « Réinstaller le modèle de lecture » (suppression puis retéléchargement vérifié par SHA-256).
+
 ## 0.1.0 — 2026-11-23 (première version, non signée)
 
 ### Lecture à voix haute (Kokoro, local)

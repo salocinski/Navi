@@ -3,7 +3,7 @@
 Pas de CI de publication : la release est construite localement puis publiée à la main.
 
 1. Versions alignées dans `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` ; entrée dans `CHANGELOG.md`.
-2. Environnement : CUDA 13.5, Visual Studio (voir `docs/environnement-reference.md`), `CMAKE_CUDA_ARCHITECTURES="75;86;89"` (ne pas laisser `86` seul).
+2. Environnement : CUDA 13.5, Visual Studio (voir `docs/environnement-reference.md`), `CMAKE_CUDA_ARCHITECTURES="75;86;89"` (ne pas laisser `86` seul), `CUDA_PATH`/`CUDA_PATH_V13_5` et `BINDGEN_EXTRA_CLANG_ARGS` (voir `docs/s3-90-whisper-build.md`) : sans eux, le build échoue sur `whisper-rs-sys`.
 3. `node tools/copy-cuda-dlls.mjs` puis `npm run bundle:win` → `src-tauri/target/release/bundle/nsis/Navi_<version>_x64-setup.exe`.
 4. Contrôler l'exécutable : manifeste `requireAdministrator`, DLL `cublas64_13.dll`/`cublasLt64_13.dll` et `THIRD_PARTY_NOTICES.md` installés.
 5. Empreinte : `sha256sum <installeur>`.
