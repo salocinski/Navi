@@ -1,7 +1,8 @@
 //! Modèle de dictée (carte N-094) : emplacement, téléchargement et intégrité SHA-256.
 //!
 //! Le fichier (1,5 Go) est trop lourd pour l'installateur : il est téléchargé au premier usage depuis
-//! Hugging Face. C'est la seule communication réseau de Navi ; aucun texte ni son n'est envoyé.
+//! Hugging Face. Avec le modèle de lecture (N-066) et le contrôle de mise à jour, ce sont les seules
+//! communications réseau de Navi ; aucun texte ni son n'est envoyé.
 
 use super::whisper::MODEL_FILE;
 use sha2::{Digest, Sha256};
@@ -110,17 +111,30 @@ fn copy_verified(
 /// Télécharge le modèle vers `dest` (fichier `.part` puis renommage) ; `progress(reçu, total)`.
 /// shortcut: pas de reprise ni de délai sur le corps (un téléchargement interrompu repart de zéro ;
 /// une connexion qui se fige sans erreur reste en attente) ; ajouter `Range` si les coupures gênent.
-pub fn download(dest: &Path, mut progress: impl FnMut(u64, u64)) -> Result<(), String> {
+pub fn download(dest: &Path, progress: impl FnMut(u64, u64)) -> Result<(), String> {
+    download_to(MODEL_URL, dest, MODEL_SIZE, MODEL_SHA256, progress)
+}
+
+/// Téléchargement vérifié (taille et SHA-256 exigés), partagé avec les modèles de lecture (N-066).
+pub(crate) fn download_to(
+    url: &str,
+    dest: &Path,
+    size: u64,
+    sha256: &str,
+    mut progress: impl FnMut(u64, u64),
+) -> Result<(), String> {
     let dir = dest.parent().ok_or("Dossier de destination invalide")?;
     std::fs::create_dir_all(dir).map_err(|e| format!("{} : {e}", dir.display()))?;
-    let part = dest.with_extension("bin.part");
+    let mut part = dest.as_os_str().to_owned();
+    part.push(".part");
+    let part = PathBuf::from(part);
     let result = (|| {
         let agent: ureq::Agent = ureq::Agent::config_builder()
             .timeout_connect(Some(Duration::from_secs(20)))
             .build()
             .into();
         let response = agent
-            .get(MODEL_URL)
+            .get(url)
             .call()
             .map_err(|e| format!("Téléchargement impossible : {e}"))?;
         let mut file =
@@ -128,9 +142,9 @@ pub fn download(dest: &Path, mut progress: impl FnMut(u64, u64)) -> Result<(), S
         copy_verified(
             response.into_body().into_reader(),
             &mut file,
-            MODEL_SIZE,
-            MODEL_SHA256,
-            |done| progress(done, MODEL_SIZE),
+            size,
+            sha256,
+            |done| progress(done, size),
         )?;
         file.sync_all().map_err(|e| e.to_string())
     })();
