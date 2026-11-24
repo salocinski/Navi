@@ -195,6 +195,31 @@ impl Dictation {
         self.downloading.load(Ordering::SeqCst)
     }
 
+    /// N-105/N-106 : au lancement, en tâche de fond, contrôle l'empreinte du modèle puis le charge
+    /// sur le GPU, pour que la première dictée n'attende ni le hachage (~8 s) ni le chargement
+    /// (~2 s). Modèle absent ou corrompu : rien ici, le téléchargement reste déclenché par la
+    /// première dictée, jamais à l'insu de l'utilisateur.
+    pub fn preload_in_background(&self) {
+        let verified = self.verified.clone();
+        let engine = self.engine.clone();
+        std::thread::spawn(move || {
+            let path = model::model_path();
+            if !path.is_file() {
+                return;
+            }
+            if !model::is_overridden() {
+                if !matches!(model::verify(&path), Ok(ModelState::Valid)) {
+                    return;
+                }
+                verified.store(true, Ordering::SeqCst);
+            }
+            let Ok(mut guard) = engine.lock() else { return };
+            if let Err(e) = guard.get_or_insert_with(|| WhisperEngine::new(path)).load() {
+                eprintln!("[navi] préchargement du modèle de dictée : {e}");
+            }
+        });
+    }
+
     /// Lance le téléchargement du modèle en tâche de fond ; `false` s'il est déjà en cours.
     pub fn start_download(&self) -> bool {
         if self.downloading.swap(true, Ordering::SeqCst) {
@@ -314,14 +339,24 @@ fn process(dictation: &Dictation, capture: MicCapture, end: HoldEnd, held: Durat
 
 fn transcribe(dictation: &Dictation, pcm: &[f32]) -> Result<String, String> {
     let path = model::model_path();
+    let t0 = std::time::Instant::now();
     dictation.ensure_model(&path)?;
+    let t_verif = t0.elapsed();
     let mut guard = dictation
         .engine
         .lock()
         .map_err(|_| "verrou moteur de dictée".to_string())?;
     let engine = guard.get_or_insert_with(|| WhisperEngine::new(path));
+    let t1 = std::time::Instant::now();
     engine.load().map_err(|e| e.to_string())?;
+    let t_load = t1.elapsed();
+    let t2 = std::time::Instant::now();
     let out = engine.transcribe(pcm, None).map_err(|e| e.to_string())?;
+    eprintln!(
+        "[navi] dictée : vérification {t_verif:?}, chargement {t_load:?}, transcription {:?} ({} échantillons)",
+        t2.elapsed(),
+        pcm.len()
+    );
     // N-098 : première transcription réussie, l'ancienne version du modèle devient inutile.
     crate::models_store::confirm_use("whisper");
     Ok(out.text)

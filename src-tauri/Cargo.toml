@@ -89,3 +89,11 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+# N-104 : en dev, whisper.cpp (cmake : opt-level 0 = Debug) et le hachage SHA-256 du modèle de 1,6 Go
+# sont très lents sans optimisation.
+[profile.dev.package.whisper-rs-sys]
+opt-level = 3
+
+[profile.dev.package.sha2]
+opt-level = 3
