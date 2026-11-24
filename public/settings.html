@@ -123,6 +123,26 @@
       </fieldset>
 
       <fieldset>
+        <legend>Dictée vocale</legend>
+        <label for="hotkey_dictation">Raccourci (maintenir pour dicter)</label>
+        <input type="text" id="hotkey_dictation" class="hotkey" readonly />
+        <label for="microphone">Micro</label>
+        <select id="microphone"></select>
+        <p class="hint">
+          Maintenez le raccourci, parlez, relâchez : le texte est saisi dans la fenêtre active.
+          Raccourci appliqué à l'enregistrement ; micro pris en compte à la prochaine dictée.
+        </p>
+        <label>Modèle de reconnaissance (Whisper, environ 1,6 Go)</label>
+        <div id="model_state" role="status" aria-live="polite"></div>
+        <progress id="model_progress" max="100" value="0" hidden></progress>
+        <button type="button" id="model_download" hidden>Télécharger le modèle</button>
+        <p class="hint">
+          Téléchargé une seule fois depuis Hugging Face, puis la dictée fonctionne hors ligne. Sans
+          le modèle, la première dictée le télécharge automatiquement.
+        </p>
+      </fieldset>
+
+      <fieldset>
         <legend>Système</legend>
         <label class="inline"
           ><input type="checkbox" id="autostart" /> Lancer Navi au démarrage de Windows</label
@@ -148,6 +168,7 @@
         'hotkey_read',
         'hotkey_pause',
         'hotkey_stop',
+        'hotkey_dictation',
       ];
       const CHECKS = ['startup_sound', 'autostart'];
       const status = $('status');
@@ -177,6 +198,8 @@
             syncOutput(k);
           });
           $('models_dir').value = loaded.models_dir ?? '';
+          await loadMicrophones();
+          await refreshModel();
         } catch (err) {
           show('Lecture de la configuration impossible : ' + err, true);
         }
@@ -184,12 +207,57 @@
 
       SLIDERS.forEach((k) => $(k).addEventListener('input', () => syncOutput(k)));
 
+      // Micro : liste des périphériques d'entrée ; un micro enregistré mais absent reste visible.
+      async function loadMicrophones() {
+        const select = $('microphone');
+        select.replaceChildren(new Option('Micro par défaut de Windows', ''));
+        const names = await invoke('list_microphones');
+        const saved = loaded.microphone;
+        names.forEach((n) => select.add(new Option(n, n)));
+        if (saved && !names.includes(saved)) select.add(new Option(saved + ' (absent)', saved));
+        select.value = saved ?? '';
+      }
+
+      // Modèle de dictée : présence, téléchargement et progression.
+      let downloading = false;
+      function showModel(text, { progress, canDownload } = {}) {
+        $('model_state').textContent = text;
+        $('model_progress').hidden = progress === undefined;
+        if (progress !== undefined) $('model_progress').value = progress;
+        $('model_download').hidden = !canDownload;
+      }
+      async function refreshModel() {
+        const m = await invoke('dictation_model_status');
+        downloading = m.downloading;
+        if (m.downloading) showModel('Téléchargement en cours…', { progress: 0 });
+        else if (m.present) showModel('Modèle installé.');
+        else showModel('Modèle absent.', { canDownload: true });
+      }
+      $('model_download').addEventListener('click', async () => {
+        try {
+          showModel('Téléchargement en cours…', { progress: 0 });
+          await invoke('download_dictation_model');
+        } catch (err) {
+          showModel('Téléchargement impossible : ' + err, { canDownload: true });
+        }
+      });
+      window.__TAURI__.event.listen('dictation-state', (event) => {
+        const p = event.payload;
+        if (p.type === 'model-download' && p.total > 0) {
+          const pct = Math.floor((p.done / p.total) * 100);
+          showModel('Téléchargement : ' + pct + ' %', { progress: pct });
+        } else if (p.type === 'model-ready') showModel('Modèle installé.');
+        else if (p.type === 'model-failed')
+          showModel('Téléchargement échoué : ' + p.message, { canDownload: true });
+      });
+
       // Saisie d'un raccourci : la combinaison pressée est convertie au format attendu par
       // le backend (ex. « Ctrl+Alt+S »). Un modificateur est obligatoire.
       const DEFAULT_HOTKEYS = {
         hotkey_read: 'Super+Alt+S',
         hotkey_pause: 'Ctrl+Shift+P',
         hotkey_stop: 'Ctrl+Shift+S',
+        hotkey_dictation: 'Alt+Space',
       };
       const MODIFIER_KEYS = ['Control', 'Shift', 'Alt', 'Meta', 'AltGraph'];
       document.querySelectorAll('input.hotkey').forEach((input) => {
@@ -227,6 +295,7 @@
         CHECKS.forEach((k) => (config[k] = $(k).checked));
         SLIDERS.forEach((k) => (config[k] = Number($(k).value)));
         config.models_dir = $('models_dir').value.trim() || null;
+        config.microphone = $('microphone').value || null;
         try {
           await invoke('set_config', { config });
           loaded = config;
