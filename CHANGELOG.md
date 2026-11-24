@@ -1,5 +1,22 @@
 # Journal des versions
 
+## 0.1.2 — 2026-11-24 (non signée)
+
+### Corrections
+
+- Réinstaller le modèle de lecture ne ferme plus l'application (le moteur est conservé, seule sa session est rechargée).
+- Espeak-ng introuvable ou sans données ne ferme plus l'application : erreur lisible à la place ; les données d'espeak-ng sont empaquetées sans aplatissement de dossiers.
+
+### Dictée
+
+- Le modèle de dictée est vérifié (SHA-256) puis chargé au lancement, en tâche de fond : la première dictée ne subit plus ~10 s d'attente.
+- Cartouche au-dessus de la pastille : le texte reconnu s'affiche pendant l'enregistrement (retranscription toutes les 0,6 s), puis le texte final jusqu'à la saisie. Il s'élargit jusqu'à 200 px puis grandit vers le haut. Le texte n'est jamais journalisé.
+- Pastille repositionnée (5 px au-dessus de la barre des tâches, décalée vers la gauche) et non activable.
+
+### Développement
+
+- Profil de dev : whisper.cpp et SHA-256 optimisés ; durées de la dictée journalisées.
+
 ## 0.1.1 — 2026-11-24 (non signée)
 
 ### Corrections
