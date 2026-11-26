@@ -1,5 +1,5 @@
 {
-  "estimated_total": 109,
+  "estimated_total": 110,
   "tickets": [
     {
       "id": "N-001",
@@ -871,6 +871,14 @@
       "description": "[RESOLUTION 2026-11-26] [RESOLUTION 2026-11-26] PR #136 fusionnée (efedd11) : README.md remplacé (modèle Tauri → présentation de Navi : fonctionnalités, installation, développement), 67 lignes ajoutées. Preuves : diff README.md sur main.",
       "state": "done",
       "updated_at": "2026-11-26T13:42:49Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-110",
+      "title": "Recette de la version 0.1.2 : confirmer réinstallation du modèle, espeak-ng empaqueté et dictée au premier usage",
+      "description": "[NOTE 2026-11-26] Créée à la demande du propriétaire après clôture de N-102 et N-109. Objet : fermer les réserves « à confirmer dans l installeur 0.1.2 » des cartes N-102 (réinstallation du modèle) et N-103 (espeak-ng empaqueté sans aplatissement), et vérifier la version publiée le 2026-11-25 (tag v0.1.2, Navi_0.1.2_x64-setup.exe, SHA-256 5d374d96…82d69b).",
+      "state": "doing",
+      "updated_at": "2026-11-26T13:52:15Z",
       "assignee": ""
     }
   ]
