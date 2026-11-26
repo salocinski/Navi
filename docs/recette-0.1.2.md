@@ -42,40 +42,40 @@ suppression du dossier avant un build évite la confusion.
 
 ### A. Installation
 
-- [ ] A1. Désinstaller la version précédente, puis installer `Navi_0.1.2_x64-setup.exe`
+- [x] A1. Désinstaller la version précédente, puis installer `Navi_0.1.2_x64-setup.exe`
       (SmartScreen : « Informations complémentaires » → « Exécuter quand même » ; installeur non signé).
-- [ ] A2. Vérifier l'arborescence installée : `%ProgramFiles%\Navi\models\phonemizer\espeak-ng.dll`
-      **et** `%ProgramFiles%\Navi\models\phonemizer\espeak-ng-data\` (dossier, avec `phontab`,
+- [x] A2. Vérifier l'arborescence installée : `<installation>\models\phonemizer\espeak-ng.dll`
+      **et** `<installation>\models\phonemizer\espeak-ng-data\` (dossier, avec `phontab`,
       `phonindex`, `fr_dict`, `en_dict`).
-- [ ] A3. Cas de mise à jour (facultatif mais utile) : installer 0.1.1 puis 0.1.2 par-dessus ;
-      les anciens fichiers à plat restent dans `models\phonemizer\` — vérifier que la lecture
-      fonctionne quand même (la recherche exige la DLL **et** `espeak-ng-data` dans le même dossier).
+- [ ] A3. Cas de mise à jour (facultatif mais utile, **non testé**) : installer 0.1.1 puis 0.1.2
+      par-dessus ; les anciens fichiers à plat restent dans `models\phonemizer\` — vérifier que la
+      lecture fonctionne quand même (la recherche exige la DLL **et** `espeak-ng-data` dans le même dossier).
 
 ### B. Lecture (N-102 et N-103)
 
-- [ ] B1. Sélectionner du texte dans Chrome, `Win+Alt+S` → la lecture démarre, en français puis en anglais.
-- [ ] B2. Paramètres → « Réinstaller le modèle de lecture » → **l'application ne se ferme pas**,
+- [x] B1. Sélectionner du texte dans Chrome, `Win+Alt+S` → la lecture démarre, en français puis en anglais.
+- [x] B2. Paramètres → « Réinstaller le modèle de lecture » → **l'application ne se ferme pas**,
       le modèle se retélécharge, puis une lecture suivante fonctionne (réserve N-102).
-- [ ] B3. Données espeak-ng absentes : renommer `%ProgramFiles%\Navi\models\phonemizer\espeak-ng-data`
+- [x] B3. Données espeak-ng absentes : renommer `<installation>\models\phonemizer\espeak-ng-data`
       en `espeak-ng-data.bak`, relancer Navi, tenter une lecture → message d'erreur lisible,
       **l'application reste ouverte** (réserve N-103). Restaurer le dossier ensuite.
-- [ ] B4. Pause, reprise, arrêt (`Win+Alt+P`, arrêt) et enchaînement rapide de deux lectures.
+- [x] B4. Pause, reprise, arrêt (`Win+Alt+P`, arrêt) et enchaînement rapide de deux lectures.
 
 ### C. Dictée
 
-- [ ] C1. `Alt+Espace` maintenu, parler, relâcher → le texte arrive dans la fenêtre active.
-- [ ] C2. Première dictée après lancement : pas d'attente d'une dizaine de secondes
+- [x] C1. `Alt+Espace` maintenu, parler, relâcher → le texte arrive dans la fenêtre active.
+- [x] C2. Première dictée après lancement : pas d'attente d'une dizaine de secondes
       (vérification SHA-256 et chargement en tâche de fond).
-- [ ] C3. Le cartouche au-dessus de la pastille affiche le texte pendant l'enregistrement,
+- [x] C3. Le cartouche au-dessus de la pastille affiche le texte pendant l'enregistrement,
       puis le texte final.
 
 ### D. Interface et démarrage
 
-- [ ] D1. Pastille à 5 px au-dessus de la barre des tâches, décalée vers la gauche, non cliquable,
+- [x] D1. Pastille à 5 px au-dessus de la barre des tâches, décalée vers la gauche, non cliquable,
       rouge en cas d'erreur.
-- [ ] D2. Démarrage automatique : tâche planifiée, exécution en administrateur, instance unique
-      (un second lancement n'ouvre pas de doublon).
-- [ ] D3. Désinstalleur : les fichiers programme sont retirés ; noter ce qui reste
+- [ ] D2. Démarrage automatique (**non testé**, réglage désactivé sur le poste de recette) : tâche
+      planifiée, exécution en administrateur, instance unique (un second lancement n'ouvre pas de doublon).
+- [ ] D3. Désinstalleur (**non testé**) : les fichiers programme sont retirés ; noter ce qui reste
       (configuration, modèles téléchargés) pour la documentation.
 
 ## Critères de clôture de N-110
@@ -84,8 +84,18 @@ suppression du dossier avant un build évite la confusion.
 - Réserve N-103 fermée : A2 conforme et B3 affiche une erreur sans fermer l'application.
 - Aucune régression constatée en B1, B4, C1 à C3.
 
+**Verdict du 2026-11-26** : les trois critères sont satisfaits. D2 et D3 restent non testés, sans
+lien avec les réserves visées (démarrage automatique et désinstallation), et sont assumés comme
+tels par le propriétaire.
+
 ## Résultats
 
-| Date | Section | Verdict | Note |
+| Date | Cas | Verdict | Détail |
 |---|---|---|---|
-| | | | |
+| 2026-11-26 | A1, A2 | OK | Navi 0.1.2 installée dans `E:\Navi` ; `models\phonemizer` = `espeak-ng.dll` + `espeak-ng-data` (phontab, phonindex, fr_dict, en_dict, voices, lang), un seul fichier à la racine ; manifeste `requireAdministrator` présent |
+| 2026-11-26 | A3 | non testé | chemin de mise à jour 0.1.1 → 0.1.2 non exercé |
+| 2026-11-26 | B1 à B4 | OK | lecture FR et EN, réinstallation du modèle sans fermeture (réserve N-102 levée), espeak-ng absent → erreur lisible et application ouverte (réserve N-103 levée), transport pause/reprise/arrêt et lectures enchaînées |
+| 2026-11-26 | C1 à C3 | OK | insertion dans la fenêtre active, pas d'attente au premier usage, cartouche de dictée |
+| 2026-11-26 | D1 | OK | pastille conforme (position, non cliquable, rouge en erreur) |
+| 2026-11-26 | D2 | non testé | réglage d'autostart désactivé sur le poste ; assumé |
+| 2026-11-26 | D3 | non testé | désinstalleur non exercé ; assumé |
