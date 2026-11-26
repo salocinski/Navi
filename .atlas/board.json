@@ -876,7 +876,7 @@
     {
       "id": "N-110",
       "title": "Recette de la version 0.1.2 : confirmer réinstallation du modèle, espeak-ng empaqueté et dictée au premier usage",
-      "description": "[NOTE 2026-11-26] Créée à la demande du propriétaire après clôture de N-102 et N-109. Objet : fermer les réserves « à confirmer dans l installeur 0.1.2 » des cartes N-102 (réinstallation du modèle) et N-103 (espeak-ng empaqueté sans aplatissement), et vérifier la version publiée le 2026-11-25 (tag v0.1.2, Navi_0.1.2_x64-setup.exe, SHA-256 5d374d96…82d69b).",
+      "description": "[NOTE 2026-11-26] Créée à la demande du propriétaire après clôture de N-102 et N-109. Objet : fermer les réserves « à confirmer dans l installeur 0.1.2 » des cartes N-102 (réinstallation du modèle) et N-103 (espeak-ng empaqueté sans aplatissement), et vérifier la version publiée le 2026-11-25 (tag v0.1.2, Navi_0.1.2_x64-setup.exe, SHA-256 5d374d96…82d69b).\n\n[NOTE 2026-11-26 08:55] [NOTE 2026-11-26] Verifications statiques faites, PR #138 ouverte (docs/recette-0.1.2.md). Installeur local = empreinte publiee 5d374d96…82d69b ; versions 0.1.2 alignees ; navi.exe du 2026-11-24 20:31 posterieur aux fusions 46d219d (N-102) et f56b8d5 (N-103) ; installer.nsi embarque 364 fichiers sous models/phonemizer/espeak-ng-data (phontab, phonindex, en_dict, fr_dict, voices) et un seul fichier racine (espeak-ng.dll) : arborescence preservee, aucun residu aplati. Reste la recette manuelle sur l app installee (checklist A1-A3, B1-B4, C1-C3, D1-D3). Constat annexe : target/release/models/phonemizer garde 365 fichiers a plat (18,8 Mo, 2026-11-16) du build 0.1.1, non embarques mais a nettoyer avant build.",
       "state": "doing",
       "updated_at": "2026-11-26T13:52:15Z",
       "assignee": ""
