@@ -7,8 +7,8 @@ cards block                              matches=1 plan block                   
 <!--
   BASTION PROTOCOL — Kanban versionné dans le dépôt (suivi multi-providers d'IA).
   Données : les deux blocs <script type="application/json"> ci-dessous sont la source de vérité.
-    #bp-plan  → { "milestones": [...], "epics": [...] }   (constantes du projet, §11 du doc de référence)
-    #bp-cards → { "cards": [...] }                        (cartes prefixe-xxx ; statuts, notes, criteres)
+    #atlas-plan  → { "milestones": [...], "epics": [...] }   (constantes du projet, §11 du doc de référence)
+    #atlas-cards → { "cards": [...] }                        (cartes prefixe-xxx ; statuts, notes, criteres)
   Usage :
     1. Ouvrir ce fichier dans un navigateur, déplacer/éditer les cartes.
     2. Cliquer « Exporter le fichier » : le kanban.html mis à jour est téléchargé.
@@ -278,7 +278,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
   </form>
 </div>
 
-<script id="bp-plan" type="application/json">
+<script id="atlas-plan" type="application/json">
 {
   "milestones": [
     {
@@ -379,7 +379,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
 }
 </script>
 
-<script id="bp-cards" type="application/json">
+<script id="atlas-cards" type="application/json">
 {
   "cards": [
     {
@@ -477,7 +477,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 8,
       "title": "Tester l'accélération GPU si la chaîne est disponible",
-      "status": "todo",
+      "status": "done",
       "prio": "P2",
       "kind": "spike",
       "milestone": "M0",
@@ -486,7 +486,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-006"
       ],
-      "note": "DirectML/CUDA uniquement si reproductible ; sinon documenter.\n\nCritères :\n- [ ] Résultat ou impossibilité documentée"
+      "note": "DirectML/CUDA uniquement si reproductible ; sinon documenter.\n\nCritères :\n- [ ] Résultat ou impossibilité documentée\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] Aucune modification du code, validé par le propriétaire. Constat par lecture du code (aucun test GPU exécuté) : Whisper (dictée) utilise déjà CUDA par défaut (feature Cargo `cuda`, WhisperContextParameters::default), avec repli CPU silencieux ; Kokoro (lecture) reste en CPU seul via ort sans fournisseur GPU, CPU jugé viable (RTF médian 0,36, docs/s0-07c-cpu-verdict.md). Demande de réglage GPU par défaut / CPU optionnel écartée : malentendu dû au titre de la carte. Pas de PR."
     },
     {
       "num": 9,
@@ -962,7 +962,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 42,
       "title": "Gérer le périphérique audio par défaut",
-      "status": "backlog",
+      "status": "done",
       "prio": "P2",
       "kind": "tache",
       "milestone": "M1",
@@ -971,7 +971,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-041"
       ],
-      "note": "Changement ou absence de périphérique."
+      "note": "Changement ou absence de périphérique.\n\n[NOTE 2026-11-24 09:39] [DECISION 2026-11-24] Périmètre validé par le propriétaire : pas de bascule en direct ; à chaque reset() (nouvelle lecture) on rouvre OutputStream::try_default() si le périphérique par défaut a changé ; erreur claire si absence ; tests ciblés sur la décision rouvrir ou non. Limite connue : changement en cours de lecture pris en compte à la lecture suivante.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #121 fusionnée (a763f68). reset() rouvre la sortie audio si le périphérique par défaut a changé ; absence de sortie : erreur remontée (reset synchrone). Preuves : fmt, clippy -D warnings, 157 tests OK dont réouverture_selon_le_peripherique_par_defaut. Limite : bascule en cours de lecture non gérée (shortcut:), non testé sur matériel réel — à valider en recette."
     },
     {
       "num": 43,
@@ -1302,7 +1302,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 66,
       "title": "Installer et mettre à jour les modèles automatiquement",
-      "status": "backlog",
+      "status": "done",
       "prio": "P3",
       "kind": "tache",
       "milestone": "M3",
@@ -1311,7 +1311,7 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
       "deps": [
         "N-059"
       ],
-      "note": "Hors périmètre du Sprint 0."
+      "note": "Hors périmètre du Sprint 0.\n\n[NOTE 2026-11-24 10:09] [DECISION 2026-11-24] Périmètre validé : (1) installation de Kokoro au premier usage via le téléchargement vérifié de N-094 (SHA-256 + taille) ; (2) vérification de disponibilité de mise à jour d'un modèle : manifeste JSON versionné dans le dépôt Navi lu en HTTPS (option B), case « vérifier chaque semaine » DÉCOCHÉE par défaut, bouton « Vérifier la disponibilité d'une mise à jour », date de dernière vérification dans la config, échec réseau silencieux ; notification seule, aucune installation. Modèles téléchargés une fois puis 100 % locaux (hors ligne OK). Requête anonyme (aucun texte/audio/identifiant). Mise à jour par l'utilisateur et signature du manifeste : carte N-098.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #122 fusionnée (9387686). Kokoro installé au premier usage (téléchargement vérifié taille + SHA-256, vocab embarqué) ; contrôle de disponibilité de mise à jour via manifests/models.json (HTTPS, opt-in hebdomadaire décoché par défaut + bouton, notification seule). Preuves : fmt, clippy -D warnings, prettier, 166 tests OK (9 nouveaux). Non vérifié : téléchargement réseau réel, rendu de la page Paramètres. Suite : N-098 (mise à jour par l'utilisateur, manifeste signé)."
     },
     {
       "num": 67,
@@ -1719,14 +1719,170 @@ main.wrap { padding-block: 20px 48px; display: grid; gap: 18px; }
     {
       "num": 97,
       "title": "[Dictée] Vie privée et accessibilité : aucun audio conservé ni envoyé, indicateur micro",
-      "note": "Tout reste local ; aucun enregistrement conservé.",
+      "note": "Tout reste local ; aucun enregistrement conservé.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] Vie privée et accessibilité de la dictée livrées, PR #119 fusionnée (39ec7f7).",
       "deps": [],
       "epic": "realisation",
       "kind": "tache",
       "milestone": "M2",
       "prio": "P3",
       "size": "S",
-      "status": "doing",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 98,
+      "title": "[Modèles] Mise à jour du modèle par l'utilisateur sans nouvelle release",
+      "note": "[NOTE 2026-11-24 10:09] [DECISION 2026-11-24] Créée depuis N-066, validée par le propriétaire. Périmètre : manifeste signé (ed25519, clé publique fixée dans l'app) ; version de format de compatibilité (refus si le moteur ne la gère pas) ; action explicite avec confirmation (version, taille) ; hôtes de téléchargement limités ; taille plafonnée ; SHA-256 vérifié avant remplacement ; remplacement atomique, ancien modèle conservé (retour arrière). Tests sans réseau : signature valide/invalide, format incompatible, hash divergent, interruption. Modèles 100 % locaux à l'usage.\n\n[NOTE 2026-11-24 11:23] [DECISION 2026-11-24] Conception validée par le propriétaire : signature ed25519 détachée (manifests/models.json.sig, octets exacts du manifeste), clé publique fixée dans le code, vérification via ring (déjà dans l'arbre, dépendance directe), signature via tools/sign-manifest.mjs (node:crypto, sans dépendance) ; clé privée générée hors dépôt, jamais affichée ; manifests/ exclu de prettier ; enregistrement installed.json (version + SHA-256 vérifiés) consulté avant les empreintes épinglées ; ancien fichier gardé en .previous, supprimé automatiquement après le premier usage réussi du nouveau modèle, bouton « Revenir à la version précédente ». Le contrôle de disponibilité (N-066) exige désormais aussi la signature.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #123 fusionnée (f2a8c76). Manifeste models.json signé ed25519 (clé publique fixée dans le code, vérification ring), garde-fous (noms issus des fichiers livrés, préfixes d'URL, taille ≤ 4 Go, SHA-256, format), téléchargement en .new appliqué au démarrage suivant, .previous supprimé après premier usage réussi, retour arrière, UI Paramètres avec confirmation. Preuves : clippy -D warnings, 175 tests, fmt, prettier OK. Non testé à la main : téléchargement réseau réel, rendu Paramètres.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "M",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 99,
+      "title": "[Bug 0.1.0] Lecture impossible : « Moteur TTS non chargé » quand le moteur n'est pas encore créé --help",
+      "note": "[NOTE 2026-11-24 13:07] [2026-11-24] Cause : le moteur n existe qu après load_model (N-066). Correctif : ensure_engine partagé par load_model et la lecture. PR ouverte. Titre de carte contient « --help » par erreur de création.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] ensure_engine partagé par load_model et la lecture ; PR #125 fusionnée (d56c252). Reste à livrer dans un installeur 0.1.1.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "M",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 100,
+      "title": "Bouton « Réinstaller le modèle de lecture » (désinstalle Kokoro puis le retélécharge)",
+      "note": "[NOTE 2026-11-24 13:14] [2026-11-24] PR ouverte, basée sur la PR de N-099 (ensure_engine).\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] Bouton « Réinstaller le modèle de lecture » livré, PR #126 fusionnée.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "S",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 101,
+      "title": "Release 0.1.1 : correctif lecture (N-099) et réinstallation du modèle (N-100)",
+      "note": "[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] Release 0.1.1 publiée (tag v0.1.1 sur d49fbde, installeur NSIS, SHA-256 40af710d…d95d3cb), PR #127 fusionnée.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P1",
+      "size": "S",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 102,
+      "title": "[Bug 0.1.1] « Réinstaller le modèle de lecture » ferme l'application",
+      "note": "[NOTE 2026-11-24 14:01] [2026-11-24] Cause probable : le moteur était recréé, ort refuse un 2e Environment, panic=abort. Correctif : on ne libère que la session. PR ouverte.\n\n[RESOLUTION 2026-11-26] [RESOLUTION 2026-11-26] PR #128 fusionnée (46d219d) : la réinstallation du modèle ne recrée plus le moteur, elle ne libère que la session ONNX (ort ne crée l environnement qu une fois par processus) ; suppression puis réinstallation vérifiée des fichiers. Preuves : diff src-tauri/src/lib.rs (engine.unload_session() au lieu de mettre le moteur à None). Limite : correctif postérieur à l installeur 0.1.1, à confirmer en recette dans le build 0.1.2.",
+      "deps": [],
+      "epic": "bug",
+      "kind": "bug",
+      "milestone": "M2",
+      "prio": "P1",
+      "size": "S",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 103,
+      "title": "Moteur de lecture : espeak-ng introuvable ou sans données (installeur aplati, recherche de la DLL) — arrêt de l'application",
+      "note": "[NOTE 2026-11-24 14:13] [2026-11-24] Reproduit en dev : DLL espeak trouvée sans espeak-ng-data (empaquetage aplati), espeak ferme le processus. Correctif : find_phonemizer + garde + empaquetage. PR ouverte.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #129 fusionnée : espeak-ng introuvable ne ferme plus l application (garde + recherche des données), empaquetage sans aplatissement. Empaquetage à confirmer dans l installeur 0.1.2.",
+      "deps": [],
+      "epic": "bug",
+      "kind": "bug",
+      "milestone": "M2",
+      "prio": "P1",
+      "size": "M",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 104,
+      "title": "Dictée : mesurer les durées (vérification, chargement, transcription) et optimiser whisper/sha2 en profil dev",
+      "note": "[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #130/#133 : durées de la dictée journalisées ; whisper-rs-sys et sha2 en opt-level 3 en dev. Mesuré : vérification 8,1 s, chargement 2,2 s, transcription 0,75 s.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "S",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 105,
+      "title": "Dictée : vérifier le modèle (SHA-256) au lancement de l'application, en tâche de fond",
+      "note": "[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #131/#133 : contrôle SHA-256 du modèle de dictée au lancement, en tâche de fond. Mesuré en dev : vérification ~2 µs à la première dictée.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "S",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 106,
+      "title": "Lecture : charger le modèle Kokoro au lancement de l'application plutôt qu'à la première lecture",
+      "note": "[NOTE 2026-11-24 14:42] [2026-11-24] Précision : il s agit du modèle de dictée (Whisper), pas de Kokoro (titre erroné). Préchargement au lancement après le contrôle d empreinte (N-105).\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #132/#133 : chargement du modèle de dictée (Whisper) au lancement, en tâche de fond. Mesuré en dev : chargement ~400 ns à la première dictée.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "S",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 107,
+      "title": "Pastille flottante : repositionner (bas, à 5 px de la barre des tâches, décalée à gauche d'un cercle) et ajouter un cartouche affichant le texte reçu en dictée",
+      "note": "[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #134 fusionnée : pastille à 5 px de la barre des tâches, décalée ; cartouche de dictée en temps réel (200 px puis vertical, sans défilement), fenêtre non activable. Essai manuel en dev : saisie arrivée dans Chrome. Limites : retranscription complète à chaque passe, fenêtre fixe de 700 px.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "M",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 108,
+      "title": "Version 0.1.2 (journal des versions, numéros alignés)",
+      "note": "[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #135 fusionnée : version 0.1.2 alignée (package.json, package-lock.json, Cargo.toml, Cargo.lock, tauri.conf.json) et entrée du journal des versions. Build de l installeur à suivre.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P2",
+      "size": "S",
+      "status": "done",
+      "assigned_to": ""
+    },
+    {
+      "num": 109,
+      "title": "README : remplacer le modèle Tauri par la présentation de Navi (fonctionnalités, installation, développement)",
+      "note": "[RESOLUTION 2026-11-26] [RESOLUTION 2026-11-26] PR #136 fusionnée (efedd11) : README.md remplacé (modèle Tauri → présentation de Navi : fonctionnalités, installation, développement), 67 lignes ajoutées. Preuves : diff README.md sur main.",
+      "deps": [],
+      "epic": "realisation",
+      "kind": "tache",
+      "milestone": "M2",
+      "prio": "P3",
+      "size": "S",
+      "status": "done",
       "assigned_to": ""
     }
   ]
@@ -2023,8 +2179,8 @@ board.addEventListener("drop", (e) => {
 function jsonSafe(obj) { return JSON.stringify(obj, null, 2).replace(/<\//g, "<\\/"); }
 function exporterFichier() {
   const clone = document.documentElement.cloneNode(true);
-  clone.querySelector("#bp-plan").textContent = jsonSafe(plan);
-  clone.querySelector("#bp-cards").textContent = jsonSafe({ cards });
+  clone.querySelector("#atlas-plan").textContent = jsonSafe(plan);
+  clone.querySelector("#atlas-cards").textContent = jsonSafe({ cards });
   // Vider le contenu rendu : il est régénéré au chargement par render().
   ["#stats", "#track", "#board", "#roadmap", "#matrix", "#f-epic-filter", "#notice"].forEach((sel) => {
     const el = clone.querySelector(sel); if (el) el.innerHTML = "";
@@ -2054,8 +2210,8 @@ $("#export-btn").addEventListener("click", exporterFichier);
 /* Chargement : le fichier est la source de vérité, le brouillon du navigateur s'applique au-dessus. */
 (async () => {
   try {
-    plan = JSON.parse(document.getElementById("bp-plan").textContent);
-    cards = (JSON.parse(document.getElementById("bp-cards").textContent).cards) || [];
+    plan = JSON.parse(document.getElementById("atlas-plan").textContent);
+    cards = (JSON.parse(document.getElementById("atlas-cards").textContent).cards) || [];
   } catch (e) {
     notice("JSON du fichier illisible : " + e.message, "err");
     return;

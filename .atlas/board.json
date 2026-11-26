@@ -1,5 +1,5 @@
 {
-  "estimated_total": 97,
+  "estimated_total": 109,
   "tickets": [
     {
       "id": "N-001",
@@ -60,9 +60,9 @@
     {
       "id": "N-008",
       "title": "Tester l'accélération GPU si la chaîne est disponible",
-      "description": "DirectML/CUDA uniquement si reproductible ; sinon documenter.\n\nCritères :\n- [ ] Résultat ou impossibilité documentée",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "DirectML/CUDA uniquement si reproductible ; sinon documenter.\n\nCritères :\n- [ ] Résultat ou impossibilité documentée\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] Aucune modification du code, validé par le propriétaire. Constat par lecture du code (aucun test GPU exécuté) : Whisper (dictée) utilise déjà CUDA par défaut (feature Cargo `cuda`, WhisperContextParameters::default), avec repli CPU silencieux ; Kokoro (lecture) reste en CPU seul via ort sans fournisseur GPU, CPU jugé viable (RTF médian 0,36, docs/s0-07c-cpu-verdict.md). Demande de réglage GPU par défaut / CPU optionnel écartée : malentendu dû au titre de la carte. Pas de PR.",
+      "state": "done",
+      "updated_at": "2026-11-24T14:35:53Z",
       "assignee": ""
     },
     {
@@ -332,9 +332,9 @@
     {
       "id": "N-042",
       "title": "Gérer le périphérique audio par défaut",
-      "description": "Changement ou absence de périphérique.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Changement ou absence de périphérique.\n\n[NOTE 2026-11-24 09:39] [DECISION 2026-11-24] Périmètre validé par le propriétaire : pas de bascule en direct ; à chaque reset() (nouvelle lecture) on rouvre OutputStream::try_default() si le périphérique par défaut a changé ; erreur claire si absence ; tests ciblés sur la décision rouvrir ou non. Limite connue : changement en cours de lecture pris en compte à la lecture suivante.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #121 fusionnée (a763f68). reset() rouvre la sortie audio si le périphérique par défaut a changé ; absence de sortie : erreur remontée (reset synchrone). Preuves : fmt, clippy -D warnings, 157 tests OK dont réouverture_selon_le_peripherique_par_defaut. Limite : bascule en cours de lecture non gérée (shortcut:), non testé sur matériel réel — à valider en recette.",
+      "state": "done",
+      "updated_at": "2026-11-24T14:56:24Z",
       "assignee": ""
     },
     {
@@ -524,9 +524,9 @@
     {
       "id": "N-066",
       "title": "Installer et mettre à jour les modèles automatiquement",
-      "description": "Hors périmètre du Sprint 0.",
-      "state": "todo",
-      "updated_at": "2026-11-17T15:50:02Z",
+      "description": "Hors périmètre du Sprint 0.\n\n[NOTE 2026-11-24 10:09] [DECISION 2026-11-24] Périmètre validé : (1) installation de Kokoro au premier usage via le téléchargement vérifié de N-094 (SHA-256 + taille) ; (2) vérification de disponibilité de mise à jour d'un modèle : manifeste JSON versionné dans le dépôt Navi lu en HTTPS (option B), case « vérifier chaque semaine » DÉCOCHÉE par défaut, bouton « Vérifier la disponibilité d'une mise à jour », date de dernière vérification dans la config, échec réseau silencieux ; notification seule, aucune installation. Modèles téléchargés une fois puis 100 % locaux (hors ligne OK). Requête anonyme (aucun texte/audio/identifiant). Mise à jour par l'utilisateur et signature du manifeste : carte N-098.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #122 fusionnée (9387686). Kokoro installé au premier usage (téléchargement vérifié taille + SHA-256, vocab embarqué) ; contrôle de disponibilité de mise à jour via manifests/models.json (HTTPS, opt-in hebdomadaire décoché par défaut + bouton, notification seule). Preuves : fmt, clippy -D warnings, prettier, 166 tests OK (9 nouveaux). Non vérifié : téléchargement réseau réel, rendu de la page Paramètres. Suite : N-098 (mise à jour par l'utilisateur, manifeste signé).",
+      "state": "done",
+      "updated_at": "2026-11-24T15:47:43Z",
       "assignee": ""
     },
     {
@@ -772,9 +772,105 @@
     {
       "id": "N-097",
       "title": "[Dictée] Vie privée et accessibilité : aucun audio conservé ni envoyé, indicateur micro",
-      "description": "Tout reste local ; aucun enregistrement conservé.",
-      "state": "doing",
-      "updated_at": "2026-11-24T00:36:15Z",
+      "description": "Tout reste local ; aucun enregistrement conservé.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] Vie privée et accessibilité de la dictée livrées, PR #119 fusionnée (39ec7f7).",
+      "state": "done",
+      "updated_at": "2026-11-24T17:13:09Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-098",
+      "title": "[Modèles] Mise à jour du modèle par l'utilisateur sans nouvelle release",
+      "description": "[NOTE 2026-11-24 10:09] [DECISION 2026-11-24] Créée depuis N-066, validée par le propriétaire. Périmètre : manifeste signé (ed25519, clé publique fixée dans l'app) ; version de format de compatibilité (refus si le moteur ne la gère pas) ; action explicite avec confirmation (version, taille) ; hôtes de téléchargement limités ; taille plafonnée ; SHA-256 vérifié avant remplacement ; remplacement atomique, ancien modèle conservé (retour arrière). Tests sans réseau : signature valide/invalide, format incompatible, hash divergent, interruption. Modèles 100 % locaux à l'usage.\n\n[NOTE 2026-11-24 11:23] [DECISION 2026-11-24] Conception validée par le propriétaire : signature ed25519 détachée (manifests/models.json.sig, octets exacts du manifeste), clé publique fixée dans le code, vérification via ring (déjà dans l'arbre, dépendance directe), signature via tools/sign-manifest.mjs (node:crypto, sans dépendance) ; clé privée générée hors dépôt, jamais affichée ; manifests/ exclu de prettier ; enregistrement installed.json (version + SHA-256 vérifiés) consulté avant les empreintes épinglées ; ancien fichier gardé en .previous, supprimé automatiquement après le premier usage réussi du nouveau modèle, bouton « Revenir à la version précédente ». Le contrôle de disponibilité (N-066) exige désormais aussi la signature.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #123 fusionnée (f2a8c76). Manifeste models.json signé ed25519 (clé publique fixée dans le code, vérification ring), garde-fous (noms issus des fichiers livrés, préfixes d'URL, taille ≤ 4 Go, SHA-256, format), téléchargement en .new appliqué au démarrage suivant, .previous supprimé après premier usage réussi, retour arrière, UI Paramètres avec confirmation. Preuves : clippy -D warnings, 175 tests, fmt, prettier OK. Non testé à la main : téléchargement réseau réel, rendu Paramètres.",
+      "state": "done",
+      "updated_at": "2026-11-24T16:43:11Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-099",
+      "title": "[Bug 0.1.0] Lecture impossible : « Moteur TTS non chargé » quand le moteur n'est pas encore créé --help",
+      "description": "[NOTE 2026-11-24 13:07] [2026-11-24] Cause : le moteur n existe qu après load_model (N-066). Correctif : ensure_engine partagé par load_model et la lecture. PR ouverte. Titre de carte contient « --help » par erreur de création.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] ensure_engine partagé par load_model et la lecture ; PR #125 fusionnée (d56c252). Reste à livrer dans un installeur 0.1.1.",
+      "state": "done",
+      "updated_at": "2026-11-24T18:16:13Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-100",
+      "title": "Bouton « Réinstaller le modèle de lecture » (désinstalle Kokoro puis le retélécharge)",
+      "description": "[NOTE 2026-11-24 13:14] [2026-11-24] PR ouverte, basée sur la PR de N-099 (ensure_engine).\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] Bouton « Réinstaller le modèle de lecture » livré, PR #126 fusionnée.",
+      "state": "done",
+      "updated_at": "2026-11-24T18:38:20Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-101",
+      "title": "Release 0.1.1 : correctif lecture (N-099) et réinstallation du modèle (N-100)",
+      "description": "[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] Release 0.1.1 publiée (tag v0.1.1 sur d49fbde, installeur NSIS, SHA-256 40af710d…d95d3cb), PR #127 fusionnée.",
+      "state": "done",
+      "updated_at": "2026-11-24T18:53:29Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-102",
+      "title": "[Bug 0.1.1] « Réinstaller le modèle de lecture » ferme l'application",
+      "description": "[NOTE 2026-11-24 14:01] [2026-11-24] Cause probable : le moteur était recréé, ort refuse un 2e Environment, panic=abort. Correctif : on ne libère que la session. PR ouverte.\n\n[RESOLUTION 2026-11-26] [RESOLUTION 2026-11-26] PR #128 fusionnée (46d219d) : la réinstallation du modèle ne recrée plus le moteur, elle ne libère que la session ONNX (ort ne crée l environnement qu une fois par processus) ; suppression puis réinstallation vérifiée des fichiers. Preuves : diff src-tauri/src/lib.rs (engine.unload_session() au lieu de mettre le moteur à None). Limite : correctif postérieur à l installeur 0.1.1, à confirmer en recette dans le build 0.1.2.",
+      "state": "done",
+      "updated_at": "2026-11-26T13:42:46Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-103",
+      "title": "Moteur de lecture : espeak-ng introuvable ou sans données (installeur aplati, recherche de la DLL) — arrêt de l'application",
+      "description": "[NOTE 2026-11-24 14:13] [2026-11-24] Reproduit en dev : DLL espeak trouvée sans espeak-ng-data (empaquetage aplati), espeak ferme le processus. Correctif : find_phonemizer + garde + empaquetage. PR ouverte.\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #129 fusionnée : espeak-ng introuvable ne ferme plus l application (garde + recherche des données), empaquetage sans aplatissement. Empaquetage à confirmer dans l installeur 0.1.2.",
+      "state": "done",
+      "updated_at": "2026-11-24T20:03:33Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-104",
+      "title": "Dictée : mesurer les durées (vérification, chargement, transcription) et optimiser whisper/sha2 en profil dev",
+      "description": "[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #130/#133 : durées de la dictée journalisées ; whisper-rs-sys et sha2 en opt-level 3 en dev. Mesuré : vérification 8,1 s, chargement 2,2 s, transcription 0,75 s.",
+      "state": "done",
+      "updated_at": "2026-11-24T20:03:35Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-105",
+      "title": "Dictée : vérifier le modèle (SHA-256) au lancement de l'application, en tâche de fond",
+      "description": "[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #131/#133 : contrôle SHA-256 du modèle de dictée au lancement, en tâche de fond. Mesuré en dev : vérification ~2 µs à la première dictée.",
+      "state": "done",
+      "updated_at": "2026-11-24T20:03:37Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-106",
+      "title": "Lecture : charger le modèle Kokoro au lancement de l'application plutôt qu'à la première lecture",
+      "description": "[NOTE 2026-11-24 14:42] [2026-11-24] Précision : il s agit du modèle de dictée (Whisper), pas de Kokoro (titre erroné). Préchargement au lancement après le contrôle d empreinte (N-105).\n\n[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #132/#133 : chargement du modèle de dictée (Whisper) au lancement, en tâche de fond. Mesuré en dev : chargement ~400 ns à la première dictée.",
+      "state": "done",
+      "updated_at": "2026-11-24T20:03:39Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-107",
+      "title": "Pastille flottante : repositionner (bas, à 5 px de la barre des tâches, décalée à gauche d'un cercle) et ajouter un cartouche affichant le texte reçu en dictée",
+      "description": "[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #134 fusionnée : pastille à 5 px de la barre des tâches, décalée ; cartouche de dictée en temps réel (200 px puis vertical, sans défilement), fenêtre non activable. Essai manuel en dev : saisie arrivée dans Chrome. Limites : retranscription complète à chaque passe, fenêtre fixe de 700 px.",
+      "state": "done",
+      "updated_at": "2026-11-24T23:40:28Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-108",
+      "title": "Version 0.1.2 (journal des versions, numéros alignés)",
+      "description": "[RESOLUTION 2026-11-24] [RESOLUTION 2026-11-24] PR #135 fusionnée : version 0.1.2 alignée (package.json, package-lock.json, Cargo.toml, Cargo.lock, tauri.conf.json) et entrée du journal des versions. Build de l installeur à suivre.",
+      "state": "done",
+      "updated_at": "2026-11-24T23:44:32Z",
+      "assignee": ""
+    },
+    {
+      "id": "N-109",
+      "title": "README : remplacer le modèle Tauri par la présentation de Navi (fonctionnalités, installation, développement)",
+      "description": "[RESOLUTION 2026-11-26] [RESOLUTION 2026-11-26] PR #136 fusionnée (efedd11) : README.md remplacé (modèle Tauri → présentation de Navi : fonctionnalités, installation, développement), 67 lignes ajoutées. Preuves : diff README.md sur main.",
+      "state": "done",
+      "updated_at": "2026-11-26T13:42:49Z",
       "assignee": ""
     }
   ]
