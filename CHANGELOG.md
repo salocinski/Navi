@@ -2,6 +2,16 @@
 
 ## Non publié
 
+## 0.1.4 — 2026-11-28 (non signée)
+
+### Ajouts
+
+- Notification Windows aussi quand le modèle de lecture ne se charge pas en dehors d'une lecture (chargement de fond, après une réinstallation), et quand la réinstallation du modèle échoue.
+
+### Changements
+
+- Panneau de l'icône de notification : l'espace vide entre les boutons du bas (Paramètres, Quitter) et le bord inférieur est supprimé.
+
 ### Corrections
 
 - Paramètres : les textes d'aide sur les voix et le dossier des modèles ne disent plus « pas encore appliqué » ; ils indiquent quand chaque réglage prend effet (voix à la prochaine lecture, dossier des modèles au prochain démarrage).
