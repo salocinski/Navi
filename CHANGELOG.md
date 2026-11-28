@@ -2,6 +2,10 @@
 
 ## Non publié
 
+### Corrections
+
+- Paramètres : les textes d'aide sur les voix et le dossier des modèles ne disent plus « pas encore appliqué » ; ils indiquent quand chaque réglage prend effet (voix à la prochaine lecture, dossier des modèles au prochain démarrage).
+
 ## 0.1.3 — 2026-11-28 (non signée)
 
 ### Ajouts
