@@ -69,7 +69,13 @@ pub fn init_notifier(app: &AppHandle) {
 pub fn notify_failure(message: &str) {
     use tauri_plugin_notification::NotificationExt;
     let Some(app) = APP.get() else { return };
-    if let Err(e) = app.notification().builder().title("Navi").body(message).show() {
+    if let Err(e) = app
+        .notification()
+        .builder()
+        .title("Navi")
+        .body(message)
+        .show()
+    {
         log::warn!("notification impossible : {e}");
     }
 }

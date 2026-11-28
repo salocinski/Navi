@@ -786,14 +786,21 @@ mod tests {
         ];
         for err in cas {
             let n = err.notice();
-            assert!(n.len() > 20 && n.len() < 100, "notice hors gabarit pour {err:?}");
+            assert!(
+                n.len() > 20 && n.len() < 100,
+                "notice hors gabarit pour {err:?}"
+            );
         }
         let r = CaptureResult::failure(CaptureError::InjectionFailed { sent: 0 });
         assert_eq!(
             r.notice,
             Some("Cette application bloque la copie. Essayez de copier le texte manuellement.")
         );
-        assert!(CaptureResult::success("a".into(), "t".into()).notice.is_none());
+        assert!(
+            CaptureResult::success("a".into(), "t".into())
+                .notice
+                .is_none()
+        );
     }
 
     #[test]
