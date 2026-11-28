@@ -129,14 +129,11 @@ pub fn synthesize_segments(
     let mut count = 0;
     for seg in segments {
         if is_cancelled() {
-            eprintln!(
-                "[navi] synthèse annulée après {count}/{} segments",
-                segments.len()
-            );
+            log::info!("synthèse annulée après {count}/{} segments", segments.len());
             return Ok(count);
         }
-        eprintln!(
-            "[navi] synthèse segment {}/{} ({} chars)…",
+        log::debug!(
+            "synthèse segment {}/{} ({} chars)…",
             seg.index + 1,
             segments.len(),
             seg.text.chars().count()
@@ -162,8 +159,8 @@ pub fn synthesize_segments(
         }
         count += 1;
         on_segment_done();
-        eprintln!(
-            "[navi] segment {}/{} synthétisé ({} échantillons)",
+        log::debug!(
+            "segment {}/{} synthétisé ({} échantillons)",
             count,
             segments.len(),
             samples

@@ -192,7 +192,7 @@ pub fn run_check() -> Result<CheckResult, String> {
     let mut config = crate::config::AppConfig::load().unwrap_or_default();
     config.last_update_check = Some(result.checked_at);
     if let Err(e) = config.save() {
-        eprintln!("[navi] date du contrôle de mise à jour non enregistrée : {e}");
+        log::warn!("date du contrôle de mise à jour non enregistrée : {e}");
     }
     Ok(result)
 }

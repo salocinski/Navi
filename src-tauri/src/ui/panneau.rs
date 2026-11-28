@@ -90,7 +90,7 @@ pub(crate) fn anchor(monitor: Area, work: Area, icon: Area, w: i32, h: i32) -> (
 /// Branche la fermeture à la perte de focus (appeler depuis `setup`).
 pub(crate) fn setup(app: &AppHandle) {
     let Some(window) = app.get_webview_window(LABEL) else {
-        eprintln!("[navi] panneau : fenêtre principale introuvable");
+        log::warn!("panneau : fenêtre principale introuvable");
         return;
     };
     let handle = window.clone();

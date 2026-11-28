@@ -315,9 +315,9 @@ pub fn apply_pending() {
             continue;
         };
         match update(|s| apply_pending_in(s, id, &dir, &pinned)) {
-            Ok(Ok(true)) => eprintln!("[navi] modèle {id} : changement de version appliqué"),
+            Ok(Ok(true)) => log::info!("modèle {id} : changement de version appliqué"),
             Ok(Ok(false)) => {}
-            Ok(Err(e)) | Err(e) => eprintln!("[navi] modèle {id} : {e}"),
+            Ok(Err(e)) | Err(e) => log::warn!("modèle {id} : {e}"),
         }
     }
 }
@@ -330,7 +330,7 @@ pub fn confirm_use(id: &str) {
     if let Some(dir) = dir_of(id)
         && let Err(e) = update(|s| confirm_use_in(s, id, &dir))
     {
-        eprintln!("[navi] modèle {id} : nettoyage de l'ancienne version impossible : {e}");
+        log::warn!("modèle {id} : nettoyage de l'ancienne version impossible : {e}");
     }
 }
 

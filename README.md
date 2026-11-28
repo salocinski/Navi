@@ -45,11 +45,13 @@ Assistant vocal **local** pour Windows : Navi lit à voix haute le texte sélect
 
 Prérequis : Windows 10 ou 11 x64. Une carte NVIDIA est recommandée pour la dictée (le processeur seul est très lent).
 
+En cas de problème, le journal local est dans `%APPDATA%\Navi\logs` (Paramètres → Journaux → « Ouvrir le dossier des journaux »). Il ne quitte jamais l'ordinateur et ne contient aucun texte lu ou dicté.
+
 ## Développement
 
 Pile : [Tauri 2](https://tauri.app/) (Rust) + React / TypeScript, `ort` (Kokoro), `whisper-rs` (Whisper).
 
-Prérequis (Windows) : Rust stable, Node.js, Visual Studio avec la charge « Développement Desktop en C++ » et le SDK Windows, CUDA 13.5 avec son intégration Visual Studio, CMake. Les variables à définir pour compiler `whisper-rs-sys` (`CUDA_PATH`, `BINDGEN_EXTRA_CLANG_ARGS`, `CMAKE_CUDA_ARCHITECTURES`) sont décrites dans [docs/release.md](docs/release.md) et [docs/environnement-reference.md](docs/environnement-reference.md).
+Prérequis (Windows) : Rust stable, Node.js, Visual Studio avec la charge « Développement Desktop en C++ » et le SDK Windows, CUDA 13.5 avec son intégration Visual Studio, CMake. Les variables à définir pour compiler `whisper-rs-sys` (`CUDA_PATH`, `BINDGEN_EXTRA_CLANG_ARGS`, `CMAKE_CUDA_ARCHITECTURES`) sont décrites dans [docs/release.md](docs/release.md) et [docs/environnement-reference.md](docs/environnement-reference.md). Si Visual Studio n'est pas dans son emplacement par défaut, indiquer son dossier à CMake avec `CMAKE_GENERATOR_INSTANCE` (sinon `whisper-rs-sys` échoue sur « could not find specified instance of Visual Studio »).
 
 ```bash
 npm ci

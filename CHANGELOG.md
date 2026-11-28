@@ -1,5 +1,15 @@
 # Journal des versions
 
+## Non publié
+
+### Ajouts
+
+- Journal local (`%APPDATA%\Navi\logs`) avec rotation à 2 Mo : erreurs, étapes et durées, sans aucune télémétrie. Le texte lu, dicté ou reconnu n'y est jamais écrit. Paramètres > Journaux pour ouvrir le dossier.
+
+### Développement
+
+- Tous les diagnostics passent par la façade `log` (niveaux error/warn/info/debug) au lieu de `eprintln!`, perdu dans l'application installée ; `NAVI_LOG` règle le niveau en développement. Les erreurs de lecture et de dictée sont journalisées en un point unique. Crochet de panique : la cause est écrite avant l'arrêt (`panic = "abort"`).
+
 ## 0.1.2 — 2026-11-24 (non signée)
 
 ### Corrections

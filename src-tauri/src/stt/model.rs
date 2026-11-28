@@ -219,7 +219,7 @@ mod tests {
         download(&dest, |done, total| {
             if done * 10 / total != last {
                 last = done * 10 / total;
-                eprintln!("{} %", last * 10);
+                log::debug!("{} %", last * 10);
             }
         })
         .unwrap();

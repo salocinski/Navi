@@ -116,12 +116,12 @@ pub fn create_system_tray(
                         | crate::state::PlaybackState::Paused
                 );
                 if busy {
-                    eprintln!("[navi] tray — lecture déjà en cours, ignoré");
+                    log::info!("tray — lecture déjà en cours, ignoré");
                     return;
                 }
                 if let Err(err) = crate::read_selection_impl(&view) {
                     view.machine.set_error(err.clone());
-                    eprintln!("[navi] tray — lecture échouée : {err}");
+                    log::error!("tray — lecture échouée : {err}");
                 }
             }
             "pause" => {
@@ -131,7 +131,7 @@ pub fn create_system_tray(
                 };
                 if let Err(err) = outcome {
                     view.machine.set_error(err.clone());
-                    eprintln!("[navi] tray — pause/reprise échouée : {err}");
+                    log::error!("tray — pause/reprise échouée : {err}");
                 }
             }
             "stop" => {
@@ -139,7 +139,7 @@ pub fn create_system_tray(
             }
             "settings" => {
                 if let Err(err) = parametres::open(app) {
-                    eprintln!("[navi] tray — fenêtre Paramètres impossible : {err}");
+                    log::warn!("tray — fenêtre Paramètres impossible : {err}");
                 }
             }
             "quit" => quit(app),

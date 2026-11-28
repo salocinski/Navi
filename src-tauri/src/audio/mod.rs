@@ -272,11 +272,11 @@ impl AudioPlayer {
                 };
 
                 let Some(samples) = samples else {
-                    eprintln!("[audio] consommateur gen {my_gen} sorti");
+                    log::debug!("consommateur gen {my_gen} sorti");
                     break;
                 };
-                eprintln!(
-                    "[audio] consommateur gen {my_gen} : pop {} échantillons, append au sink",
+                log::debug!(
+                    "consommateur gen {my_gen} : pop {} échantillons, append au sink",
                     samples.len()
                 );
 
@@ -307,11 +307,9 @@ impl AudioPlayer {
                     let n = samples.len();
                     let source = SamplesBuffer::new(1, SAMPLE_RATE, samples);
                     sink.append(source);
-                    eprintln!("[audio] sink appendé — {} échantillons en vol", n);
+                    log::debug!("sink appendé — {} échantillons en vol", n);
                 } else {
-                    eprintln!(
-                        "[audio] SINK ABSENT — échantillons perdus (sink consommé ou absent)"
-                    );
+                    log::debug!("SINK ABSENT — échantillons perdus (sink consommé ou absent)");
                 }
             }
         });
@@ -432,24 +430,20 @@ impl Drop for AudioPlayer {
 /// Ne panique jamais : toute erreur de périphérique/fichier/format est journalisée et tolérée.
 pub fn play_signature_once(volume: f32) {
     let path = crate::utils::resolve_signature();
-    eprintln!("[navi] signature de démarrage : {}", path.display());
+    log::info!("signature de démarrage : {}", path.display());
     std::thread::spawn(move || {
         let file = match std::fs::File::open(&path) {
             Ok(f) => f,
             Err(err) => {
-                eprintln!(
-                    "[navi] signature introuvable ({}) : {}",
-                    path.display(),
-                    err
-                );
+                log::warn!("signature introuvable ({}) : {}", path.display(), err);
                 return;
             }
         };
         let stream = match OutputStream::try_default() {
             Ok(s) => s,
             Err(err) => {
-                eprintln!(
-                    "[navi] périphérique audio indisponible pour la signature : {}",
+                log::warn!(
+                    "périphérique audio indisponible pour la signature : {}",
                     err
                 );
                 return;
@@ -458,14 +452,14 @@ pub fn play_signature_once(volume: f32) {
         let sink = match Sink::try_new(&stream.1) {
             Ok(s) => s,
             Err(err) => {
-                eprintln!("[navi] initialisation sink signature impossible : {}", err);
+                log::warn!("initialisation sink signature impossible : {}", err);
                 return;
             }
         };
         let source = match Decoder::new(std::io::BufReader::new(file)) {
             Ok(s) => s,
             Err(err) => {
-                eprintln!("[navi] décodage signature impossible : {}", err);
+                log::warn!("décodage signature impossible : {}", err);
                 return;
             }
         };
@@ -558,7 +552,7 @@ mod tests {
     #[test]
     fn reset_apres_stop_relance_un_consommateur() {
         let Ok(mut player) = AudioPlayer::new() else {
-            eprintln!("[audio] test ignoré : aucun périphérique de sortie");
+            log::info!("test ignoré : aucun périphérique de sortie");
             return;
         };
         let tone = || vec![0.0f32; SAMPLE_RATE as usize / 20]; // 50 ms de silence

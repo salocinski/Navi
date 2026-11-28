@@ -2683,6 +2683,7 @@ dependencies = [
  "global-hotkey",
  "libc",
  "libloading 0.9.1",
+ "log",
  "npyz",
  "ort",
  "ring",
