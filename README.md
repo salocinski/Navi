@@ -2,7 +2,7 @@
 
 Assistant vocal **local** pour Windows : Navi lit à voix haute le texte sélectionné et transcrit la voix en texte, dans n'importe quelle application. Après l'installation des modèles, tout fonctionne hors ligne : aucun son et aucun texte ne quittent la machine.
 
-> Version actuelle : **0.1.2** (installeur non signé, Windows SmartScreen affichera un avertissement). Voir le [journal des versions](CHANGELOG.md).
+> Version actuelle : **0.1.3** (installeur non signé, Windows SmartScreen affichera un avertissement). Voir le [journal des versions](CHANGELOG.md).
 
 ## Fonctionnalités
 
