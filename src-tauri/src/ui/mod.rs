@@ -58,6 +58,22 @@ pub fn quit_app(app: AppHandle) {
 
 pub(crate) mod tray_icons;
 
+static APP: std::sync::OnceLock<AppHandle> = std::sync::OnceLock::new();
+
+/// Mémorise le handle pour les notifications émises hors contexte Tauri (appeler depuis `setup`).
+pub fn init_notifier(app: &AppHandle) {
+    let _ = APP.set(app.clone());
+}
+
+/// Notification Windows d'échec de capture (N-046). Best-effort : un échec d'affichage est journalisé.
+pub fn notify_failure(message: &str) {
+    use tauri_plugin_notification::NotificationExt;
+    let Some(app) = APP.get() else { return };
+    if let Err(e) = app.notification().builder().title("Navi").body(message).show() {
+        log::warn!("notification impossible : {e}");
+    }
+}
+
 /// Crée le menu et l'icône de la zone de notification (appeler depuis `setup`).
 pub fn create_system_tray(
     app: &AppHandle,

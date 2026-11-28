@@ -553,6 +553,10 @@ fn start_reading(state: tauri::State<NaviState>) -> Result<String, String> {
     read_selection_impl(&state.view())
 }
 
+/// Notification Windows quand le modèle vocal n'a pas pu être chargé (N-046).
+const MODEL_NOTICE: &str =
+    "Le modèle vocal n'a pas pu être chargé. Réessayez dans un instant ; sinon relancez Navi.";
+
 pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     if state.dictation.machine.is_active() {
         return Err("Lecture ignorée : une dictée est en cours".to_string());
@@ -597,6 +601,9 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
     //    — en parallèle du chargement éventuel.
     let cap = crate::capture::capture_selection();
     if !cap.success {
+        if let Some(notice) = cap.notice {
+            crate::ui::notify_failure(notice);
+        }
         let message = cap
             .error
             .clone()
@@ -611,11 +618,13 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
         match loader.join() {
             Ok(Ok(())) => {}
             Ok(Err(message)) => {
+                crate::ui::notify_failure(MODEL_NOTICE);
                 state.machine.set_error(message.clone());
                 return Err(message);
             }
             Err(_) => {
                 let message = "Chargement du modèle interrompu".to_string();
+                crate::ui::notify_failure(MODEL_NOTICE);
                 state.machine.set_error(message.clone());
                 return Err(message);
             }
@@ -630,6 +639,7 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
         .is_none()
     {
         let message = "Modèle Kokoro non chargé — réessayez la lecture".to_string();
+        crate::ui::notify_failure(MODEL_NOTICE);
         state.machine.set_error(message.clone());
         return Err(message);
     }
@@ -802,6 +812,7 @@ pub fn run() {
     );
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // Instance Navi déjà active : la seconde occurrence se termine ici.
             // Effet au premier plan : afficher/focaliser la fenêtre principale
@@ -914,6 +925,7 @@ pub fn run() {
                 });
             }
 
+            crate::ui::init_notifier(app.handle());
             crate::ui::panneau::setup(app.handle());
 
             // Icône de zone de notification + menu (carte N-047) — feuille DA docs/pistes-interface.html.
