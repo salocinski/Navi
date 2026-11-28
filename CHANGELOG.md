@@ -2,9 +2,16 @@
 
 ## Non publié
 
+## 0.1.3 — 2026-11-28 (non signée)
+
 ### Ajouts
 
+- Notification Windows quand la capture de la sélection échoue (message court et orienté action, par exemple « Cette application bloque la copie. Essayez de copier le texte manuellement. ») ou quand le modèle de lecture n'a pas pu être chargé. L'icône passe aussi au rouge.
 - Journal local (`%APPDATA%\Navi\logs`) avec rotation à 2 Mo : erreurs, étapes et durées, sans aucune télémétrie. Le texte lu, dicté ou reconnu n'y est jamais écrit. Paramètres > Journaux pour ouvrir le dossier.
+
+### Changements
+
+- Fenêtre Paramètres : design harmonisé avec le panneau (thème sombre, mêmes couleurs, boutons et focus visible). Aucun changement fonctionnel.
 
 ### Développement
 
