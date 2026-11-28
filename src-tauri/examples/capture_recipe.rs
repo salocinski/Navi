@@ -32,6 +32,7 @@ fn main() {
         success,
         error,
         restore,
+        notice: _,
     } = capture_selection();
 
     if success {

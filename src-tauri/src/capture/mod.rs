@@ -130,6 +130,31 @@ pub struct CaptureResult {
     /// `None` si le presse-papiers a été intégralement restauré (ou si la capture a échoué
     /// avant toute modification). `Some(message)` si la restauration a été partielle ou impossible.
     pub restore: Option<String>,
+    /// Message court et orienté action pour la notification Windows (N-046) ; `None` si succès.
+    pub notice: Option<&'static str>,
+}
+
+impl CaptureError {
+    /// Version courte du message, affichée dans la notification Windows.
+    pub fn notice(&self) -> &'static str {
+        match self {
+            CaptureError::NoSelection | CaptureError::NoTextContent => {
+                "Aucun texte sélectionné. Sélectionnez du texte puis relancez la lecture."
+            }
+            CaptureError::InjectionFailed { .. } | CaptureError::ReadFailure(_) => {
+                "Cette application bloque la copie. Essayez de copier le texte manuellement."
+            }
+            CaptureError::ClipboardBusy { .. } => {
+                "Presse-papiers occupé par une autre application. Réessayez dans un instant."
+            }
+            CaptureError::NoForegroundWindow | CaptureError::WindowSwitchFailed(_) => {
+                "Impossible de cibler la fenêtre. Cliquez dans l'application puis relancez la lecture."
+            }
+            CaptureError::SnapshotFailed(_) => {
+                "Presse-papiers non sauvegardable : capture annulée pour ne pas l'écraser."
+            }
+        }
+    }
 }
 
 impl CaptureResult {
@@ -140,6 +165,7 @@ impl CaptureResult {
             success: true,
             error: None,
             restore: None,
+            notice: None,
         }
     }
 
@@ -150,6 +176,7 @@ impl CaptureResult {
             success: false,
             error: Some(err.to_string()),
             restore: None,
+            notice: Some(err.notice()),
         }
     }
 }
@@ -743,6 +770,37 @@ mod tests {
             assert!(msg.len() > 10, "message trop court pour {err:?}");
             assert!(!msg.starts_with("Error"), "message non clair pour {err:?}");
         }
+    }
+
+    #[test]
+    fn notice_courte_pour_chaque_cas() {
+        let cas = [
+            CaptureError::NoForegroundWindow,
+            CaptureError::InjectionFailed { sent: 0 },
+            CaptureError::NoSelection,
+            CaptureError::ClipboardBusy { attempts: 5 },
+            CaptureError::NoTextContent,
+            CaptureError::ReadFailure("x".to_string()),
+            CaptureError::SnapshotFailed("x".to_string()),
+            CaptureError::WindowSwitchFailed("x".to_string()),
+        ];
+        for err in cas {
+            let n = err.notice();
+            assert!(
+                n.len() > 20 && n.len() < 100,
+                "notice hors gabarit pour {err:?}"
+            );
+        }
+        let r = CaptureResult::failure(CaptureError::InjectionFailed { sent: 0 });
+        assert_eq!(
+            r.notice,
+            Some("Cette application bloque la copie. Essayez de copier le texte manuellement.")
+        );
+        assert!(
+            CaptureResult::success("a".into(), "t".into())
+                .notice
+                .is_none()
+        );
     }
 
     #[test]
