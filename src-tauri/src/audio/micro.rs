@@ -134,7 +134,7 @@ where
                 let mut b = buf.lock().unwrap_or_else(|e| e.into_inner());
                 downmix_into(data, channels, cap, &mut b);
             },
-            |e| eprintln!("[micro] erreur de flux : {e}"),
+            |e| log::warn!("erreur de flux : {e}"),
             None,
         )
         .map_err(|e| format!("Ouverture du micro refusée ou impossible : {e}"))

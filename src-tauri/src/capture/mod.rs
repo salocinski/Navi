@@ -501,8 +501,8 @@ pub(crate) fn wait_for_modifiers_released(timeout: Duration) {
         }
         thread::sleep(Duration::from_millis(10));
     }
-    eprintln!(
-        "[navi] modificateurs encore enfoncés après {} ms — copie tentée quand même",
+    log::debug!(
+        "modificateurs encore enfoncés après {} ms — copie tentée quand même",
         timeout.as_millis()
     );
 }

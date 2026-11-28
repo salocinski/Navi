@@ -94,6 +94,7 @@ pub(crate) fn idle_secs() -> Option<u64> {
 }
 pub mod audio;
 pub mod autostart;
+pub mod diag;
 pub mod dictation;
 pub mod hotkey;
 pub mod insert;
@@ -167,6 +168,21 @@ fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+/// Ouvre le dossier des journaux dans l'explorateur (carte N-034).
+///
+/// Le dossier est créé s'il n'existe pas encore : un utilisateur peut le consulter avant
+/// qu'une première ligne ait été écrite.
+#[tauri::command]
+fn open_log_dir(app: tauri::AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = crate::diag::log_dir()
+        .ok_or_else(|| "dossier de données de l'application introuvable".to_string())?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("dossier des journaux non créable : {e}"))?;
+    app.opener()
+        .open_path(dir.to_string_lossy().to_string(), None::<&str>)
+        .map_err(|e| format!("ouverture du dossier impossible : {e}"))
+}
+
 /// DTO de statut exposé à l'UI (lecture seule).
 #[derive(Serialize)]
 struct StatusDto {
@@ -184,7 +200,7 @@ struct StatusDto {
 #[tauri::command]
 fn get_config() -> crate::config::AppConfig {
     let mut config = crate::config::AppConfig::load().unwrap_or_else(|e| {
-        eprintln!("[navi] config illisible, valeurs par défaut : {e}");
+        log::warn!("config illisible, valeurs par défaut : {e}");
         Default::default()
     });
     // Le registre fait foi : l'utilisateur peut retirer Navi du démarrage depuis Windows.
@@ -470,7 +486,7 @@ pub(crate) fn ensure_engine(view: &NaviRef) -> Result<(), String> {
                 .map(|mut guard| *guard = Some(kokoro))
         }
         Err(message) => {
-            eprintln!("[navi] chargement moteur échoué : {message}");
+            log::error!("chargement moteur échoué : {message}");
             view.machine.set_error(message.clone());
             Err(message)
         }
@@ -523,7 +539,7 @@ fn reinstall_kokoro(state: tauri::State<NaviState>) -> Result<(), String> {
                 let _ = ensure_engine(&view);
             }
             Err(message) => {
-                eprintln!("[navi] réinstallation du modèle échouée : {message}");
+                log::error!("réinstallation du modèle échouée : {message}");
                 view.machine.set_error(message);
             }
         }
@@ -649,7 +665,7 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
 
     // Réglages de lecture (fenêtre Paramètres, N-051) : relus à chaque lecture.
     let config = crate::config::AppConfig::load().unwrap_or_else(|e| {
-        eprintln!("[navi] config illisible, valeurs par défaut : {e}");
+        log::warn!("config illisible, valeurs par défaut : {e}");
         Default::default()
     });
 
@@ -683,10 +699,7 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
         voice: Some(config.voice_for(language).to_string()),
     };
     std::thread::spawn(move || {
-        eprintln!(
-            "[navi] thread de synthèse démarré ({} segments)",
-            segments.len()
-        );
+        log::debug!("thread de synthèse démarré ({} segments)", segments.len());
         let outcome = (|| -> Result<usize, String> {
             let engine_guard = engine.lock().map_err(|_| "verrou moteur".to_string())?;
             let kokoro = engine_guard
@@ -711,10 +724,10 @@ pub(crate) fn read_selection_impl(state: &NaviRef) -> Result<String, String> {
         })();
         match outcome {
             Ok(done) => {
-                eprintln!("[navi] synthèse terminée — {done} segments envoyés dans la file audio")
+                log::info!("synthèse terminée — {done} segments envoyés dans la file audio")
             }
             Err(message) => {
-                eprintln!("[navi] synthèse échouée : {message}");
+                log::error!("synthèse échouée : {message}");
                 machine.set_error(message);
             }
         }
@@ -775,6 +788,18 @@ pub(crate) fn stop_reading_impl(state: &NaviRef) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // N-034 : journal local en premier, pour que tout ce qui suit (y compris une panique
+    // pendant l'initialisation de Tauri) laisse une trace sur disque.
+    crate::diag::init();
+    log::info!(
+        "Navi {} démarre ({})",
+        env!("CARGO_PKG_VERSION"),
+        if cfg!(debug_assertions) {
+            "développement"
+        } else {
+            "release"
+        }
+    );
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -811,6 +836,7 @@ pub fn run() {
             ui::open_settings,
             ui::hide_panel,
             ui::quit_app,
+            open_log_dir,
         ])
         .setup(|app| {
             // N-098 : mises à jour et retours arrière de modèles en attente, avant tout chargement.
@@ -830,7 +856,7 @@ pub fn run() {
             // combinaison (Capture) jusqu'à la fin de l'audio ; masquée sur Stopped/Idle.
             {
                 if let Err(err) = crate::ui::flotteur::create_floating_window(app.handle()) {
-                    eprintln!("[navi] pastille flottante indisponible : {err}");
+                    log::warn!("pastille flottante indisponible : {err}");
                 }
             }
             {
@@ -895,7 +921,7 @@ pub fn run() {
                 let view = state.view();
                 let tray_handle = app.handle().clone();
                 if let Err(err) = crate::ui::create_system_tray(&tray_handle, view) {
-                    eprintln!("[navi] tray indisponible : {err}");
+                    log::warn!("tray indisponible : {err}");
                 }
             }
 
@@ -911,7 +937,7 @@ pub fn run() {
                 match crate::hotkey::HotkeyManager::new() {
                     Ok(mut manager) => {
                         let config = crate::config::AppConfig::load().unwrap_or_else(|e| {
-                            eprintln!("[navi] config illisible, valeurs par défaut : {e}");
+                            log::warn!("config illisible, valeurs par défaut : {e}");
                             Default::default()
                         });
                         let report = manager.apply(&crate::hotkey::bindings_of(&config));
@@ -931,10 +957,10 @@ pub fn run() {
                                     crate::hotkey::HotkeyAction::ReadSelection => {
                                         let phase = exec.machine.state();
                                         if matches!(phase, crate::state::PlaybackState::Capturing | crate::state::PlaybackState::Generating | crate::state::PlaybackState::Playing | crate::state::PlaybackState::Paused) {
-                                            eprintln!("[navi] raccourci lecture ignoré — une lecture est déjà en cours (Ctrl+Maj+P pause/reprise, Ctrl+Maj+S arrêt)");
+                                            log::info!("raccourci lecture ignoré — une lecture est déjà en cours (Ctrl+Maj+P pause/reprise, Ctrl+Maj+S arrêt)");
                                         } else if let Err(err) = read_selection_impl(&exec) {
                                             exec.machine.set_error(err.clone());
-                                            eprintln!("[navi] raccourci lecture échoué : {err}");
+                                            log::error!("raccourci lecture échoué : {err}");
                                         }
                                     }
                                     crate::hotkey::HotkeyAction::PauseResume => {
@@ -944,7 +970,7 @@ pub fn run() {
                                         };
                                         if let Err(err) = outcome {
                                             exec.machine.set_error(err.clone());
-                                            eprintln!("[navi] raccourci pause/reprise échoué : {err}");
+                                            log::error!("raccourci pause/reprise échoué : {err}");
                                         }
                                     }
                                     crate::hotkey::HotkeyAction::Stop => {
@@ -958,7 +984,7 @@ pub fn run() {
                                         let combo = crate::config::AppConfig::load().unwrap_or_default().hotkey_dictation;
                                         let Some(vk) = crate::hotkey::hold::main_key_vk(&combo) else {
                                             dictation_hold.end();
-                                            eprintln!("[navi] dictée : touche de « {combo} » non gérée pour le maintien");
+                                            log::warn!("dictée : touche de « {combo} » non gérée pour le maintien");
                                             continue;
                                         };
                                         crate::dictation::start(&exec, vk, dictation_hold.clone());
@@ -968,7 +994,7 @@ pub fn run() {
                         });
                     }
                     Err(err) => {
-                        eprintln!("[navi] raccourcis indisponibles — pas disponibles sur cet OS : {err}");
+                        log::warn!("raccourcis indisponibles — pas disponibles sur cet OS : {err}");
                     }
                 }
             }
@@ -998,7 +1024,7 @@ pub fn run() {
                             .and_then(|h| h.as_ref().map(|h| h.is_playing()))
                             .unwrap_or(false);
                         if !playing {
-                            eprintln!("[navi] lecture terminée — retour à l'état Inactif");
+                            log::info!("lecture terminée — retour à l'état Inactif");
                             view.machine.set_idle();
                         }
                     }
@@ -1044,7 +1070,7 @@ pub fn run() {
                         if let Ok(mut guard) = view.engine.lock()
                             && let Some(engine) = guard.as_mut()
                                 && engine.unload_session() {
-                                    eprintln!("[navi] modèle déchargé après {idle_limit} s sans utilisation (carte N-075)");
+                                    log::info!("modèle déchargé après {idle_limit} s sans utilisation (carte N-075)");
                                 }
                     }
                 });
@@ -1053,7 +1079,7 @@ pub fn run() {
             // Migration N-095 : l'ancienne valeur Run (N-054) devient une tâche planifiée élevée.
             std::thread::spawn(|| {
                 if let Err(e) = crate::autostart::migrate_legacy() {
-                    eprintln!("[navi] migration du démarrage automatique : {e}");
+                    log::warn!("migration du démarrage automatique : {e}");
                 }
             });
 
@@ -1066,14 +1092,14 @@ pub fn run() {
                 if crate::models_update::is_due(config.update_check_weekly, config.last_update_check, now)
                     && let Err(e) = crate::models_update::run_check()
                 {
-                    eprintln!("[navi] contrôle de mise à jour des modèles : {e}");
+                    log::warn!("contrôle de mise à jour des modèles : {e}");
                 }
             });
 
             // Signature sonore de démarrage : joue « Hey listen » (original, voix aiguë)
             // une seule fois, une fois raccourcis et capture prêts.
             let config = crate::config::AppConfig::load().unwrap_or_else(|e| {
-                eprintln!("[navi] config illisible, valeurs par défaut : {e}");
+                log::warn!("config illisible, valeurs par défaut : {e}");
                 Default::default()
             });
             if config.startup_sound {

@@ -181,7 +181,9 @@ impl DictationMachine {
         let _ = self.transition(DictationState::Idle, |s| s != DictationState::Idle, None);
     }
 
+    /// Échec de dictée : journalisé ici, point unique pour la dictée (N-034).
     pub fn fail(&self, message: String) {
+        log::error!("dictée : {message}");
         let _ = self.transition(DictationState::Error, |_| true, Some(message));
     }
 
@@ -226,7 +228,7 @@ impl Dictation {
             }
             let Ok(mut guard) = engine.lock() else { return };
             if let Err(e) = guard.get_or_insert_with(|| WhisperEngine::new(path)).load() {
-                eprintln!("[navi] préchargement du modèle de dictée : {e}");
+                log::warn!("préchargement du modèle de dictée : {e}");
             }
         });
     }
@@ -252,7 +254,7 @@ impl Dictation {
             match result {
                 Ok(()) => this.machine.emit(DictationEvent::ModelReady),
                 Err(message) => {
-                    eprintln!("[navi] modèle de dictée : {message}");
+                    log::info!("modèle de dictée : {message}");
                     this.machine.emit(DictationEvent::ModelFailed { message });
                 }
             }
@@ -376,7 +378,7 @@ fn process(
 ) {
     running.store(false, Ordering::SeqCst);
     let pcm = capture.stop();
-    eprintln!("[navi] dictée : {end:?} après {} ms", held.as_millis());
+    log::info!("dictée : {end:?} après {} ms", held.as_millis());
     if held < MIN_HOLD || pcm.len() < MIN_SAMPLES {
         dictation.machine.finish();
         return;
@@ -420,8 +422,8 @@ fn transcribe(dictation: &Dictation, pcm: &[f32]) -> Result<String, String> {
     let t_load = t1.elapsed();
     let t2 = std::time::Instant::now();
     let out = engine.transcribe(pcm, None).map_err(|e| e.to_string())?;
-    eprintln!(
-        "[navi] dictée : vérification {t_verif:?}, chargement {t_load:?}, transcription {:?} ({} échantillons)",
+    log::info!(
+        "dictée : vérification {t_verif:?}, chargement {t_load:?}, transcription {:?} ({} échantillons)",
         t2.elapsed(),
         pcm.len()
     );

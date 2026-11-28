@@ -76,6 +76,8 @@ ring = "0.17"
 libc = "0.2"
 # Empreintes SHA-256 des modèles (N-059) ; déjà présent dans Cargo.lock.
 sha2 = "0.10"
+# Journal local et centralisation des erreurs (N-034) : façade `log`, écriture par `diag`.
+log = { version = "0.4", features = ["std"] }
 
 # Tests
 #[cfg(test)]

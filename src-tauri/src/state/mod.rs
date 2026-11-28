@@ -259,7 +259,11 @@ impl PlaybackStateMachine {
     }
 
     /// Passe en `Error` (message FR pour l'UI) et émet les événements.
+    ///
+    /// Point unique de journalisation des erreurs de lecture (N-034) : toute erreur qui
+    /// atteint l'interface laisse aussi une trace datée dans le journal local.
     pub fn set_error(&self, error: String) {
+        log::error!("lecture : {error}");
         *self.error_message.lock().unwrap() = error.clone();
         self.emit(StateEvent::Error { message: error });
         self.set_phase(PlaybackState::Error);

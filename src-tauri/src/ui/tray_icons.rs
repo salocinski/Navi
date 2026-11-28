@@ -138,11 +138,11 @@ pub(crate) fn spawn_icon_animator(app: AppHandle, view: crate::NaviRef) {
                     match tauri::image::Image::from_bytes(frame_bytes(state, frame)) {
                         Ok(image) => {
                             if let Err(err) = tray.set_icon(Some(image)) {
-                                eprintln!("[navi] tray — mise à jour de l'icône échouée : {err}");
+                                log::warn!("tray — mise à jour de l'icône échouée : {err}");
                             }
                         }
                         Err(err) => {
-                            eprintln!("[navi] tray — frame embarquée illisible : {err}");
+                            log::warn!("tray — frame embarquée illisible : {err}");
                         }
                     }
                 }
