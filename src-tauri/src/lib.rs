@@ -499,10 +499,16 @@ pub(crate) fn ensure_engine(view: &NaviRef) -> Result<(), String> {
 #[tauri::command]
 fn load_model(state: tauri::State<NaviState>) -> Result<(), String> {
     let view = state.view();
-    std::thread::spawn(move || {
-        let _ = ensure_engine(&view);
-    });
+    std::thread::spawn(move || ensure_engine_notify(&view));
     Ok(())
+}
+
+/// `ensure_engine` hors lecture (chargement de fond, après réinstallation) : l'échec est aussi signalé
+/// par une notification (N-114). La lecture a la sienne dans `read_selection_impl` : pas de doublon.
+fn ensure_engine_notify(view: &NaviRef) {
+    if ensure_engine(view).is_err() {
+        crate::ui::notify_failure(MODEL_NOTICE);
+    }
 }
 
 /// N-100 : supprime le modèle de lecture puis le réinstalle (retour à un état sain).
@@ -535,11 +541,12 @@ fn reinstall_kokoro(state: tauri::State<NaviState>) -> Result<(), String> {
         view.loading.store(false, Ordering::SeqCst);
         match reinstalled {
             // Moteur déjà créé : la session se recharge à la prochaine lecture ; sinon on le crée.
-            Ok(()) => {
-                let _ = ensure_engine(&view);
-            }
+            Ok(()) => ensure_engine_notify(&view),
             Err(message) => {
                 log::error!("réinstallation du modèle échouée : {message}");
+                crate::ui::notify_failure(
+                    "La réinstallation du modèle vocal a échoué. Réessayez depuis les Paramètres ; sinon consultez les journaux.",
+                );
                 view.machine.set_error(message);
             }
         }
